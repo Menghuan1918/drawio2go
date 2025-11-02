@@ -1,5 +1,3 @@
-export const runtime = 'edge';
-
 import { drawioTools } from '@/app/lib/drawio-ai-tools';
 import { normalizeLLMConfig } from '@/app/lib/llm-config';
 import { LLMConfig } from '@/app/types/chat';

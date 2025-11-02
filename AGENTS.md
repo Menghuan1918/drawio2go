@@ -59,18 +59,35 @@ electron/               # 桌面应用 [详细文档 → electron/AGENTS.md]
 - **工作流程**: 先调用 `resolve-library-id` 获取包ID，再调用 `get-library-docs` 获取最新文档
 - **适用场景**: 新增包、使用包的API、版本升级、遇到兼容性问题时
 
-### 5. 检查测试
+### 5. Socket.IO 工具调用架构
+- **DrawIO 工具**: 通过 Socket.IO 转发到前端执行（需要浏览器环境）
+- **其他工具**: 可直接在后端执行（未来扩展接口）
+- **执行流程**:
+  1. AI 调用工具 → `drawio-ai-tools.ts` 的 `execute` 函数
+  2. `executeToolOnClient` 生成 requestId，通过 Socket.IO 发送到前端
+  3. 前端 `useDrawioSocket` Hook 接收请求，执行实际操作
+  4. 前端通过 Socket.IO 返回结果
+  5. 后端 Promise resolve，返回结果给 AI
+- **超时机制**: 默认 30 秒，可配置
+- **错误处理**: 前端执行失败会返回详细错误信息给 AI
+
+### 6. 检查测试
 - 主动调用`getDiagnostics`工具获得语法错误检查信息，避免在编译时才处理语法错误
 - 完成相关里程碑后，使用`web-function-tester`子代理进行页面功能测试
 
 ## 开发命令
 
+使用pnpm作为包管理系统
+
 ```bash
-npm run dev              # Next.js 开发服务器 (http://localhost:3000)
-npm run electron:dev     # Electron + Next.js 开发模式
-npm run build            # 构建 Next.js 应用
-npm run electron:build   # 构建 Electron 应用 (输出到 dist/)
+pnpm run dev              # Socket.IO + Next.js 开发服务器 (http://localhost:3000)
+pnpm run electron:dev     # Electron + Socket.IO + Next.js 开发模式
+pnpm run build            # 构建 Next.js 应用
+pnpm run start            # 生产环境启动 (Socket.IO + Next.js)
+pnpm run electron:build   # 构建 Electron 应用 (输出到 dist/)
 ```
+
+⚠️ **重要**: 不能使用 `next dev` 命令，必须使用 `pnpm run dev` 启动自定义服务器（包含 Socket.IO）
 
 ## 常见问题速查
 
@@ -123,10 +140,32 @@ npm run electron:build   # 构建 Electron 应用 (输出到 dist/)
 ### 2025-10-31 - 聊天消息格式修复
 - ✅ `/app/api/chat/route.ts` 现在将前端传入的 `UIMessage[]` 转换为模型可用的 `ModelMessage[]`，修复 "Invalid prompt: The messages must be a ModelMessage[]" 报错
 
-### 2025-10-31 - DrawIO 工具调用前端化
-- ✅ `drawio-ai-tools` 不再直接访问浏览器 API，统一返回前端路由占位
-- ✅ `ChatSidebar` 使用 `onToolCall + addToolResult` 在客户端执行 DrawIO XML 相关操作
-- ✅ 聊天界面新增工具执行状态展示，失败会提示错误文本
+### 2025-11-02 - Socket.IO 工具调用架构重构
+- ✅ **通讯机制**: 从前端 `onToolCall` 拦截改为 Socket.IO 双向通讯
+- ✅ **执行模式**: 后端同步等待前端执行结果，确保 AI 对话流程完整
+- ✅ **架构优势**:
+  - 清晰的前后端职责分离
+  - 统一的错误处理和超时机制
+  - 后端可感知工具执行状态
+  - 为未来后端工具预留接口
+- ✅ **新增文件**:
+  - `server.js` - Socket.IO 服务器 + Next.js 集成
+  - `app/lib/tool-executor.ts` - 工具执行路由器
+  - `app/types/socket-protocol.ts` - Socket.IO 通讯协议
+  - `app/types/global.d.ts` - 全局类型声明
+  - `app/hooks/useDrawioSocket.ts` - 前端 Socket.IO Hook
+- ✅ **修改文件**:
+  - `app/lib/drawio-ai-tools.ts` - 使用 `executeToolOnClient` 替代占位符
+  - `app/api/chat/route.ts` - 移除 Edge Runtime，使用 Node.js Runtime
+  - `app/components/ChatSidebar.tsx` - 删除 `onToolCall` 逻辑
+  - `app/page.tsx` - 集成全局 Socket.IO 连接
+- ✅ **新增依赖**: socket.io, socket.io-client, uuid
+
+### 2025-10-31 - DrawIO 工具调用前端化 [已废弃]
+- ⚠️ 此版本已被 Socket.IO 架构替代
+- ~~`drawio-ai-tools` 不再直接访问浏览器 API，统一返回前端路由占位~~
+- ~~`ChatSidebar` 使用 `onToolCall + addToolResult` 在客户端执行 DrawIO XML 相关操作~~
+- ~~聊天界面新增工具执行状态展示，失败会提示错误文本~~
 
 ### 2025-10-27 - DrawIO XML 工具集
 - ✅ 新增 XML 操作工具集 (`app/lib/drawio-tools.ts`)

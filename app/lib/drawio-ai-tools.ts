@@ -1,10 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-
-const CLIENT_ROUTE_PLACEHOLDER = {
-  routedToClient: true,
-  message: '操作已转交前端执行',
-};
+import { executeToolOnClient } from './tool-executor';
 
 /**
  * 工具 1: 获取 DrawIO XML
@@ -13,7 +9,9 @@ const CLIENT_ROUTE_PLACEHOLDER = {
 export const getDrawioXMLTool = tool({
   description: '获取当前 DrawIO 图表的完整 XML 内容。使用场景：需要查看当前图表结构时调用此工具。',
   inputSchema: z.object({}),
-  execute: async () => CLIENT_ROUTE_PLACEHOLDER,
+  execute: async () => {
+    return await executeToolOnClient('get_drawio_xml', {}, 10000);
+  },
 });
 
 /**
@@ -25,7 +23,9 @@ export const replaceDrawioXMLTool = tool({
   inputSchema: z.object({
     drawio_xml: z.string().describe('新的完整 DrawIO XML 内容，必须是合法的 XML 格式'),
   }),
-  execute: async () => CLIENT_ROUTE_PLACEHOLDER,
+  execute: async ({ drawio_xml }) => {
+    return await executeToolOnClient('replace_drawio_xml', { drawio_xml }, 30000);
+  },
 });
 
 /**
@@ -42,7 +42,9 @@ export const batchReplaceDrawioXMLTool = tool({
       })
     ).describe('替换对数组，每个对象包含 search 和 replace 字段'),
   }),
-  execute: async () => CLIENT_ROUTE_PLACEHOLDER,
+  execute: async ({ replacements }) => {
+    return await executeToolOnClient('batch_replace_drawio_xml', { replacements }, 30000);
+  },
 });
 
 /**

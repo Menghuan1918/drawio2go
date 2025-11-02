@@ -6,12 +6,16 @@ import DrawioEditorNative from "./components/DrawioEditorNative"; // 使用原�
 import BottomBar from "./components/BottomBar";
 import UnifiedSidebar from "./components/UnifiedSidebar";
 import { UPDATE_EVENT } from "./lib/drawio-tools";
+import { useDrawioSocket } from "./hooks/useDrawioSocket";
 
 export default function Home() {
   const [diagramXml, setDiagramXml] = useState<string>("");
   const [currentXml, setCurrentXml] = useState<string>("");
   const [settings, setSettings] = useState({ defaultPath: "" });
   const [activeSidebar, setActiveSidebar] = useState<"none" | "settings" | "chat">("none");
+
+  // 初始化 Socket.IO 连接
+  const { isConnected } = useDrawioSocket();
 
   // 加载保存的图表
   useEffect(() => {
@@ -133,6 +137,24 @@ export default function Home() {
 
   return (
     <main className="main-container">
+      {/* Socket.IO 连接状态指示器 */}
+      {!isConnected && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          background: '#ff6b6b',
+          color: 'white',
+          padding: '8px 16px',
+          textAlign: 'center',
+          fontSize: '14px',
+          zIndex: 9999,
+        }}>
+          ⚠️ Socket.IO 未连接，AI 工具功能不可用
+        </div>
+      )}
+
       {/* DrawIO 编辑器区域 */}
       <div className={`editor-container ${activeSidebar !== "none" ? "sidebar-open" : ""}`}>
         <DrawioEditorNative

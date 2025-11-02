@@ -2,20 +2,9 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useChat } from "@ai-sdk/react";
-import { lastAssistantMessageIsCompleteWithToolCalls } from "ai";
 import { Button, TooltipContent, TooltipRoot } from "@heroui/react";
 import ReactMarkdown, { type Components as MarkdownComponents } from "react-markdown";
 import { useLLMConfig } from "@/app/hooks/useLLMConfig";
-import {
-  getDrawioXML,
-  replaceDrawioXML,
-  batchReplaceDrawioXML,
-} from "@/app/lib/drawio-tools";
-
-type DrawioToolName =
-  | "get_drawio_xml"
-  | "replace_drawio_xml"
-  | "batch_replace_drawio_xml";
 
 const TOOL_LABELS: Record<string, string> = {
   "tool-get_drawio_xml": "获取 DrawIO XML",
@@ -66,9 +55,11 @@ const markdownComponents: MarkdownComponents = {
       />
     );
   },
-  code({ inline, className, children, ...props }) {
+  code({ node, className, children, ...props }) {
     const content = String(children).replace(/\n$/, "");
-    if (inline) {
+    const isInline = !className?.includes('language-');
+
+    if (isInline) {
       return (
         <code className={`inline-code ${className ?? ""}`.trim()} {...props}>
           {content}
@@ -77,7 +68,7 @@ const markdownComponents: MarkdownComponents = {
     }
 
     return (
-      <pre className={`code-block ${className ?? ""}`.trim()} {...props}>
+      <pre className={`code-block ${className ?? ""}`.trim()}>
         <code>{content}</code>
       </pre>
     );
@@ -85,7 +76,7 @@ const markdownComponents: MarkdownComponents = {
   blockquote({ node, ...props }) {
     return <blockquote className="message-quote" {...props} />;
   },
-  ul({ node, ordered, ...props }) {
+  ul({ node, ...props }) {
     return <ul className="message-list" {...props} />;
   },
   ol({ node, ...props }) {
@@ -191,84 +182,7 @@ export default function ChatSidebar({ isOpen, onClose }: ChatSidebarProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { config: llmConfig, isLoading: configLoading, error: configError } = useLLMConfig();
 
-  const { messages, sendMessage, status, error: chatError, addToolResult } = useChat({
-    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
-    onToolCall: async ({ toolCall }) => {
-      if (toolCall.dynamic) {
-        return;
-      }
-
-      const { toolCallId, toolName, input } = toolCall;
-
-      const respondError = (errorText: string) => {
-        addToolResult({
-          tool: toolName as DrawioToolName,
-          toolCallId,
-          state: "output-error",
-          errorText,
-        });
-      };
-
-      try {
-        switch (toolName) {
-          case "get_drawio_xml": {
-            const result = getDrawioXML();
-            if (!result.success) {
-              respondError(result.error ?? "获取 XML 失败");
-              return;
-            }
-            addToolResult({
-              tool: toolName as DrawioToolName,
-              toolCallId,
-              output: result,
-            });
-            break;
-          }
-          case "replace_drawio_xml": {
-            const params = input as { drawio_xml: string };
-            if (!params?.drawio_xml) {
-              respondError("缺少 drawio_xml 参数");
-              return;
-            }
-            const result = replaceDrawioXML(params.drawio_xml);
-            if (!result.success) {
-              respondError(result.error ?? "替换 XML 失败");
-              return;
-            }
-            addToolResult({
-              tool: toolName as DrawioToolName,
-              toolCallId,
-              output: result,
-            });
-            break;
-          }
-          case "batch_replace_drawio_xml": {
-            const params = input as { replacements: Array<{ search: string; replace: string }> };
-            if (!params?.replacements) {
-              respondError("缺少 replacements 参数");
-              return;
-            }
-            const result = batchReplaceDrawioXML(params.replacements);
-            if (!result.success) {
-              respondError(result.message ?? "批量替换失败");
-              return;
-            }
-            addToolResult({
-              tool: toolName as DrawioToolName,
-              toolCallId,
-              output: result,
-            });
-            break;
-          }
-          default: {
-            respondError(`未实现的工具: ${toolName}`);
-          }
-        }
-      } catch (error) {
-        respondError(error instanceof Error ? error.message : "客户端执行异常");
-      }
-    },
-  });
+  const { messages, sendMessage, status, error: chatError } = useChat();
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
