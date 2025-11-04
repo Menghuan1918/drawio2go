@@ -9,7 +9,7 @@
  */
 export interface ToolCallRequest {
   requestId: string;
-  toolName: 'get_drawio_xml' | 'replace_drawio_xml' | 'batch_replace_drawio_xml';
+  toolName: 'get_drawio_xml' | 'replace_drawio_xml';
   input: Record<string, unknown>;
   timeout: number;
 }

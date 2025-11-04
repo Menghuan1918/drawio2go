@@ -46,4 +46,15 @@ declare global {
   }
 }
 
+declare module 'xpath' {
+  import type { Document, Node } from '@xmldom/xmldom';
+
+  export type XPathValue = Node | string | number | boolean;
+
+  export function select(
+    expression: string,
+    node: Node | Document
+  ): XPathValue | XPathValue[];
+}
+
 export {};

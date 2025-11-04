@@ -14,11 +14,9 @@ import type {
   ServerToClientEvents,
   ClientToServerEvents,
 } from '@/app/types/socket-protocol';
-import type { Replacement } from '@/app/types/drawio-tools';
 import {
   getDrawioXML,
   replaceDrawioXML,
-  batchReplaceDrawioXML,
 } from '@/app/lib/drawio-tools';
 
 /**
@@ -75,13 +73,6 @@ export function useDrawioSocket() {
               throw new Error('缺少 drawio_xml 参数');
             }
             result = replaceDrawioXML(request.input.drawio_xml as string) as unknown as { success: boolean; error?: string; message?: string; [key: string]: unknown };
-            break;
-
-          case 'batch_replace_drawio_xml':
-            if (!request.input?.replacements) {
-              throw new Error('缺少 replacements 参数');
-            }
-            result = batchReplaceDrawioXML(request.input.replacements as Replacement[]) as unknown as { success: boolean; error?: string; message?: string; [key: string]: unknown };
             break;
 
           default:

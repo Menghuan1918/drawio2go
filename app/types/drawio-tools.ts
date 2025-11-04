@@ -3,7 +3,7 @@
  */
 
 /**
- * 获取 XML 的返回结果
+ * 获取 XML 的返回结果（前端存储访问）
  */
 export interface GetXMLResult {
   success: boolean;
@@ -12,7 +12,7 @@ export interface GetXMLResult {
 }
 
 /**
- * 替换 XML 的返回结果
+ * 替换 XML 的返回结果（前端存储访问）
  */
 export interface ReplaceXMLResult {
   success: boolean;
@@ -21,39 +21,122 @@ export interface ReplaceXMLResult {
 }
 
 /**
- * 批量替换的单个替换对
- */
-export interface Replacement {
-  search: string;
-  replace: string;
-}
-
-/**
- * 批量替换中失败项的错误详情
- */
-export interface ReplacementError {
-  index: number;
-  search: string;
-  replace: string;
-  reason: string;
-}
-
-/**
- * 批量替换的返回结果
- */
-export interface BatchReplaceResult {
-  success: boolean;
-  message: string;
-  totalRequested: number;
-  successCount: number;
-  skippedCount: number;
-  errors: ReplacementError[];
-}
-
-/**
  * XML 验证结果
  */
 export interface XMLValidationResult {
   valid: boolean;
   error?: string;
+}
+
+/**
+ * drawio_read 查询结果的统一类型
+ */
+export type DrawioQueryResult =
+  | DrawioElementResult
+  | DrawioAttributeResult
+  | DrawioTextResult;
+
+interface DrawioQueryResultBase {
+  matched_xpath: string;
+}
+
+export interface DrawioElementResult extends DrawioQueryResultBase {
+  type: 'element';
+  tag_name: string;
+  attributes: Record<string, string>;
+  xml_string: string;
+}
+
+export interface DrawioAttributeResult extends DrawioQueryResultBase {
+  type: 'attribute';
+  name: string;
+  value: string;
+}
+
+export interface DrawioTextResult extends DrawioQueryResultBase {
+  type: 'text';
+  value: string;
+}
+
+export interface DrawioReadResult {
+  success: boolean;
+  results?: DrawioQueryResult[];
+  error?: string;
+}
+
+/**
+ * drawio_edit_batch 批量操作定义
+ */
+interface OperationBase {
+  allow_no_match?: boolean;
+}
+
+export interface SetAttributeOperation extends OperationBase {
+  type: 'set_attribute';
+  xpath: string;
+  key: string;
+  value: string;
+}
+
+export interface RemoveAttributeOperation extends OperationBase {
+  type: 'remove_attribute';
+  xpath: string;
+  key: string;
+}
+
+export type InsertPosition =
+  | 'append_child'
+  | 'prepend_child'
+  | 'before'
+  | 'after';
+
+export interface InsertElementOperation extends OperationBase {
+  type: 'insert_element';
+  target_xpath: string;
+  new_xml: string;
+  position?: InsertPosition;
+}
+
+export interface RemoveElementOperation extends OperationBase {
+  type: 'remove_element';
+  xpath: string;
+}
+
+export interface ReplaceElementOperation extends OperationBase {
+  type: 'replace_element';
+  xpath: string;
+  new_xml: string;
+}
+
+export interface SetTextContentOperation extends OperationBase {
+  type: 'set_text_content';
+  xpath: string;
+  value: string;
+}
+
+export type DrawioEditOperation =
+  | SetAttributeOperation
+  | RemoveAttributeOperation
+  | InsertElementOperation
+  | RemoveElementOperation
+  | ReplaceElementOperation
+  | SetTextContentOperation;
+
+export interface DrawioEditBatchRequest {
+  operations: DrawioEditOperation[];
+}
+
+export type DrawioEditBatchResult =
+  | DrawioEditBatchSuccess
+  | DrawioEditBatchError;
+
+export interface DrawioEditBatchSuccess {
+  success: true;
+  operations_applied: number;
+}
+
+export interface DrawioEditBatchError {
+  success: false;
+  operation_index: number;
+  error: string;
 }

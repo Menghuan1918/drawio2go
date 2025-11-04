@@ -2,182 +2,59 @@
 
 ## 概述
 
-汇总应用层工具函数，包括 DrawIO XML 操作、AI 工具调用与 LLM 配置管理，支持跨组件复用。
+汇总应用层工具函数与 AI 工具定义，负责 DrawIO XML 的读取、写入与 Socket.IO 调用协调。
 
 ## 工具文件清单
 
-- **drawio-tools.ts**: DrawIO XML 操作工具集
-- **drawio-ai-tools.ts**: DrawIO AI 工具调用接口
-- **tool-executor.ts**: 工具执行路由器
+- **drawio-tools.ts**: 浏览器端的 XML 存储桥接（localStorage + 事件通知）
+- **drawio-xml-service.ts**: 服务端 XML 转接层，负责 XPath 查询与批量编辑
+- **drawio-ai-tools.ts**: AI 工具定义（`drawio_read` / `drawio_edit_batch`）
+- **tool-executor.ts**: 工具执行路由器，通过 Socket.IO 与前端通讯
 - ~~llm-config.ts~~: LLM 配置工具（已迁移到 hooks）
 
-## DrawIO AI 工具调用（`drawio-ai-tools.ts`）
+## DrawIO Socket.IO 调用流程
 
-AI 工具调用的统一接口，通过 Socket.IO 与前端通讯执行 DrawIO 相关操作。
+1. 后端工具通过 `executeToolOnClient()` 获取当前 XML 或请求前端写入
+2. 前端（`useDrawioSocket` + `drawio-tools.ts`）访问 localStorage 并响应请求
+3. 服务端使用 `drawio-xml-service.ts` 对 XML 进行 XPath 查询或批量操作
+4. 编辑完成后再次通过 Socket.IO 将新 XML 写回前端
 
-### 工具方法
-- `getDiagramData()`: 获取当前图表 XML 数据
-- `updateDiagram(newXml)`: 更新图表 XML 数据
-- `batchReplaceText(replacements)`: 批量替换文本内容
+## DrawIO XML 转接层（`drawio-xml-service.ts`）
 
-### Socket.IO 通讯
-- 通过 `executeToolOnClient()` 发送执行请求到前端
-- 等待前端执行结果并返回
-- 默认30秒超时机制
+### 核心设计原则
+- **无推断 (No Inference)**: 不对 XML 做领域特化解析，只处理调用者提供的 XPath 与原始字符串
+- **XPath 驱动**: 所有查询与编辑均使用标准 XPath 表达式定位节点
+- **原子性**: `drawio_edit_batch` 全部成功后才写回前端，任一操作失败立即返回错误，不修改原始 XML
+- **Base64 解码**: 每次从前端读取 XML 后都会自动检测并解码 `data:image/svg+xml;base64,` 前缀
+
+### 提供的函数
+- `executeDrawioRead(xpath?: string)`: 返回结构化的查询结果（元素 / 属性 / 文本），并在 `matched_xpath` 字段中携带命中路径
+- `executeDrawioEditBatch({ operations })`: 执行批量操作，遵守 `allow_no_match` 语义并保持原子性
+
+### 支持的操作类型
+`set_attribute`, `remove_attribute`, `insert_element`, `remove_element`, `replace_element`, `set_text_content`
+
+## DrawIO AI 工具（`drawio-ai-tools.ts`）
+
+- **`drawio_read`**: 可选 `xpath` 参数，默认返回根节点。输出为结构化 JSON 数组
+- **`drawio_edit_batch`**: `operations` 数组，严格遵循“全部成功或全部失败”规则
+- 输入参数使用 Zod 校验并在内部调用 `drawio-xml-service.ts`
 
 ## 工具执行路由器（`tool-executor.ts`）
 
-统一路由管理所有工具调用，区分前后端执行。
+- 统一管理 Socket.IO 请求的发送与结果回传
+- 自动生成 `requestId`、处理超时与错误
+- 当前仅路由 DrawIO 相关工具（前端执行部分）
 
-### 路由逻辑
-- **前端工具**: DrawIO 相关工具 → Socket.IO → 前端执行
-- **后端工具**: 其他工具 → 直接在 Node.js 环境执行
+## 浏览器端存储工具（`drawio-tools.ts`）
 
-### 支持的工具
-- DrawIO 工具集（前端执行）
-- 预留其他工具接口（后端执行）
-
-## 历史功能：LLM 配置工具（已迁移）
-> ⚠️ 注意：LLM 配置工具已迁移至 `hooks/useLLMConfig.ts`，不再位于此目录
-
-- **默认配置**: `DEFAULT_LLM_CONFIG` 与 `DEFAULT_SYSTEM_PROMPT` 提供统一的初始参数。
-- **URL 规范化**: `normalizeApiUrl` 自动补全 `/v1` 路径并清理尾部斜杠。
-- **供应商识别**: `resolveProviderType`/`isProviderType` 兼容旧版 `useLegacyOpenAIFormat` 配置。
-- **配置归一化**: `normalizeLLMConfig` 输出后端与前端共用的标准化 `LLMConfig`。
-
-## DrawIO XML 工具集（`drawio-tools.ts`）
-
-提供 DrawIO XML 文档操作的完整工具集，支持获取、修改和批量替换 XML 内容。
-
-### 存储管理
-- **存储键**: `currentDiagram`
-- **自动同步**: 修改后立即更新 localStorage
-- **编辑器通知**: 通过事件系统触发重新加载
-
-### 事件系统
-通过自定义事件通知 DrawIO 编辑器重新加载：
-```typescript
-window.dispatchEvent(new CustomEvent("drawio-xml-updated", {
-  detail: { xml: newXml }
-}));
-```
-
-## 核心功能
-
-### 1. getDrawioXML()
-获取当前存储在 localStorage 中的 DrawIO XML 内容。
-
-**返回**:
-```typescript
-GetXMLResult {
-  success: boolean;
-  xml?: string;
-  error?: string;
-}
-```
-
-### 2. replaceDrawioXML(newXml: string)
-安全地覆写当前的 DrawIO XML 内容。
-
-**参数**:
-- `newXml`: 新的 XML 内容字符串
-
-**功能**:
-- XML 格式验证
-- localStorage 更新
-- 编辑器重新加载通知
-
-**返回**:
-```typescript
-ReplaceXMLResult {
-  success: boolean;
-  message: string;
-  error?: string;
-}
-```
-
-### 3. batchReplaceDrawioXML(replacements: Replacement[])
-批量替换 XML 中的文本内容，支持全局替换（替换所有匹配项）。
-
-**参数**:
-- `replacements`: 替换规则数组
-  ```typescript
-  Replacement {
-    search: string;    // 查找文本（将替换所有匹配项）
-    replace: string;   // 替换文本
-  }
-  ```
-
-**功能**:
-- 全局替换所有匹配的内容
-- 自动跳过未找到的搜索内容
-- 详细的错误报告
-
-**返回**:
-```typescript
-BatchReplaceResult {
-  success: boolean;
-  message: string;
-  totalRequested: number;
-  successCount: number;
-  skippedCount: number;
-  errors: ReplacementError[];
-}
-```
-
-## 技术实现
-
-### XML 验证
-使用浏览器内置的 DOMParser 进行 XML 格式验证：
-```typescript
-const parser = new DOMParser();
-const doc = parser.parseFromString(xml, "text/xml");
-const parseError = doc.querySelector("parsererror");
-```
-
-### 事件系统
-通过自定义事件通知 DrawIO 编辑器重新加载：
-```typescript
-window.dispatchEvent(new CustomEvent("drawio-xml-updated", {
-  detail: { xml: newXml }
-}));
-```
-
-### 存储管理
-- **存储键**: `currentDiagram`
-- **自动同步**: 修改后立即更新 localStorage
-- **编辑器通知**: 通过事件系统触发重新加载
-
-## 使用示例
-
-```typescript
-import {
-  getDrawioXML,
-  replaceDrawioXML,
-  batchReplaceDrawioXML
-} from "../lib/drawio-tools";
-
-// 获取当前 XML
-const currentXml = await getDrawioXML();
-
-// 替换整个 XML
-await replaceDrawioXML(newXmlContent);
-
-// 批量文本替换
-await batchReplaceDrawioXML([
-  { search: "旧文本", replace: "新文本" },
-  { search: "另一个旧文本", replace: "另一个新文本" }
-]);
-```
-
-## 错误处理
-
-所有函数都提供详细的错误信息：
-- XML 格式验证错误
-- localStorage 访问错误
-- 批量操作中的单项错误
-- 成功操作的详细统计
+- localStorage 键名：`currentDiagram`
+- 保存时自动解码 base64，并通过 `drawio-xml-updated` 自定义事件通知编辑器
+- 提供 `getDrawioXML()`、`replaceDrawioXML()`、`saveDrawioXML()` 三个接口
 
 ## 类型定义
 
-完整的 TypeScript 类型定义位于 `../types/drawio-tools.ts`，包含所有接口和错误类型。
+所有公共类型位于 `../types/drawio-tools.ts`，包含：
+- 前端桥接返回结果（`GetXMLResult` / `ReplaceXMLResult` / `XMLValidationResult`）
+- `drawio_read` 查询结果结构
+- `drawio_edit_batch` 支持的操作及返回值

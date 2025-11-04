@@ -1,57 +1,164 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { executeToolOnClient } from './tool-executor';
+import { DOMParser } from '@xmldom/xmldom';
 
-/**
- * 工具 1: 获取 DrawIO XML
- * 获取当前 DrawIO 图表的完整 XML 内容
- */
-export const getDrawioXMLTool = tool({
-  description: '获取当前 DrawIO 图表的完整 XML 内容。使用场景：需要查看当前图表结构时调用此工具。',
-  inputSchema: z.object({}),
-  execute: async () => {
-    return await executeToolOnClient('get_drawio_xml', {}, 10000);
+import {
+  executeDrawioEditBatch,
+  executeDrawioRead,
+} from './drawio-xml-service';
+import { executeToolOnClient } from './tool-executor';
+import type {
+  DrawioEditOperation,
+  ReplaceXMLResult,
+} from '@/app/types/drawio-tools';
+
+const operationSchema = z
+  .object({
+    type: z.enum([
+      'set_attribute',
+      'remove_attribute',
+      'insert_element',
+      'remove_element',
+      'replace_element',
+      'set_text_content',
+    ]),
+    xpath: z.string().optional(),
+    target_xpath: z.string().optional(),
+    key: z.string().optional(),
+    value: z.string().optional(),
+    new_xml: z.string().optional(),
+    position: z.enum(['append_child', 'prepend_child', 'before', 'after']).optional(),
+    allow_no_match: z.boolean().optional(),
+  })
+  .superRefine((operation, ctx) => {
+    const ensureNonEmpty = (
+      value: string | undefined,
+      path: (string | number)[],
+      message: string
+    ) => {
+      if (typeof value !== 'string' || value.trim() === '') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path,
+          message,
+        });
+      }
+    };
+
+    switch (operation.type) {
+      case 'set_attribute': {
+        ensureNonEmpty(operation.xpath, ['xpath'], 'xpath 不能为空');
+        ensureNonEmpty(operation.key, ['key'], 'key 不能为空');
+        if (typeof operation.value !== 'string') {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['value'],
+            message: 'value 必须是字符串',
+          });
+        }
+        break;
+      }
+      case 'remove_attribute': {
+        ensureNonEmpty(operation.xpath, ['xpath'], 'xpath 不能为空');
+        ensureNonEmpty(operation.key, ['key'], 'key 不能为空');
+        break;
+      }
+      case 'insert_element': {
+        ensureNonEmpty(operation.target_xpath, ['target_xpath'], 'target_xpath 不能为空');
+        ensureNonEmpty(operation.new_xml, ['new_xml'], 'new_xml 不能为空');
+        break;
+      }
+      case 'remove_element': {
+        ensureNonEmpty(operation.xpath, ['xpath'], 'xpath 不能为空');
+        break;
+      }
+      case 'replace_element': {
+        ensureNonEmpty(operation.xpath, ['xpath'], 'xpath 不能为空');
+        ensureNonEmpty(operation.new_xml, ['new_xml'], 'new_xml 不能为空');
+        break;
+      }
+      case 'set_text_content': {
+        ensureNonEmpty(operation.xpath, ['xpath'], 'xpath 不能为空');
+        if (typeof operation.value !== 'string') {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['value'],
+            message: 'value 必须是字符串',
+          });
+        }
+        break;
+      }
+      default:
+        break;
+    }
+  });
+
+export const drawioReadTool = tool({
+  description:
+    '使用 XPath 精确读取 DrawIO XML 内容。默认返回根节点，可传入 xpath 参数精确查询元素、属性或文本，结果会包含 matched_xpath 以便后续调用。',
+  inputSchema: z
+    .object({
+      xpath: z.string().optional(),
+    })
+    .optional(),
+  execute: async (input) => {
+    const xpath = input?.xpath?.trim();
+    return await executeDrawioRead(xpath);
   },
 });
 
-/**
- * 工具 2: 完全替换 DrawIO XML
- * 完全替换当前 DrawIO 图表的 XML 内容
- */
-export const replaceDrawioXMLTool = tool({
-  description: '完全替换当前 DrawIO 图表的 XML 内容。使用场景：需要生成全新的图表或进行大范围修改时使用。注意：此操作会覆盖整个图表。',
+export const drawioEditBatchTool = tool({
+  description:
+    '基于 XPath 的原子化批量编辑工具。所有操作要么全部成功，要么在任意一步失败时回滚并返回错误。',
   inputSchema: z.object({
-    drawio_xml: z.string().describe('新的完整 DrawIO XML 内容，必须是合法的 XML 格式'),
+    operations: z
+      .array(operationSchema)
+      .min(1, 'operations 至少包含一项操作'),
+  }),
+  execute: async ({ operations }) => {
+    return await executeDrawioEditBatch({
+      operations: operations as DrawioEditOperation[],
+    });
+  },
+});
+
+export const drawioOverwriteTool = tool({
+  description:
+    '完整覆写 DrawIO XML 内容。此操作会替换整个图表，用于模板替换等场景。XML 格式会被强制验证。',
+  inputSchema: z.object({
+    drawio_xml: z.string().min(1, 'drawio_xml 不能为空'),
   }),
   execute: async ({ drawio_xml }) => {
-    return await executeToolOnClient('replace_drawio_xml', { drawio_xml }, 30000);
+    // 强制验证 XML 格式
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(drawio_xml, 'text/xml');
+      const parseErrors = doc.getElementsByTagName('parsererror');
+
+      if (parseErrors.length > 0) {
+        return {
+          success: false,
+          error: 'XML 格式无效: 解析失败',
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: `XML 验证失败: ${error instanceof Error ? error.message : String(error)}`,
+      };
+    }
+
+    // 调用前端工具覆写 XML
+    return (await executeToolOnClient(
+      'replace_drawio_xml',
+      { drawio_xml },
+      30000
+    )) as ReplaceXMLResult;
   },
 });
 
-/**
- * 工具 3: 批量替换 DrawIO XML
- * 批量精准替换 DrawIO XML 中的内容片段
- */
-export const batchReplaceDrawioXMLTool = tool({
-  description: '批量精准替换 DrawIO XML 中的内容片段。使用场景：需要修改图表中的特定文本、属性或样式时使用。会替换所有匹配的内容（全局替换）。建议先使用 get_drawio_xml 获取内容，确认要替换的字符串正确后再调用。',
-  inputSchema: z.object({
-    replacements: z.array(
-      z.object({
-        search: z.string().describe('要搜索的字符串，将替换所有匹配项'),
-        replace: z.string().describe('替换后的字符串'),
-      })
-    ).describe('替换对数组，每个对象包含 search 和 replace 字段'),
-  }),
-  execute: async ({ replacements }) => {
-    return await executeToolOnClient('batch_replace_drawio_xml', { replacements }, 30000);
-  },
-});
-
-/**
- * 所有 DrawIO 工具的集合，用于传递给 AI SDK
- */
 export const drawioTools = {
-  get_drawio_xml: getDrawioXMLTool,
-  replace_drawio_xml: replaceDrawioXMLTool,
-  batch_replace_drawio_xml: batchReplaceDrawioXMLTool,
+  drawio_read: drawioReadTool,
+  drawio_edit_batch: drawioEditBatchTool,
+  drawio_overwrite: drawioOverwriteTool,
 };

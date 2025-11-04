@@ -37,11 +37,12 @@ Socket.IO 通讯协议的类型定义。
 - 全局 Socket.IO 客户端类型
 - 环境变量类型声明
 - 扩展的 Window 对象属性
+- `declare module 'xpath'`：为第三方库补充最小化声明
 
 ### drawio-tools.ts
-DrawIO XML 操作工具的完整类型定义。
+DrawIO XML 操作的完整类型定义。
 
-#### 核心接口
+#### 前端桥接类型
 
 **GetXMLResult** - 获取 XML 的返回结果
 ```typescript
@@ -61,42 +62,60 @@ export interface ReplaceXMLResult {
 }
 ```
 
-**Replacement** - 批量替换的单个替换对
-```typescript
-export interface Replacement {
-  search: string;    // 查找文本
-  replace: string;   // 替换文本
-}
-```
-
-**ReplacementError** - 批量替换中跳过项的错误详情
-```typescript
-export interface ReplacementError {
-  index: number;     // 错误项索引
-  search: string;    // 查找文本
-  replace: string;   // 替换文本
-  reason: string;    // 跳过原因
-}
-```
-
-**BatchReplaceResult** - 批量替换的返回结果
-```typescript
-export interface BatchReplaceResult {
-  success: boolean;
-  message: string;
-  totalRequested: number;    // 总请求数
-  successCount: number;      // 成功数
-  skippedCount: number;      // 跳过数
-  errors: ReplacementError[]; // 错误详情
-}
-```
-
 **XMLValidationResult** - XML 验证结果
 ```typescript
 export interface XMLValidationResult {
   valid: boolean;
   error?: string;
 }
+```
+
+#### drawio_read 查询结果
+
+**DrawioQueryResult** - 统一的查询结果联合类型（包含 matched_xpath 字段，指向命中的节点路径）
+```typescript
+export type DrawioQueryResult =
+  | { type: 'element'; tag_name: string; attributes: Record<string, string>; xml_string: string; matched_xpath: string }
+  | { type: 'attribute'; name: string; value: string; matched_xpath: string }
+  | { type: 'text'; value: string; matched_xpath: string };
+```
+
+**DrawioReadResult** - 查询响应
+```typescript
+export interface DrawioReadResult {
+  success: boolean;
+  results?: DrawioQueryResult[];
+  error?: string;
+}
+```
+
+#### drawio_edit_batch 操作定义
+
+所有操作共享 `allow_no_match?: boolean` 标志，未匹配节点时根据该标志决定是否视为成功跳过。
+
+- **SetAttributeOperation** (`type: 'set_attribute'`)
+- **RemoveAttributeOperation** (`type: 'remove_attribute'`)
+- **InsertElementOperation** (`type: 'insert_element'`, `target_xpath`, `new_xml`, `position`) 
+- **RemoveElementOperation** (`type: 'remove_element'`, `xpath`)
+- **ReplaceElementOperation** (`type: 'replace_element'`, `xpath`, `new_xml`)
+- **SetTextContentOperation** (`type: 'set_text_content'`, `xpath`, `value`)
+
+联合类型示例：
+```typescript
+export type DrawioEditOperation =
+  | SetAttributeOperation
+  | RemoveAttributeOperation
+  | InsertElementOperation
+  | RemoveElementOperation
+  | ReplaceElementOperation
+  | SetTextContentOperation;
+```
+
+**DrawioEditBatchResult** - 批量编辑返回结构
+```typescript
+export type DrawioEditBatchResult =
+  | { success: true; operations_applied: number }
+  | { success: false; operation_index: number; error: string };
 ```
 
 ## 类型设计原则
@@ -107,7 +126,7 @@ export interface XMLValidationResult {
 
 ### 2. 详细错误信息
 - 每个错误都包含具体的描述信息
-- 批量操作提供单项错误追踪
+- 批量操作保留触发失败的操作索引
 
 ### 3. 类型安全
 - 使用严格的类型检查
@@ -125,22 +144,28 @@ export interface XMLValidationResult {
 import type {
   GetXMLResult,
   ReplaceXMLResult,
-  BatchReplaceResult,
-  Replacement
+  DrawioReadResult,
+  DrawioEditOperation,
+  DrawioEditBatchResult,
 } from "./drawio-tools";
+import {
+  executeDrawioRead,
+  executeDrawioEditBatch,
+} from "../lib/drawio-xml-service";
 
-// 类型安全的函数调用
-async function handleXmlOperations() {
-  const result: GetXMLResult = await getDrawioXML();
+async function demo() {
+  const read: DrawioReadResult = await executeDrawioRead("//mxCell[@id='cat-head']");
 
-  if (result.success && result.xml) {
-    const replacements: Replacement[] = [
-      { search: "旧文本", replace: "新文本" }
-    ];
+  const editOperations: DrawioEditOperation[] = [
+    {
+      type: 'set_attribute',
+      xpath: "//mxCell[@id='cat-head']",
+      key: 'value',
+      value: 'Cat Head',
+    },
+  ];
 
-    const batchResult: BatchReplaceResult =
-      await batchReplaceDrawioXML(replacements);
-  }
+  const result: DrawioEditBatchResult = await executeDrawioEditBatch({ operations: editOperations });
 }
 ```
 
@@ -154,6 +179,6 @@ async function handleXmlOperations() {
 
 ### 类型命名规范
 - **接口**: PascalCase (如 `GetXMLResult`)
-- **类型别名**: PascalCase (如 `EventHandler`)
+- **类型别名**: PascalCase (如 `DrawioEditOperation`)
 - **枚举**: PascalCase (如 `ThemeMode`)
 - **常量**: camelCase (如 `storageKey`)

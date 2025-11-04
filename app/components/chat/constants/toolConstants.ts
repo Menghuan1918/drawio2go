@@ -3,9 +3,8 @@
  */
 
 export const TOOL_LABELS: Record<string, string> = {
-  "tool-get_drawio_xml": "获取 DrawIO XML",
-  "tool-replace_drawio_xml": "完全替换 DrawIO XML",
-  "tool-batch_replace_drawio_xml": "批量替换 DrawIO XML",
+  "tool-drawio_read": "读取 DrawIO XML",
+  "tool-drawio_edit_batch": "批量编辑 DrawIO XML",
 };
 
 export const TOOL_STATUS_META: Record<

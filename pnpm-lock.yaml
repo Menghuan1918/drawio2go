@@ -29,6 +29,9 @@ importers:
       '@tailwindcss/postcss':
         specifier: ^4.1.16
         version: 4.1.16
+      '@xmldom/xmldom':
+        specifier: ^0.8.11
+        version: 0.8.11
       ai:
         specifier: ^5.0.86
         version: 5.0.86(zod@4.1.12)
@@ -68,6 +71,9 @@ importers:
       uuid:
         specifier: ^11.0.6
         version: 11.1.0
+      xpath:
+        specifier: ^0.0.34
+        version: 0.0.34
       zod:
         specifier: ^4.1.12
         version: 4.1.12
@@ -87,6 +93,9 @@ importers:
       '@types/uuid':
         specifier: ^10.0.0
         version: 10.0.0
+      '@types/xmldom':
+        specifier: ^0.1.34
+        version: 0.1.34
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
@@ -1401,6 +1410,9 @@ packages:
 
   '@types/verror@1.10.11':
     resolution: {integrity: sha512-RlDm9K7+o5stv0Co8i8ZRGxDbrTxhJtgjqjFyVh/tXQyl/rYtTKlnTvZ88oSTeYREWurwx20Js4kTuKCsFkUtg==}
+
+  '@types/xmldom@0.1.34':
+    resolution: {integrity: sha512-7eZFfxI9XHYjJJuugddV6N5YNeXgQE1lArWOcd1eCOKWb/FGs5SIjacSYuEJuwhsGS3gy4RuZ5EUIcqYscuPDA==}
 
   '@types/yauzl@2.10.3':
     resolution: {integrity: sha512-oJoftv0LSuaDZE3Le4DbKX+KS9G36NzOeSap90UIK0yMA/NhKJhqlSGtNDORNRaIbQfzjXDrQa0ytJ6mNRGz/Q==}
@@ -3926,6 +3938,10 @@ packages:
     resolution: {integrity: sha512-TEU+nJVUUnA4CYJFLvK5X9AOeH4KvDvhIfm0vV1GaQRtchnG0hgK5p8hw/xjv8cunWYCsiPCSDzObPyhEwq3KQ==}
     engines: {node: '>=0.4.0'}
 
+  xpath@0.0.34:
+    resolution: {integrity: sha512-FxF6+rkr1rNSQrhUNYrAFJpRXNzlDoMxeXN5qI84939ylEv3qqPFKa85Oxr6tDaJKqwW6KKyo2v26TSv3k6LeA==}
+    engines: {node: '>=0.6.0'}
+
   y18n@5.0.8:
     resolution: {integrity: sha512-0pfFzegeDWJHJIAmTLRP2DwHjdF5s7jo9tuztdQxAhINCdvS+3nGINqPd00AphqJR/0LhANUS6/+7SCb98YOfA==}
     engines: {node: '>=10'}
@@ -5688,6 +5704,8 @@ snapshots:
 
   '@types/verror@1.10.11':
     optional: true
+
+  '@types/xmldom@0.1.34': {}
 
   '@types/yauzl@2.10.3':
     dependencies:
@@ -8934,6 +8952,8 @@ snapshots:
   xmlbuilder@15.1.1: {}
 
   xmlhttprequest-ssl@2.1.2: {}
+
+  xpath@0.0.34: {}
 
   y18n@5.0.8: {}
 
