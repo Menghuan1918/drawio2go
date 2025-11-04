@@ -48,7 +48,7 @@ export default function ChatSidebar({ }: ChatSidebarProps) {
   // 使用 ref 来跟踪发送消息时的会话ID
   const sendingSessionIdRef = useRef<string | null>(null);
 
-  const { messages, sendMessage, status, error: chatError } = useChat({
+  const { messages, sendMessage, status, stop, error: chatError } = useChat({
     id: activeSession?.id || "default",
     messages: initialMessages,
     onFinish: ({ messages }) => {
@@ -133,6 +133,12 @@ export default function ChatSidebar({ }: ChatSidebarProps) {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     await submitMessage();
+  };
+
+  const handleCancel = () => {
+    if (isChatStreaming) {
+      stop();
+    }
   };
 
   const handleNewChat = () => {
@@ -311,6 +317,7 @@ export default function ChatSidebar({ }: ChatSidebarProps) {
         llmConfig={llmConfig}
         error={combinedError}
         onSubmit={handleSubmit}
+        onCancel={handleCancel}
         onNewChat={handleNewChat}
         onHistory={handleHistory}
         onVersionControl={handleVersionControl}

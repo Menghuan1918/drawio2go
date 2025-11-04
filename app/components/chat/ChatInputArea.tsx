@@ -13,6 +13,7 @@ interface ChatInputAreaProps {
   llmConfig: LLMConfig | null;
   error: string | null;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onCancel?: () => void;
   onNewChat: () => void;
   onHistory: () => void;
   onVersionControl: () => void;
@@ -27,6 +28,7 @@ export default function ChatInputArea({
   llmConfig,
   error,
   onSubmit,
+  onCancel,
   onNewChat,
   onHistory,
   onVersionControl,
@@ -65,6 +67,7 @@ export default function ChatInputArea({
         <ChatInputActions
           isSendDisabled={isSendDisabled}
           isChatStreaming={isChatStreaming}
+          onCancel={onCancel}
           onNewChat={onNewChat}
           onHistory={onHistory}
           onVersionControl={onVersionControl}

@@ -5,6 +5,7 @@ import { Button, TooltipContent, TooltipRoot } from "@heroui/react";
 interface ChatInputActionsProps {
   isSendDisabled: boolean;
   isChatStreaming: boolean;
+  onCancel?: () => void;
   onNewChat: () => void;
   onHistory: () => void;
   onVersionControl: () => void;
@@ -14,6 +15,7 @@ interface ChatInputActionsProps {
 export default function ChatInputActions({
   isSendDisabled,
   isChatStreaming,
+  onCancel,
   onNewChat,
   onHistory,
   onVersionControl,
@@ -137,26 +139,46 @@ export default function ChatInputActions({
         </TooltipRoot>
 
         <Button
-          type="submit"
+          type={isChatStreaming ? undefined : "submit"}
           variant="primary"
           size="sm"
-          isDisabled={isSendDisabled}
+          isDisabled={isChatStreaming ? false : isSendDisabled}
+          onPress={isChatStreaming ? onCancel : undefined}
           className="chat-send-button button-primary"
         >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <line x1="22" y1="2" x2="11" y2="13"></line>
-            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-          </svg>
-          {isChatStreaming ? "发送中..." : "发送"}
+          {isChatStreaming ? (
+            // 取消图标（X）
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="15" y1="9" x2="9" y2="15"></line>
+              <line x1="9" y1="9" x2="15" y2="15"></line>
+            </svg>
+          ) : (
+            // 发送图标
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          )}
+          {isChatStreaming ? "取消" : "发送"}
         </Button>
       </div>
     </div>
