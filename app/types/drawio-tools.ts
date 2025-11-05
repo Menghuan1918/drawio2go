@@ -59,9 +59,8 @@ export interface DrawioTextResult extends DrawioQueryResultBase {
 }
 
 export interface DrawioReadResult {
-  success: boolean;
-  results?: DrawioQueryResult[];
-  error?: string;
+  success: true;
+  results: DrawioQueryResult[];
 }
 
 /**
@@ -126,17 +125,7 @@ export interface DrawioEditBatchRequest {
   operations: DrawioEditOperation[];
 }
 
-export type DrawioEditBatchResult =
-  | DrawioEditBatchSuccess
-  | DrawioEditBatchError;
-
-export interface DrawioEditBatchSuccess {
+export interface DrawioEditBatchResult {
   success: true;
   operations_applied: number;
-}
-
-export interface DrawioEditBatchError {
-  success: false;
-  operation_index: number;
-  error: string;
 }

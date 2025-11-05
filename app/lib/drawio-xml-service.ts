@@ -24,72 +24,64 @@ import type {
 const BASE64_PREFIX = 'data:image/svg+xml;base64,';
 
 export async function executeDrawioRead(xpathExpression?: string): Promise<DrawioReadResult> {
-  try {
-    const xml = await fetchDiagramXml();
-    const document = parseXml(xml);
+  const xml = await fetchDiagramXml();
+  const document = parseXml(xml);
 
-    if (!xpathExpression || xpathExpression.trim() === '') {
-      const element = document.documentElement;
-      if (!element) {
-        return {
-          success: true,
-          results: [],
-        };
-      }
-      const rootResult = convertNodeToResult(element);
+  if (!xpathExpression || xpathExpression.trim() === '') {
+    const element = document.documentElement;
+    if (!element) {
       return {
         success: true,
-        results: rootResult ? [rootResult] : [],
+        results: [],
       };
     }
-
-    let evaluation;
-    try {
-      evaluation = select(xpathExpression, document);
-    } catch (error) {
-      return {
-        success: false,
-        error: `Invalid XPath expression: ${error instanceof Error ? error.message : String(error)}`,
-      };
-    }
-
-    if (!Array.isArray(evaluation)) {
-      const scalar = toScalarString(evaluation);
-      return {
-        success: true,
-        results:
-          scalar !== undefined
-            ? [
-                {
-                  type: 'text',
-                  value: scalar,
-                  matched_xpath: xpathExpression ?? '',
-                },
-              ]
-            : [],
-      };
-    }
-
-    const results: DrawioQueryResult[] = [];
-    for (const node of evaluation) {
-      if (isDomNode(node)) {
-        const converted = convertNodeToResult(node);
-        if (converted) {
-          results.push(converted);
-        }
-      }
-    }
-
+    const rootResult = convertNodeToResult(element);
     return {
       success: true,
-      results,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : '未知错误',
+      results: rootResult ? [rootResult] : [],
     };
   }
+
+  let evaluation;
+  try {
+    evaluation = select(xpathExpression, document);
+  } catch (error) {
+    throw new Error(
+      `Invalid XPath expression: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+
+  if (!Array.isArray(evaluation)) {
+    const scalar = toScalarString(evaluation);
+    return {
+      success: true,
+      results:
+        scalar !== undefined
+          ? [
+              {
+                type: 'text',
+                value: scalar,
+                matched_xpath: xpathExpression ?? '',
+              },
+            ]
+          : [],
+    };
+  }
+
+  const results: DrawioQueryResult[] = [];
+  for (const node of evaluation) {
+    if (isDomNode(node)) {
+      const converted = convertNodeToResult(node);
+      if (converted) {
+        results.push(converted);
+      }
+    }
+  }
+
+  return {
+    success: true,
+    results,
+  };
 }
 
 export async function executeDrawioEditBatch(
@@ -104,29 +96,17 @@ export async function executeDrawioEditBatch(
     };
   }
 
-  let document: Document;
-
-  try {
-    const xml = await fetchDiagramXml();
-    document = parseXml(xml);
-  } catch (error) {
-    return {
-      success: false,
-      operation_index: 0,
-      error: error instanceof Error ? error.message : '无法获取当前图表 XML',
-    };
-  }
+  const xml = await fetchDiagramXml();
+  const document = parseXml(xml);
 
   for (let index = 0; index < operations.length; index++) {
     const operation = operations[index];
     try {
       applyOperation(document, operation);
     } catch (error) {
-      return {
-        success: false,
-        operation_index: index,
-        error: error instanceof Error ? error.message : '未知错误',
-      };
+      throw new Error(
+        `操作 ${index} 失败: ${error instanceof Error ? error.message : '未知错误'}`
+      );
     }
   }
 
@@ -140,14 +120,11 @@ export async function executeDrawioEditBatch(
   )) as ReplaceXMLResult;
 
   if (!replaceResult?.success) {
-    return {
-      success: false,
-      operation_index: operations.length,
-      error:
-        replaceResult?.error ||
+    throw new Error(
+      replaceResult?.error ||
         replaceResult?.message ||
-        '前端替换 XML 失败',
-    };
+        '前端替换 XML 失败'
+    );
   }
 
   return {

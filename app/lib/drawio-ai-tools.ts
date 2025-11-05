@@ -136,16 +136,12 @@ export const drawioOverwriteTool = tool({
       const parseErrors = doc.getElementsByTagName('parsererror');
 
       if (parseErrors.length > 0) {
-        return {
-          success: false,
-          error: 'XML 格式无效: 解析失败',
-        };
+        throw new Error('XML 格式无效: 解析失败');
       }
     } catch (error) {
-      return {
-        success: false,
-        error: `XML 验证失败: ${error instanceof Error ? error.message : String(error)}`,
-      };
+      throw new Error(
+        `XML 验证失败: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
 
     // 调用前端工具覆写 XML
