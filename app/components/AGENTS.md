@@ -135,8 +135,13 @@ interface BottomBarProps {
   onSave?: () => void;            // 保存按钮
   onLoad?: () => void;            // 加载按钮
   activeSidebar?: "none" | "settings" | "chat"; // 当前激活的侧栏
+  selectionLabel?: string;        // GitHub 按钮右侧的状态文案（选区数量或降级提示）
 }
 ```
+
+#### 状态显示
+- **Electron 环境**: 底栏通过 IPC 注入脚本监听 DrawIO 选区变化，实时显示 `选中了X个对象`
+- **浏览器环境**: 沙箱限制导致无法获取选区，底栏展示 `网页无法使用该功能`
 
 ## HeroUI v3 使用规范
 

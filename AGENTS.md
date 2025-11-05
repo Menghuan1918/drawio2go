@@ -119,6 +119,15 @@ pnpm run electron:build   # 构建 Electron 应用 (输出到 dist/)
   - `app/lib/tool-executor.ts` - 工具路由
   - `app/hooks/useDrawioSocket.ts` - 前端 Hook
 
+### 2025-11 底部选区状态显示
+- **Electron**: 主进程向 DrawIO iframe 注入监听器，实时通过 postMessage 回传选中对象数量，底部工具栏在 GitHub 按钮右侧展示为 `选中了X个对象`
+- **Web**: 受浏览器沙箱限制，底部状态文案显示 `网页无法使用该功能`
+- **相关文件**:
+  - `electron/main.js`、`electron/preload.js` - 注入与 IPC 通道
+  - `app/components/DrawioEditorNative.tsx` - 处理选区消息
+  - `app/components/BottomBar.tsx` - 显示状态文案
+  - `app/page.tsx` - 组合状态数据
+
 ### 2025-11 聊天组件模块化架构
 - 将大型 `ChatSidebar.tsx` 重构为 12 个独立组件
 - 统一导出通过 `app/components/chat/index.ts`
@@ -135,4 +144,4 @@ pnpm run electron:build   # 构建 Electron 应用 (输出到 dist/)
 
 ---
 
-*最后更新: 2025-11-04*
+*最后更新: 2025-11-05*

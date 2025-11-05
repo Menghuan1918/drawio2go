@@ -8,6 +8,7 @@ interface BottomBarProps {
   onSave?: () => void;
   onLoad?: () => void;
   activeSidebar?: "none" | "settings" | "chat";
+  selectionLabel?: string;
 }
 
 export default function BottomBar({
@@ -16,6 +17,7 @@ export default function BottomBar({
   onSave,
   onLoad,
   activeSidebar = "none",
+  selectionLabel,
 }: BottomBarProps) {
   const handleGithubClick = () => {
     // 在 Electron 中打开外部链接
@@ -45,6 +47,12 @@ export default function BottomBar({
         </svg>
         Github
       </Button>
+
+      {selectionLabel && (
+        <div className="ml-3 text-sm text-white/80 whitespace-nowrap">
+          {selectionLabel}
+        </div>
+      )}
 
       <div style={{ flex: 1 }}></div>
 

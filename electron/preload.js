@@ -20,4 +20,7 @@ contextBridge.exposeInMainWorld("electron", {
   showOpenDialog: (options) => ipcRenderer.invoke("show-open-dialog", options),
   writeFile: (filePath, data) => ipcRenderer.invoke("write-file", filePath, data),
   readFile: (filePath) => ipcRenderer.invoke("read-file", filePath),
+
+  // 启用 DrawIO 选区监听
+  enableSelectionWatcher: () => ipcRenderer.invoke("enable-selection-watcher"),
 });

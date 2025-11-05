@@ -5,9 +5,10 @@ import { useRef, useState, useEffect, useCallback } from "react";
 interface DrawioEditorNativeProps {
   initialXml?: string;
   onSave?: (xml: string) => void;
+  onSelectionChange?: (count: number) => void;
 }
 
-export default function DrawioEditorNative({ initialXml, onSave }: DrawioEditorNativeProps) {
+export default function DrawioEditorNative({ initialXml, onSave, onSelectionChange }: DrawioEditorNativeProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [isReady, setIsReady] = useState(false);
   const previousXmlRef = useRef<string | undefined>(initialXml);
@@ -69,6 +70,9 @@ export default function DrawioEditorNative({ initialXml, onSave }: DrawioEditorN
           }
         } else if (data.event === 'load') {
           console.log("✅ DrawIO 已加载内容");
+        } else if (data.event === 'drawio-selection') {
+          const count = typeof data.count === 'number' ? data.count : Number(data.count ?? 0) || 0;
+          onSelectionChange?.(count);
         }
       } catch (error) {
         console.error("❌ 解析消息失败:", error);
@@ -101,6 +105,30 @@ export default function DrawioEditorNative({ initialXml, onSave }: DrawioEditorN
   const handleIframeLoad = () => {
     console.log("🌐 iframe onLoad 事件触发");
   };
+
+  useEffect(() => {
+    if (!isReady) {
+      return;
+    }
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const enableWatcher = window.electron?.enableSelectionWatcher;
+
+    if (enableWatcher) {
+      enableWatcher()
+        .then((result) => {
+          if (!result?.success) {
+            console.warn("⚠️ 启用 DrawIO 选区监听失败:", result?.message);
+          }
+        })
+        .catch((error) => {
+          console.error("❌ 启用 DrawIO 选区监听异常:", error);
+        });
+    }
+  }, [isReady]);
 
   return (
     <div className="drawio-container" style={{ width: '100%', height: '100%' }}>

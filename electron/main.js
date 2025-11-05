@@ -230,3 +230,125 @@ ipcMain.handle("read-file", async (event, filePath) => {
     throw error;
   }
 });
+
+// IPC 处理：启用 DrawIO 选区监听
+ipcMain.handle("enable-selection-watcher", async () => {
+  if (!mainWindow) {
+    return { success: false, message: "窗口尚未就绪" };
+  }
+
+  try {
+    const mainFrame = mainWindow.webContents?.mainFrame;
+    const drawioFrame = mainFrame?.frames?.find((frame) =>
+      frame.url?.includes("embed.diagrams.net")
+    );
+
+    if (!drawioFrame) {
+      return { success: false, message: "未找到 DrawIO 编辑器 iframe" };
+    }
+
+    const injectionResult = await drawioFrame.executeJavaScript(
+      `(() => {
+        if (window.__drawioSelectionWatcherPromise) {
+          return window.__drawioSelectionWatcherPromise;
+        }
+
+        window.__drawioSelectionWatcherPromise = new Promise((resolve, reject) => {
+          const MAX_ATTEMPTS = 50;
+          let attempts = 0;
+
+          const notify = (graph) => {
+            try {
+              const cells = graph.getSelectionCells();
+              let count = 0;
+
+              if (Array.isArray(cells)) {
+                count = cells.filter(Boolean).length;
+              } else if (cells) {
+                count = 1;
+              }
+
+              window.parent?.postMessage(
+                JSON.stringify({ event: "drawio-selection", count }),
+                "*"
+              );
+            } catch (error) {
+              console.error("DrawIO selection notify error", error);
+            }
+          };
+
+          const install = () => {
+            attempts += 1;
+
+            if (window.Draw && typeof window.Draw.loadPlugin === "function") {
+              try {
+                window.Draw.loadPlugin((ui) => {
+                  try {
+                    const graph = ui?.editor?.graph;
+
+                    if (!graph) {
+                      resolve({ success: false, message: "Graph 未准备好" });
+                      return;
+                    }
+
+                    if (graph.__selectionWatcherInstalled) {
+                      resolve({ success: true, message: "already" });
+                      notify(graph);
+                      return;
+                    }
+
+                    graph.__selectionWatcherInstalled = true;
+
+                    const selectionModel = graph.getSelectionModel?.();
+
+                    if (selectionModel?.addListener) {
+                      selectionModel.addListener("change", () => notify(graph));
+                    }
+
+                    if (ui?.editor?.addListener) {
+                      ui.editor.addListener("selectionChanged", () => notify(graph));
+                    }
+
+                    notify(graph);
+                    resolve({ success: true });
+                  } catch (pluginError) {
+                    reject(pluginError);
+                  }
+                });
+              } catch (loadError) {
+                reject(loadError);
+              }
+              return;
+            }
+
+            if (attempts >= MAX_ATTEMPTS) {
+              reject(new Error("Draw.loadPlugin 未在预期时间内就绪"));
+              return;
+            }
+
+            setTimeout(install, 200);
+          };
+
+          install();
+        });
+
+        return window.__drawioSelectionWatcherPromise;
+      })()`
+    );
+
+    if (injectionResult?.success) {
+      return { success: true };
+    }
+
+    return {
+      success: false,
+      message: injectionResult?.message || "注入结果未知",
+    };
+  } catch (error) {
+    console.error("启用 DrawIO 选区监听失败:", error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "执行脚本失败",
+    };
+  }
+});

@@ -42,6 +42,7 @@ declare global {
       }) => Promise<string[] | null>;
       writeFile: (filePath: string, data: string) => Promise<{ success: boolean; error?: string }>;
       readFile: (filePath: string) => Promise<string>;
+      enableSelectionWatcher: () => Promise<{ success: boolean; message?: string }>;
     };
   }
 }

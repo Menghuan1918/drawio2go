@@ -13,6 +13,8 @@ export default function Home() {
   const [currentXml, setCurrentXml] = useState<string>("");
   const [settings, setSettings] = useState({ defaultPath: "" });
   const [activeSidebar, setActiveSidebar] = useState<"none" | "settings" | "chat">("none");
+  const [selectionCount, setSelectionCount] = useState<number>(0);
+  const [isElectronEnv, setIsElectronEnv] = useState<boolean>(false);
 
   // 初始化 Socket.IO 连接
   const { isConnected } = useDrawioSocket();
@@ -20,6 +22,8 @@ export default function Home() {
   // 加载保存的图表
   useEffect(() => {
     if (typeof window !== "undefined") {
+      setIsElectronEnv(Boolean(window.electron));
+
       const savedXml = localStorage.getItem("currentDiagram");
       if (savedXml) {
         setDiagramXml(savedXml);
@@ -160,6 +164,7 @@ export default function Home() {
         <DrawioEditorNative
           initialXml={diagramXml}
           onSave={handleAutoSave}
+          onSelectionChange={setSelectionCount}
         />
       </div>
 
@@ -178,6 +183,7 @@ export default function Home() {
         onSave={handleManualSave}
         onLoad={handleLoad}
         activeSidebar={activeSidebar}
+        selectionLabel={isElectronEnv ? `选中了${selectionCount}个对象` : "网页无法使用该功能"}
       />
     </main>
   );
