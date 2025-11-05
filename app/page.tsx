@@ -15,6 +15,7 @@ export default function Home() {
   const [activeSidebar, setActiveSidebar] = useState<"none" | "settings" | "chat">("none");
   const [selectionCount, setSelectionCount] = useState<number>(0);
   const [isElectronEnv, setIsElectronEnv] = useState<boolean>(false);
+  const [forceReload, setForceReload] = useState<boolean>(false); // 控制是否强制完全重载
 
   // 初始化 Socket.IO 连接
   const { isConnected } = useDrawioSocket();
@@ -36,10 +37,13 @@ export default function Home() {
       }
 
       // 监听 DrawIO XML 更新事件（由工具函数触发）
+      // 注意：这里只更新 React 状态，实际的 DrawIO 编辑器更新在 DrawioEditorNative 组件内部完成
+      // DrawioEditorNative 会监听 initialXml prop 的变化，并使用 merge 动作增量更新，保留编辑状态
       const handleXmlUpdate = (event: Event) => {
         const customEvent = event as CustomEvent<{ xml: string }>;
         if (customEvent.detail?.xml) {
-          console.log("🔄 收到 DrawIO 工具触发的 XML 更新事件");
+          console.log("🔄 收到 DrawIO 工具触发的 XML 更新事件，开始更新状态");
+          console.log("🔄 新 XML 长度:", customEvent.detail.xml.length);
           setDiagramXml(customEvent.detail.xml);
           setCurrentXml(customEvent.detail.xml);
         }
@@ -96,9 +100,13 @@ export default function Home() {
     if (typeof window !== "undefined" && window.electron) {
       const result = await window.electron.loadDiagram();
       if (result.success && result.xml) {
+        console.log("📂 用户手动加载文件，触发完全重载");
+        setForceReload(true); // 触发完全重载
         setDiagramXml(result.xml);
         setCurrentXml(result.xml);
         saveDrawioXML(result.xml);
+        // 重置 forceReload 标志
+        setTimeout(() => setForceReload(false), 100);
       } else if (result.message !== "用户取消打开") {
         alert(`加载失败: ${result.message}`);
       }
@@ -113,9 +121,13 @@ export default function Home() {
           const reader = new FileReader();
           reader.onload = (event) => {
             const xml = event.target?.result as string;
+            console.log("📂 用户手动加载文件，触发完全重载");
+            setForceReload(true); // 触发完全重载
             setDiagramXml(xml);
             setCurrentXml(xml);
             saveDrawioXML(xml);
+            // 重置 forceReload 标志
+            setTimeout(() => setForceReload(false), 100);
           };
           reader.readAsText(file);
         }
@@ -165,6 +177,7 @@ export default function Home() {
           initialXml={diagramXml}
           onSave={handleAutoSave}
           onSelectionChange={setSelectionCount}
+          forceReload={forceReload}
         />
       </div>
 

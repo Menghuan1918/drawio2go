@@ -74,7 +74,6 @@ server.js              # Socket.IO 服务器 + Next.js 集成
 
 ### 6. 检查测试
 - 主动调用`pnpm lint`获得语法错误检查信息，避免在编译时才处理语法错误
-- 完成相关任务后，使用`web-function-tester`子代理进行页面功能测试
 
 ## 开发命令
 

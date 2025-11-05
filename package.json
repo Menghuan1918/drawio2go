@@ -63,6 +63,11 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "electron"
+    ],
+    "ignoredBuiltDependencies": [
+      "electron",
+      "sharp",
+      "unrs-resolver"
     ]
   },
   "build": {
