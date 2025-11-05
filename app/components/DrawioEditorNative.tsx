@@ -5,12 +5,22 @@ import { useRef, useState, useEffect, useCallback } from "react";
 interface DrawioEditorNativeProps {
   initialXml?: string;
   onSave?: (xml: string) => void;
+  onSelectionChange?: (count: number) => void;
 }
 
-export default function DrawioEditorNative({ initialXml, onSave }: DrawioEditorNativeProps) {
+export default function DrawioEditorNative({
+  initialXml,
+  onSave,
+  onSelectionChange,
+}: DrawioEditorNativeProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [isReady, setIsReady] = useState(false);
   const previousXmlRef = useRef<string | undefined>(initialXml);
+  const selectionChangeRef = useRef(onSelectionChange);
+
+  useEffect(() => {
+    selectionChangeRef.current = onSelectionChange;
+  }, [onSelectionChange]);
 
   // 构建 DrawIO URL
   const drawioUrl = `https://embed.diagrams.net/?embed=1&proto=json&spin=1&ui=kennedy&libraries=1&saveAndExit=1&noExitBtn=1`;
@@ -47,6 +57,10 @@ export default function DrawioEditorNative({ initialXml, onSave }: DrawioEditorN
           console.log("✅ DrawIO iframe 初始化成功！");
           setIsReady(true);
 
+          if (selectionChangeRef.current) {
+            selectionChangeRef.current(0);
+          }
+
           // 加载初始数据（跳过 ready 检查，因为此时状态还未更新）
           loadDiagram(initialXml, true);
         } else if (data.event === 'autosave' || data.event === 'save') {
@@ -69,6 +83,16 @@ export default function DrawioEditorNative({ initialXml, onSave }: DrawioEditorN
           }
         } else if (data.event === 'load') {
           console.log("✅ DrawIO 已加载内容");
+        } else if (data.event === 'selectionChanged') {
+          const count = Array.isArray(data.cells)
+            ? data.cells.filter(Boolean).length
+            : typeof data.count === 'number'
+              ? data.count
+              : 0;
+
+          if (selectionChangeRef.current) {
+            selectionChangeRef.current(count);
+          }
         }
       } catch (error) {
         console.error("❌ 解析消息失败:", error);

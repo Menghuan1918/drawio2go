@@ -8,6 +8,7 @@ interface BottomBarProps {
   onSave?: () => void;
   onLoad?: () => void;
   activeSidebar?: "none" | "settings" | "chat";
+  selectionCount?: number;
 }
 
 export default function BottomBar({
@@ -16,6 +17,7 @@ export default function BottomBar({
   onSave,
   onLoad,
   activeSidebar = "none",
+  selectionCount = 0,
 }: BottomBarProps) {
   const handleGithubClick = () => {
     // 在 Electron 中打开外部链接
@@ -29,6 +31,8 @@ export default function BottomBar({
 
   return (
     <div className="bottom-bar">
+      <div className="bottom-bar-selection">选中了 {selectionCount} 个对象</div>
+
       <Button
         variant="secondary"
         size="md"

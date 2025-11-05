@@ -13,6 +13,7 @@ export default function Home() {
   const [currentXml, setCurrentXml] = useState<string>("");
   const [settings, setSettings] = useState({ defaultPath: "" });
   const [activeSidebar, setActiveSidebar] = useState<"none" | "settings" | "chat">("none");
+  const [selectionCount, setSelectionCount] = useState(0);
 
   // 初始化 Socket.IO 连接
   const { isConnected } = useDrawioSocket();
@@ -160,6 +161,7 @@ export default function Home() {
         <DrawioEditorNative
           initialXml={diagramXml}
           onSave={handleAutoSave}
+          onSelectionChange={setSelectionCount}
         />
       </div>
 
@@ -178,6 +180,7 @@ export default function Home() {
         onSave={handleManualSave}
         onLoad={handleLoad}
         activeSidebar={activeSidebar}
+        selectionCount={selectionCount}
       />
     </main>
   );
