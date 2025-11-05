@@ -53,7 +53,7 @@ export default function Home() {
   const handleAutoSave = (xml: string) => {
     setCurrentXml(xml);
     if (typeof window !== "undefined") {
-      saveDrawioXML(xml);
+      saveDrawioXML(xml, { notify: false });
     }
   };
 

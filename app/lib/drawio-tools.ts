@@ -3,7 +3,7 @@
  *
  * 负责在浏览器环境下管理图表 XML 的持久化与事件分发。
  * 工具函数会在写入 localStorage 前自动处理 base64 编码的内容，
- * 并在更新后通过自定义事件通知编辑器重新加载。
+ * 默认情况下会在更新后通过自定义事件通知编辑器重新加载。
  */
 
 import type {
@@ -11,6 +11,15 @@ import type {
   ReplaceXMLResult,
   XMLValidationResult,
 } from "../types/drawio-tools";
+
+interface SaveDrawioXMLOptions {
+  /**
+   * 是否派发 XML 更新事件，通知编辑器重新加载。
+   *
+   * 默认开启，仅在自动保存等场景下关闭以避免不必要的重载。
+   */
+  notify?: boolean;
+}
 
 /**
  * localStorage 中存储 DrawIO XML 的键名
@@ -79,18 +88,27 @@ function decodeBase64XML(xml: string): string {
 /**
  * 保存 XML 到 localStorage（自动解码 base64）
  *
- * 统一的保存入口，确保 localStorage 中永远存储解码后的纯 XML
+ * 统一的保存入口，确保 localStorage 中永远存储解码后的纯 XML。
+ * 默认会派发 XML 更新事件，可通过传入 `notify: false` 静默更新。
  *
  * @param xml - XML 内容（可能包含 base64 编码）
+ * @param options - 保存行为的配置项
  */
-export function saveDrawioXML(xml: string): void {
+export function saveDrawioXML(
+  xml: string,
+  options: SaveDrawioXMLOptions = {}
+): void {
   if (typeof window === "undefined") {
     throw new Error("saveDrawioXML 只能在浏览器环境中使用");
   }
 
+  const { notify = true } = options;
   const decodedXml = decodeBase64XML(xml);
   localStorage.setItem(STORAGE_KEY, decodedXml);
-  triggerUpdateEvent(decodedXml);
+
+  if (notify) {
+    triggerUpdateEvent(decodedXml);
+  }
 }
 
 /**
