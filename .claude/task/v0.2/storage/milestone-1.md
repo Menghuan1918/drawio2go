@@ -1,7 +1,7 @@
 # 里程碑 1：类型定义与接口设计
 
-**状态**：⏳ 待开始
-**预计耗时**：30 分钟
+**状态**：✅ 已完成
+**实际耗时**：待记录
 **依赖**：无
 
 ## 目标
@@ -10,7 +10,7 @@
 ## 任务清单
 
 ### 1. 创建常量定义文件
-- [ ] 创建 `app/lib/storage/constants.ts`：
+- [x] 创建 `app/lib/storage/constants.ts`：
   ```typescript
   // 默认常量（临时实现）
   export const DEFAULT_PROJECT_UUID = 'default';
@@ -25,7 +25,7 @@
   ```
 
 ### 2. 创建类型定义文件
-- [ ] 创建 `app/lib/storage/types.ts`，定义所有数据模型：
+- [x] 创建 `app/lib/storage/types.ts`，定义所有数据模型：
 
 #### Settings 类型
 ```typescript
@@ -150,7 +150,7 @@ export type CreateMessageInput = Omit<Message, 'created_at'>;
 ```
 
 ### 3. 创建抽象接口文件
-- [ ] 创建 `app/lib/storage/adapter.ts`，定义 StorageAdapter 接口：
+- [x] 创建 `app/lib/storage/adapter.ts`，定义 StorageAdapter 接口：
 
 ```typescript
 import type {
@@ -355,73 +355,79 @@ export interface StorageAdapter {
 ```
 
 ### 4. 添加全局类型声明
-- [ ] 修改 `app/types/global.d.ts`，添加 Electron 存储接口类型：
+- [x] 修改 `app/types/global.d.ts`，添加 Electron 存储接口类型：
 
 ```typescript
-interface Window {
-  electron?: {
-    // ... 现有的 IPC 接口
-  };
+// 添加到现有的 global.d.ts 中：
+import type {
+  Setting,
+  Project,
+  CreateProjectInput,
+  UpdateProjectInput,
+  XMLVersion,
+  CreateXMLVersionInput,
+  Conversation,
+  CreateConversationInput,
+  UpdateConversationInput,
+  Message,
+  CreateMessageInput,
+} from '@/lib/storage/types';
 
-  /**
-   * Electron 存储 IPC 接口
-   * 仅在 Electron 环境下可用
-   */
-  electronStorage?: {
-    // 初始化
-    initialize: () => Promise<void>;
+// 在 Window 接口中添加：
+electronStorage?: {
+  // 初始化
+  initialize: () => Promise<void>;
 
-    // Settings
-    getSetting: (key: string) => Promise<string | null>;
-    setSetting: (key: string, value: string) => Promise<void>;
-    deleteSetting: (key: string) => Promise<void>;
-    getAllSettings: () => Promise<Array<{ key: string; value: string; updated_at: number }>>;
+  // Settings
+  getSetting: (key: string) => Promise<string | null>;
+  setSetting: (key: string, value: string) => Promise<void>;
+  deleteSetting: (key: string) => Promise<void>;
+  getAllSettings: () => Promise<Setting[]>;
 
-    // Projects
-    getProject: (uuid: string) => Promise<any>;
-    createProject: (project: any) => Promise<any>;
-    updateProject: (uuid: string, updates: any) => Promise<void>;
-    deleteProject: (uuid: string) => Promise<void>;
-    getAllProjects: () => Promise<any[]>;
+  // Projects
+  getProject: (uuid: string) => Promise<Project | null>;
+  createProject: (project: CreateProjectInput) => Promise<Project>;
+  updateProject: (uuid: string, updates: UpdateProjectInput) => Promise<void>;
+  deleteProject: (uuid: string) => Promise<void>;
+  getAllProjects: () => Promise<Project[]>;
 
-    // XMLVersions
-    getXMLVersion: (id: number) => Promise<any>;
-    createXMLVersion: (version: any) => Promise<any>;
-    getXMLVersionsByProject: (projectUuid: string) => Promise<any[]>;
-    deleteXMLVersion: (id: number) => Promise<void>;
+  // XMLVersions
+  getXMLVersion: (id: number) => Promise<XMLVersion | null>;
+  createXMLVersion: (version: CreateXMLVersionInput) => Promise<XMLVersion>;
+  getXMLVersionsByProject: (projectUuid: string) => Promise<XMLVersion[]>;
+  deleteXMLVersion: (id: number) => Promise<void>;
 
-    // Conversations
-    getConversation: (id: string) => Promise<any>;
-    createConversation: (conversation: any) => Promise<any>;
-    updateConversation: (id: string, updates: any) => Promise<void>;
-    deleteConversation: (id: string) => Promise<void>;
-    getConversationsByProject: (projectUuid: string) => Promise<any[]>;
-    getConversationsByXMLVersion: (xmlVersionId: number) => Promise<any[]>;
+  // Conversations
+  getConversation: (id: string) => Promise<Conversation | null>;
+  createConversation: (conversation: CreateConversationInput) => Promise<Conversation>;
+  updateConversation: (id: string, updates: UpdateConversationInput) => Promise<void>;
+  deleteConversation: (id: string) => Promise<void>;
+  getConversationsByProject: (projectUuid: string) => Promise<Conversation[]>;
+  getConversationsByXMLVersion: (xmlVersionId: number) => Promise<Conversation[]>;
 
-    // Messages
-    getMessagesByConversation: (conversationId: string) => Promise<any[]>;
-    createMessage: (message: any) => Promise<any>;
-    deleteMessage: (id: string) => Promise<void>;
-    createMessages: (messages: any[]) => Promise<any[]>;
-  };
-}
+  // Messages
+  getMessagesByConversation: (conversationId: string) => Promise<Message[]>;
+  createMessage: (message: CreateMessageInput) => Promise<Message>;
+  deleteMessage: (id: string) => Promise<void>;
+  createMessages: (messages: CreateMessageInput[]) => Promise<Message[]>;
+};
 ```
 
 ## 验收标准
-- [ ] `constants.ts` 定义所有必要常量
-- [ ] `types.ts` 包含 5 张表的完整类型定义
-- [ ] `types.ts` 包含所有 Input 类型（Create/Update）
-- [ ] `adapter.ts` 定义完整的 StorageAdapter 接口
-- [ ] `adapter.ts` 包含约 25+ 个方法签名
-- [ ] `global.d.ts` 添加 Window.electronStorage 类型声明
-- [ ] 所有类型包含 JSDoc 注释
-- [ ] 编译无 TypeScript 错误
+- [x] `constants.ts` 定义所有必要常量
+- [x] `types.ts` 包含 5 张表的完整类型定义
+- [x] `types.ts` 包含所有 Input 类型（Create/Update）
+- [x] `adapter.ts` 定义完整的 StorageAdapter 接口
+- [x] `adapter.ts` 包含约 25+ 个方法签名
+- [x] `global.d.ts` 添加 Window.electronStorage 类型声明
+- [x] 所有类型包含 JSDoc 注释
+- [x] 编译无 TypeScript 错误
 
 ## 测试步骤
-1. 创建所有文件
-2. 运行 `pnpm run build` 或 `pnpm tsc` 检查类型
-3. 确认无编译错误
-4. 检查 IDE 类型提示是否正常
+1. ✅ 创建所有文件
+2. ✅ 运行 `pnpm run build` 或 `pnpm tsc` 检查类型
+3. ✅ 确认无编译错误
+4. ✅ 检查 IDE 类型提示是否正常
 
 ## 设计要点
 
