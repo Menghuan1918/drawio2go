@@ -144,7 +144,7 @@ export interface DrawioSelectionInfo {
 export interface DrawioCellInfo {
   id: string;
   type: 'vertex' | 'edge' | 'unknown';
-  value: any;
+  value: unknown;
   style: string;
   label: string;
   geometry?: {

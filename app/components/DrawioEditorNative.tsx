@@ -10,6 +10,21 @@ interface DrawioEditorNativeProps {
   forceReload?: boolean; // 强制完全重载（用于用户手动加载文件等场景）
 }
 
+// 从 iframe 接收的原始 DrawIO cell 数据类型
+interface RawDrawioCell {
+  id?: string;
+  type?: string;
+  value?: unknown;
+  style?: string;
+  label?: string;
+  geometry?: {
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+  };
+}
+
 // 简化的防抖函数，专门用于 XML 更新场景
 // 通过具体的类型定义避免使用 any
 function debounceXmlUpdate(
@@ -132,7 +147,7 @@ export default function DrawioEditorNative({ initialXml, onSave, onSelectionChan
 
           const selectionInfo: DrawioSelectionInfo = {
             count,
-            cells: cells.map((cell: any) => ({
+            cells: cells.map((cell: RawDrawioCell) => ({
               id: cell.id || '',
               type: cell.type || 'unknown',
               value: cell.value,
