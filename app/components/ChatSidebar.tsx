@@ -20,7 +20,7 @@ import type {
   Message,
   CreateMessageInput,
 } from "@/app/lib/storage";
-import { DEFAULT_LLM_CONFIG, normalizeLLMConfig } from "@/app/lib/llm-config";
+import { DEFAULT_LLM_CONFIG, normalizeLLMConfig } from "@/app/lib/config-utils";
 
 // 导入拆分后的组件
 import ChatSessionHeader from "./chat/ChatSessionHeader";
@@ -540,20 +540,36 @@ export default function ChatSidebar({}: ChatSidebarProps) {
     alert("导入功能暂未实现，将在后续版本中支持");
     return;
 
-    // TODO: 实现导入逻辑
-    // 1. 读取 JSON 文件
-    // 2. 解析为 Conversation + Message
-    // 3. 保存到新存储系统
+    // TODO: 实现聊天历史导入功能
+    // 功能范围:
+    // 1. 支持从 JSON 文件导入会话历史
+    // 2. 读取并验证文件格式（需定义标准导入格式）
+    // 3. 解析为 Conversation 和 Message 对象
+    // 4. 保存到统一存储系统
+    // 5. 处理导入冲突（ID 重复、时间戳等）
+    // 6. 提供导入进度反馈
   };
 
   const handleVersionControl = () => {
     console.log("版本管理");
-    // TODO: 打开版本管理界面
+    // TODO: 实现 DrawIO XML 版本管理界面
+    // 功能范围:
+    // 1. 显示当前项目的所有 XML 版本历史
+    // 2. 支持版本比对和预览
+    // 3. 支持回滚到历史版本
+    // 4. 显示版本元数据（创建时间、会话关联等）
+    // 5. 支持版本导出和备份
   };
 
   const handleFileUpload = () => {
     console.log("文件上传");
-    // TODO: 打开文件选择器
+    // TODO: 实现文件上传功能
+    // 功能范围:
+    // 1. 支持上传图片作为聊天上下文
+    // 2. 支持上传 DrawIO XML 文件进行导入
+    // 3. 文件类型验证和大小限制
+    // 4. 上传进度显示
+    // 5. 与当前会话关联
   };
 
   const handleSessionSelect = async (sessionId: string) => {

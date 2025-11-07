@@ -10,7 +10,8 @@
 - **drawio-xml-service.ts**: 服务端 XML 转接层，负责 XPath 查询与批量编辑
 - **drawio-ai-tools.ts**: AI 工具定义（`drawio_read` / `drawio_edit_batch`）
 - **tool-executor.ts**: 工具执行路由器，通过 Socket.IO 与前端通讯
-- ~~llm-config.ts~~: LLM 配置工具（已迁移到 hooks）
+- **config-utils.ts**: LLM 配置规范化工具（默认值、类型校验、URL 规范化）
+- **storage/**: 统一存储抽象层（适配器模式）
 
 ## DrawIO Socket.IO 调用流程
 
@@ -54,12 +55,227 @@
 - 使用统一存储抽象层（Electron: SQLite, Web: IndexedDB）
 - 保存时自动解码 base64，并通过 `drawio-xml-updated` 自定义事件通知编辑器
 - 提供 `getDrawioXML()`、`replaceDrawioXML()`、`saveDrawioXML()` 三个接口
-- 固定使用默认项目（uuid="default"）和版本（semantic_version="latest"）
+- 当前采用单项目模式（uuid="default"）和最新版本策略（semantic_version="latest"）
+  - 单项目模式：简化用户体验，所有数据存储在 "default" 项目下
+  - 最新版本策略：每次保存自动删除旧版本，仅保留最新版本
+  - 详见 `storage/constants.ts` 中的设计说明
+
+## 配置规范化工具（`config-utils.ts`）
+
+提供 LLM 配置的规范化和验证功能：
+
+- **默认常量**:
+  - `DEFAULT_SYSTEM_PROMPT`: 默认系统提示词（DrawIO XML 专用）
+  - `DEFAULT_API_URL`: 默认 API 地址
+  - `DEFAULT_LLM_CONFIG`: 完整的默认配置对象
+
+- **核心函数**:
+  - `isProviderType()`: 验证 provider 类型是否合法
+  - `normalizeApiUrl()`: 规范化 API URL（自动添加 /v1 后缀）
+  - `normalizeLLMConfig()`: 规范化完整配置（设置默认值、验证类型）
+
+- **使用场景**:
+  - API 路由中规范化用户输入
+  - 存储设置时自动验证和补全
+  - 确保配置格式一致性
+
+## 统一存储抽象层（`storage/`）
+
+### 设计原则
+
+- **适配器模式**: 定义统一存储接口，支持多种存储后端
+- **环境适配**: 运行时检测环境，自动选择合适的存储实现
+  - **Electron**: SQLite 数据库（通过 better-sqlite3）
+  - **Web**: IndexedDB（通过 idb）
+- **类型安全**: 完整 TypeScript 类型定义
+- **表结构统一**: 所有环境使用相同的表结构和字段命名
+
+### 文件结构
+
+- **adapter.ts**: 抽象基类 `StorageAdapter`，定义统一接口
+- **sqlite-storage.ts**: SQLite 实现（Electron 环境）
+- **indexeddb-storage.ts**: IndexedDB 实现（Web 环境）
+- **storage-factory.ts**: 存储工厂，运行时创建存储实例
+- **types.ts**: 存储层类型定义
+- **constants.ts**: 常量定义（表名、默认值等）
+- **index.ts**: 统一导出
+
+### 表结构
+
+#### Projects 表
+
+项目元数据表，管理 DrawIO 项目信息
+
+```typescript
+interface Project {
+  uuid: string; // 主键，唯一标识符
+  name: string; // 项目名称
+  description?: string; // 项目描述
+  created_at: number; // 创建时间戳
+  updated_at: number; // 更新时间戳
+}
+```
+
+#### XMLVersions 表
+
+XML 版本管理表，关联项目存储历史版本
+
+```typescript
+interface XMLVersion {
+  id?: number; // 自增主键（SQLite）/ 自动生成（IndexedDB）
+  project_uuid: string; // 关联项目
+  semantic_version: string; // 语义化版本号（如 "v1.0.0" 或 "latest"）
+  xml_content: string; // XML 内容
+  created_at: number; // 创建时间戳
+}
+```
+
+#### Conversations 表
+
+聊天会话表，存储 AI 对话历史
+
+```typescript
+interface Conversation {
+  id: string; // 会话 ID
+  title: string; // 会话标题
+  messages: string; // JSON 序列化的消息数组
+  created_at: number; // 创建时间戳
+  updated_at: number; // 更新时间戳
+}
+```
+
+#### Settings 表
+
+应用设置表，存储全局配置
+
+```typescript
+interface Settings {
+  key: string; // 设置键（主键）
+  value: string; // JSON 序列化的设置值
+  updated_at: number; // 更新时间戳
+}
+```
+
+### 核心 API
+
+所有存储实现都继承自 `StorageAdapter` 并实现以下方法：
+
+```typescript
+abstract class StorageAdapter {
+  // 初始化存储
+  abstract initialize(): Promise<void>;
+
+  // Projects 表操作
+  abstract getProject(uuid: string): Promise<Project | null>;
+  abstract getAllProjects(): Promise<Project[]>;
+  abstract saveProject(project: Project): Promise<void>;
+  abstract deleteProject(uuid: string): Promise<void>;
+
+  // XMLVersions 表操作
+  abstract getXMLVersion(
+    project_uuid: string,
+    version: string,
+  ): Promise<XMLVersion | null>;
+  abstract getLatestXML(project_uuid: string): Promise<XMLVersion | null>;
+  abstract saveXMLVersion(version: XMLVersion): Promise<void>;
+  abstract deleteXMLVersion(id: number): Promise<void>;
+
+  // Conversations 表操作
+  abstract getConversation(id: string): Promise<Conversation | null>;
+  abstract getAllConversations(): Promise<Conversation[]>;
+  abstract saveConversation(conversation: Conversation): Promise<void>;
+  abstract deleteConversation(id: string): Promise<void>;
+  abstract clearAllConversations(): Promise<void>;
+
+  // Settings 表操作
+  abstract getSetting(key: string): Promise<string | null>;
+  abstract saveSetting(key: string, value: string): Promise<void>;
+  abstract deleteSetting(key: string): Promise<void>;
+}
+```
+
+### 使用方式
+
+#### 1. 通过工厂创建实例
+
+```typescript
+import { createStorage } from "@/lib/storage";
+
+const storage = await createStorage();
+await storage.initialize();
+```
+
+#### 2. 推荐通过 Hooks 使用
+
+```typescript
+import { useStorageSettings, useStorageProjects } from "@/hooks";
+
+// Hooks 内部自动处理存储实例创建和初始化
+const { settings, saveSettings } = useStorageSettings();
+```
+
+### SQLite 实现细节
+
+- **数据库文件**: `electron/storage/drawio2go.db`
+- **同步 API**: 使用 better-sqlite3 的同步 API
+- **事务支持**: 支持事务操作保证原子性
+- **索引优化**: 为常用查询字段创建索引
+
+### IndexedDB 实现细节
+
+- **数据库名称**: `drawio2go`
+- **版本管理**: 使用 idb 库简化版本迁移
+- **对象存储**: 每个表对应一个对象存储（Object Store）
+- **索引**: 为查询字段创建索引提升性能
+
+### 架构决策
+
+#### 单项目模式 vs 多项目支持
+
+**当前实现：单项目模式**
+
+- 所有数据存储在固定的 "default" 项目下
+- 简化用户体验，无需手动管理项目
+- 适合个人使用场景
+
+**设计原因：**
+
+- 避免过早引入复杂的项目管理概念
+- 保持界面简洁，降低学习成本
+- 当前用户需求集中在单图表编辑
+
+**未来扩展（如需要）：**
+
+- 支持多项目/工作区切换
+- 添加项目创建、删除、重命名功能
+- 项目级别的配置隔离
+
+#### 最新版本策略 vs 完整版本管理
+
+**当前实现：仅保留最新版本**
+
+- 每次保存自动删除旧版本
+- 固定使用 "latest" 语义版本号
+- 保持存储空间最小化
+
+**设计原因：**
+
+- 避免版本管理的复杂性
+- 减少存储空间占用
+- 简化版本查询逻辑
+
+**未来扩展（如需要）：**
+
+- 实现真实的语义化版本管理
+- 支持版本历史记录和回滚
+- 版本比对和差异查看
+- 自动版本号递增策略
 
 ## 类型定义
 
-所有公共类型位于 `../types/drawio-tools.ts`，包含：
+所有公共类型位于 `../types/drawio-tools.ts` 和 `storage/types.ts`，包含：
 
 - 前端桥接返回结果（`GetXMLResult` / `ReplaceXMLResult` / `XMLValidationResult`）
 - `drawio_read` 查询结果结构
 - `drawio_edit_batch` 支持的操作及返回值
+- 存储层接口和表结构类型

@@ -16,11 +16,24 @@ import { getStorage } from "./storage/storage-factory";
 
 /**
  * 固定的项目 UUID（单项目模式）
+ *
+ * 当前所有 DrawIO XML 都存储在 "default" 项目下。
+ * 这种设计简化了存储逻辑，适合个人使用场景。
+ *
+ * 如需多项目支持，需要：
+ * 1. 添加项目选择器 UI
+ * 2. 在存储层添加项目切换逻辑
+ * 3. 修改此常量为动态获取
  */
 const PROJECT_UUID = "default";
 
 /**
  * 固定的语义版本号（仅保存最新版）
+ *
+ * 当前策略：每次保存自动删除旧版本，仅保留最新版本。
+ * 这避免了版本管理的复杂性，保持存储简洁。
+ *
+ * 见 replaceXML() 中的自动清理逻辑。
  */
 const SEMANTIC_VERSION = "latest";
 

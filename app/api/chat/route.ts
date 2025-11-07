@@ -1,5 +1,5 @@
 import { drawioTools } from "@/app/lib/drawio-ai-tools";
-import { normalizeLLMConfig } from "@/app/lib/llm-config";
+import { normalizeLLMConfig } from "@/app/lib/config-utils";
 import { LLMConfig } from "@/app/types/chat";
 import {
   streamText,

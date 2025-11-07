@@ -268,11 +268,8 @@ export default function DrawioEditorNative({
         } else if (data.event === "load") {
           console.log("✅ DrawIO 已加载内容");
         } else if (data.event === "drawio-selection") {
-          // 处理新的详细信息格式，同时保持向后兼容
-          const count =
-            typeof data.count === "number"
-              ? data.count
-              : Number(data.count ?? 0) || 0;
+          // 处理选区信息
+          const count = Number(data.count ?? 0) || 0;
           const cells = data.cells || [];
 
           const selectionInfo: DrawioSelectionInfo = {

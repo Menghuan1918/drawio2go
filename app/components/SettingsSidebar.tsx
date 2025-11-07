@@ -14,7 +14,7 @@ import {
   DEFAULT_LLM_CONFIG,
   DEFAULT_SYSTEM_PROMPT,
   normalizeLLMConfig,
-} from "@/app/lib/llm-config";
+} from "@/app/lib/config-utils";
 import { useStorageSettings } from "@/app/hooks/useStorageSettings";
 
 interface SettingsSidebarProps {

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { getStorage } from "@/app/lib/storage";
 import type { LLMConfig } from "@/app/types/chat";
+import { normalizeLLMConfig } from "@/app/lib/config-utils";
 
 /**
  * 设置管理 Hook
@@ -77,12 +78,17 @@ export function useStorageSettings() {
   }, []);
 
   /**
-   * 获取 LLM 配置
+   * 获取 LLM 配置（已规范化）
    */
   const getLLMConfig = useCallback(async (): Promise<LLMConfig | null> => {
     try {
       const value = await getSetting("llmConfig");
-      return value ? JSON.parse(value) : null;
+      if (!value) {
+        return null;
+      }
+      const parsed = JSON.parse(value);
+      // 规范化配置，确保格式正确
+      return normalizeLLMConfig(parsed);
     } catch (err) {
       const error = err as Error;
       setError(error);
@@ -91,12 +97,14 @@ export function useStorageSettings() {
   }, [getSetting]);
 
   /**
-   * 保存 LLM 配置
+   * 保存 LLM 配置（自动规范化）
    */
   const saveLLMConfig = useCallback(
-    async (config: LLMConfig): Promise<void> => {
+    async (config: Partial<LLMConfig>): Promise<void> => {
       try {
-        await setSetting("llmConfig", JSON.stringify(config));
+        // 规范化配置后再保存
+        const normalized = normalizeLLMConfig(config);
+        await setSetting("llmConfig", JSON.stringify(normalized));
       } catch (err) {
         const error = err as Error;
         setError(error);

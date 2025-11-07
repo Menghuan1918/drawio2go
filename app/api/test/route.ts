@@ -1,4 +1,4 @@
-import { normalizeLLMConfig } from "@/app/lib/llm-config";
+import { normalizeLLMConfig } from "@/app/lib/config-utils";
 import { LLMConfig } from "@/app/types/chat";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
@@ -17,7 +17,6 @@ export async function POST(req: NextRequest) {
       modelName: body?.modelName,
       providerType: body?.providerType,
       maxToolRounds: body?.maxToolRounds,
-      useLegacyOpenAIFormat: body?.useLegacyOpenAIFormat,
     });
 
     if (!normalizedConfig.apiUrl || !normalizedConfig.modelName) {
