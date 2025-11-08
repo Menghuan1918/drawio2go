@@ -1,8 +1,10 @@
 const { app, BrowserWindow, ipcMain, dialog, shell } = require("electron");
 const path = require("path");
 const fs = require("fs");
+const SQLiteManager = require("./storage/sqlite-manager");
 
 let mainWindow;
+let storageManager = null;
 // 更可靠的开发模式检测：检查是否打包或者环境变量
 const isDev = !app.isPackaged || process.env.NODE_ENV === "development";
 
@@ -42,13 +44,18 @@ function createWindow() {
   }
 
   // 监听加载失败
-  mainWindow.webContents.on("did-fail-load", (event, errorCode, errorDescription) => {
-    console.error(`页面加载失败: ${errorCode} - ${errorDescription}`);
-    if (isDev && errorCode === -102) {
-      // ERR_CONNECTION_REFUSED
-      console.error("无法连接到 Next.js 开发服务器。请确保运行了 'npm run dev'");
-    }
-  });
+  mainWindow.webContents.on(
+    "did-fail-load",
+    (event, errorCode, errorDescription) => {
+      console.error(`页面加载失败: ${errorCode} - ${errorDescription}`);
+      if (isDev && errorCode === -102) {
+        // ERR_CONNECTION_REFUSED
+        console.error(
+          "无法连接到 Next.js 开发服务器。请确保运行了 'npm run dev'",
+        );
+      }
+    },
+  );
 
   mainWindow.on("closed", () => {
     mainWindow = null;
@@ -65,26 +72,40 @@ function createWindow() {
           ...details.responseHeaders,
           "Content-Security-Policy": [
             "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; " +
-            "script-src * 'unsafe-inline' 'unsafe-eval'; " +
-            "connect-src * 'unsafe-inline'; " +
-            "img-src * data: blob: 'unsafe-inline'; " +
-            "frame-src *; " +
-            "style-src * 'unsafe-inline';"
-          ]
-        }
+              "script-src * 'unsafe-inline' 'unsafe-eval'; " +
+              "connect-src * 'unsafe-inline'; " +
+              "img-src * data: blob: 'unsafe-inline'; " +
+              "frame-src *; " +
+              "style-src * 'unsafe-inline';",
+          ],
+        },
       });
     });
   }
 
   // 监听控制台日志，帮助调试
-  mainWindow.webContents.on("console-message", (event, level, message, _line, _sourceId) => {
-    console.log(`[Renderer Console] ${message}`);
-  });
+  mainWindow.webContents.on(
+    "console-message",
+    (event, level, message, _line, _sourceId) => {
+      console.log(`[Renderer Console] ${message}`);
+    },
+  );
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  // 初始化存储
+  storageManager = new SQLiteManager();
+  storageManager.initialize();
+
+  // 创建窗口
+  createWindow();
+});
 
 app.on("window-all-closed", () => {
+  // 关闭数据库连接
+  if (storageManager) {
+    storageManager.close();
+  }
   if (process.platform !== "darwin") {
     app.quit();
   }
@@ -240,7 +261,7 @@ ipcMain.handle("enable-selection-watcher", async () => {
   try {
     const mainFrame = mainWindow.webContents?.mainFrame;
     const drawioFrame = mainFrame?.frames?.find((frame) =>
-      frame.url?.includes("embed.diagrams.net")
+      frame.url?.includes("embed.diagrams.net"),
     );
 
     if (!drawioFrame) {
@@ -367,7 +388,7 @@ ipcMain.handle("enable-selection-watcher", async () => {
         });
 
         return window.__drawioSelectionWatcherPromise;
-      })()`
+      })()`,
     );
 
     if (injectionResult?.success) {
@@ -385,4 +406,125 @@ ipcMain.handle("enable-selection-watcher", async () => {
       message: error instanceof Error ? error.message : "执行脚本失败",
     };
   }
+});
+
+// ==================== Storage IPC Handlers ====================
+
+// 初始化
+ipcMain.handle("storage:initialize", async () => {
+  // 已在 app.whenReady() 中初始化
+  return;
+});
+
+// Settings
+ipcMain.handle("storage:getSetting", async (event, key) => {
+  return storageManager.getSetting(key);
+});
+
+ipcMain.handle("storage:setSetting", async (event, key, value) => {
+  return storageManager.setSetting(key, value);
+});
+
+ipcMain.handle("storage:deleteSetting", async (event, key) => {
+  return storageManager.deleteSetting(key);
+});
+
+ipcMain.handle("storage:getAllSettings", async () => {
+  return storageManager.getAllSettings();
+});
+
+// Projects
+ipcMain.handle("storage:getProject", async (event, uuid) => {
+  return storageManager.getProject(uuid);
+});
+
+ipcMain.handle("storage:createProject", async (event, project) => {
+  return storageManager.createProject(project);
+});
+
+ipcMain.handle("storage:updateProject", async (event, uuid, updates) => {
+  return storageManager.updateProject(uuid, updates);
+});
+
+ipcMain.handle("storage:deleteProject", async (event, uuid) => {
+  return storageManager.deleteProject(uuid);
+});
+
+ipcMain.handle("storage:getAllProjects", async () => {
+  return storageManager.getAllProjects();
+});
+
+// XMLVersions
+ipcMain.handle("storage:getXMLVersion", async (event, id) => {
+  return storageManager.getXMLVersion(id);
+});
+
+ipcMain.handle("storage:createXMLVersion", async (event, version) => {
+  // 处理 preview_image: ArrayBuffer → Buffer
+  if (version.preview_image) {
+    version.preview_image = Buffer.from(version.preview_image);
+  }
+  return storageManager.createXMLVersion(version);
+});
+
+ipcMain.handle(
+  "storage:getXMLVersionsByProject",
+  async (event, projectUuid) => {
+    return storageManager.getXMLVersionsByProject(projectUuid);
+  },
+);
+
+ipcMain.handle("storage:deleteXMLVersion", async (event, id) => {
+  return storageManager.deleteXMLVersion(id);
+});
+
+// Conversations
+ipcMain.handle("storage:getConversation", async (event, id) => {
+  return storageManager.getConversation(id);
+});
+
+ipcMain.handle("storage:createConversation", async (event, conversation) => {
+  return storageManager.createConversation(conversation);
+});
+
+ipcMain.handle("storage:updateConversation", async (event, id, updates) => {
+  return storageManager.updateConversation(id, updates);
+});
+
+ipcMain.handle("storage:deleteConversation", async (event, id) => {
+  return storageManager.deleteConversation(id);
+});
+
+ipcMain.handle(
+  "storage:getConversationsByProject",
+  async (event, projectUuid) => {
+    return storageManager.getConversationsByProject(projectUuid);
+  },
+);
+
+ipcMain.handle(
+  "storage:getConversationsByXMLVersion",
+  async (event, xmlVersionId) => {
+    return storageManager.getConversationsByXMLVersion(xmlVersionId);
+  },
+);
+
+// Messages
+ipcMain.handle(
+  "storage:getMessagesByConversation",
+  async (event, conversationId) => {
+    return storageManager.getMessagesByConversation(conversationId);
+  },
+);
+
+ipcMain.handle("storage:createMessage", async (event, message) => {
+  return storageManager.createMessage(message);
+});
+
+ipcMain.handle("storage:deleteMessage", async (event, id) => {
+  return storageManager.deleteMessage(id);
+});
+
+ipcMain.handle("storage:createMessages", async (event, messages) => {
+  return storageManager.createMessages(messages);
 });

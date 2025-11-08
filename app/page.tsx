@@ -5,16 +5,25 @@ import { useState, useEffect } from "react";
 import DrawioEditorNative from "./components/DrawioEditorNative"; // 使用原生 iframe 实现
 import BottomBar from "./components/BottomBar";
 import UnifiedSidebar from "./components/UnifiedSidebar";
-import { UPDATE_EVENT, saveDrawioXML } from "./lib/drawio-tools";
+import { UPDATE_EVENT, saveDrawioXML, getDrawioXML } from "./lib/drawio-tools";
 import { useDrawioSocket } from "./hooks/useDrawioSocket";
 import { DrawioSelectionInfo } from "./types/drawio-tools";
+import { useStorageSettings } from "./hooks/useStorageSettings";
 
 export default function Home() {
+  // 存储 Hook
+  const { getDefaultPath } = useStorageSettings();
+
   const [diagramXml, setDiagramXml] = useState<string>("");
   const [currentXml, setCurrentXml] = useState<string>("");
   const [settings, setSettings] = useState({ defaultPath: "" });
-  const [activeSidebar, setActiveSidebar] = useState<"none" | "settings" | "chat">("none");
-  const [selectionInfo, setSelectionInfo] = useState<DrawioSelectionInfo>({ count: 0, cells: [] });
+  const [activeSidebar, setActiveSidebar] = useState<
+    "none" | "settings" | "chat"
+  >("none");
+  const [selectionInfo, setSelectionInfo] = useState<DrawioSelectionInfo>({
+    count: 0,
+    cells: [],
+  });
   const [isElectronEnv, setIsElectronEnv] = useState<boolean>(false);
   const [forceReload, setForceReload] = useState<boolean>(false); // 控制是否强制完全重载
 
@@ -26,16 +35,34 @@ export default function Home() {
     if (typeof window !== "undefined") {
       setIsElectronEnv(Boolean(window.electron));
 
-      const savedXml = localStorage.getItem("currentDiagram");
-      if (savedXml) {
-        setDiagramXml(savedXml);
-        setCurrentXml(savedXml);
-      }
+      // 从 IndexedDB 加载图表数据
+      const loadInitialData = async () => {
+        try {
+          const result = await getDrawioXML();
+          if (result.success && result.xml) {
+            setDiagramXml(result.xml);
+            setCurrentXml(result.xml);
+          }
+        } catch (error) {
+          console.error("加载初始图表数据失败:", error);
+        }
+      };
 
-      const savedPath = localStorage.getItem("defaultPath");
-      if (savedPath) {
-        setSettings({ defaultPath: savedPath });
-      }
+      loadInitialData();
+
+      // 加载默认路径设置
+      const loadDefaultPath = async () => {
+        try {
+          const savedPath = await getDefaultPath();
+          if (savedPath) {
+            setSettings({ defaultPath: savedPath });
+          }
+        } catch (error) {
+          console.error("加载默认路径失败:", error);
+        }
+      };
+
+      loadDefaultPath();
 
       // 监听 DrawIO XML 更新事件（由工具函数触发）
       // 注意：这里只更新 React 状态，实际的 DrawIO 编辑器更新在 DrawioEditorNative 组件内部完成
@@ -56,20 +83,25 @@ export default function Home() {
         window.removeEventListener(UPDATE_EVENT, handleXmlUpdate);
       };
     }
-  }, []);
+  }, [getDefaultPath]);
 
-  // 自动保存图表到 localStorage（自动解码 base64）
-  const handleAutoSave = (xml: string) => {
+  // 自动保存图表到 IndexedDB（自动解码 base64）
+  const handleAutoSave = async (xml: string) => {
     setCurrentXml(xml);
     if (typeof window !== "undefined") {
-      saveDrawioXML(xml);
+      try {
+        await saveDrawioXML(xml);
+      } catch (error) {
+        console.error("自动保存失败:", error);
+        // 可以在这里添加用户提示，但不中断编辑流程
+      }
     }
   };
 
   // 处理 DrawIO 选区变化
   const handleSelectionChange = (info: DrawioSelectionInfo) => {
     setSelectionInfo(info);
-    console.log('🎯 选中元素详情:', JSON.stringify(info.cells, null, 2));
+    console.log("🎯 选中元素详情:", JSON.stringify(info.cells, null, 2));
   };
 
   // 手动保存到文件
@@ -83,7 +115,7 @@ export default function Home() {
     if (typeof window !== "undefined" && window.electron) {
       const result = await window.electron.saveDiagram(
         currentXml,
-        settings.defaultPath
+        settings.defaultPath,
       );
       if (result.success) {
         alert(`文件已保存到: ${result.filePath}`);
@@ -109,9 +141,15 @@ export default function Home() {
       if (result.success && result.xml) {
         console.log("📂 用户手动加载文件，触发完全重载");
         setForceReload(true); // 触发完全重载
-        setDiagramXml(result.xml);
-        setCurrentXml(result.xml);
-        saveDrawioXML(result.xml);
+        await saveDrawioXML(result.xml);
+
+        // 手动触发 UPDATE_EVENT，确保编辑器更新
+        window.dispatchEvent(
+          new CustomEvent(UPDATE_EVENT, {
+            detail: { xml: result.xml },
+          }),
+        );
+
         // 重置 forceReload 标志
         setTimeout(() => setForceReload(false), 100);
       } else if (result.message !== "用户取消打开") {
@@ -126,13 +164,19 @@ export default function Home() {
         const file = (e.target as HTMLInputElement).files?.[0];
         if (file) {
           const reader = new FileReader();
-          reader.onload = (event) => {
+          reader.onload = async (event) => {
             const xml = event.target?.result as string;
             console.log("📂 用户手动加载文件，触发完全重载");
             setForceReload(true); // 触发完全重载
-            setDiagramXml(xml);
-            setCurrentXml(xml);
-            saveDrawioXML(xml);
+            await saveDrawioXML(xml);
+
+            // 手动触发 UPDATE_EVENT，确保编辑器更新
+            window.dispatchEvent(
+              new CustomEvent(UPDATE_EVENT, {
+                detail: { xml },
+              }),
+            );
+
             // 重置 forceReload 标志
             setTimeout(() => setForceReload(false), 100);
           };
@@ -162,24 +206,28 @@ export default function Home() {
     <main className="main-container">
       {/* Socket.IO 连接状态指示器 */}
       {!isConnected && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          background: '#ff6b6b',
-          color: 'white',
-          padding: '8px 16px',
-          textAlign: 'center',
-          fontSize: '14px',
-          zIndex: 9999,
-        }}>
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            background: "#ff6b6b",
+            color: "white",
+            padding: "8px 16px",
+            textAlign: "center",
+            fontSize: "14px",
+            zIndex: 9999,
+          }}
+        >
           ⚠️ Socket.IO 未连接，AI 工具功能不可用
         </div>
       )}
 
       {/* DrawIO 编辑器区域 */}
-      <div className={`editor-container ${activeSidebar !== "none" ? "sidebar-open" : ""}`}>
+      <div
+        className={`editor-container ${activeSidebar !== "none" ? "sidebar-open" : ""}`}
+      >
         <DrawioEditorNative
           initialXml={diagramXml}
           onSave={handleAutoSave}
@@ -203,9 +251,19 @@ export default function Home() {
         onSave={handleManualSave}
         onLoad={handleLoad}
         activeSidebar={activeSidebar}
-        selectionLabel={isElectronEnv
-          ? `选中了${selectionInfo.count}个对象${selectionInfo.cells.length > 0 ? ` (IDs: ${selectionInfo.cells.map(c => c.id).slice(0, 3).join(', ')}${selectionInfo.cells.length > 3 ? '...' : ''})` : ''}`
-          : "网页无法使用该功能"
+        selectionLabel={
+          isElectronEnv
+            ? `选中了${selectionInfo.count}个对象${
+                selectionInfo.cells.length > 0
+                  ? ` (IDs: ${selectionInfo.cells
+                      .map((c) => c.id)
+                      .slice(0, 3)
+                      .join(
+                        ", ",
+                      )}${selectionInfo.cells.length > 3 ? "..." : ""})`
+                  : ""
+              }`
+            : "网页无法使用该功能"
         }
       />
     </main>

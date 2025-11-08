@@ -2,7 +2,11 @@
  * 工具调用相关的工具函数
  */
 
-import { TOOL_LABELS, TOOL_STATUS_META, type ToolMessagePart } from "../constants/toolConstants";
+import {
+  TOOL_LABELS,
+  TOOL_STATUS_META,
+  type ToolMessagePart,
+} from "../constants/toolConstants";
 
 /**
  * 获取工具调用标题
@@ -41,17 +45,24 @@ export const getToolSummary = (part: ToolMessagePart): string => {
  * 获取工具调用状态元数据
  */
 export const getToolStatusMeta = (state: string) => {
-  return TOOL_STATUS_META[state] ?? {
-    label: "未知状态",
-    icon: "ℹ️",
-    tone: "info" as const,
-  };
+  return (
+    TOOL_STATUS_META[state] ?? {
+      label: "未知状态",
+      icon: "ℹ️",
+      tone: "info" as const,
+    }
+  );
 };
 
 /**
  * 生成工具调用卡片的展开键
  */
-export const getToolExpansionKey = (messageId: string, index: number, toolCallId?: string, state?: string): string => {
+export const getToolExpansionKey = (
+  messageId: string,
+  index: number,
+  toolCallId?: string,
+  state?: string,
+): string => {
   const baseKey = toolCallId ? String(toolCallId) : `${messageId}-${index}`;
   return state ? `${baseKey}-${state}` : baseKey;
 };

@@ -57,6 +57,13 @@ export default function MessageList({
   const lastMessage = messages[messages.length - 1];
   const shouldShowPlaceholderAI = isStreaming && lastMessage?.role === "user";
 
+  // 识别当前正在流式生成的消息
+  const currentStreamingMessageId = isStreaming
+    ? lastMessage?.role === "assistant"
+      ? lastMessage.id
+      : "temp-ai-placeholder"
+    : null;
+
   // 创建临时的空白AI消息（用于显示打字指示器）
   const placeholderAIMessage: UIMessage = {
     id: "temp-ai-placeholder",
@@ -77,6 +84,7 @@ export default function MessageList({
           key={message.id}
           message={message}
           status={status}
+          isCurrentStreaming={message.id === currentStreamingMessageId}
           expandedToolCalls={expandedToolCalls}
           expandedThinkingBlocks={expandedThinkingBlocks}
           onToolCallToggle={onToolCallToggle}
@@ -89,6 +97,7 @@ export default function MessageList({
           key="temp-ai-placeholder"
           message={placeholderAIMessage}
           status={status}
+          isCurrentStreaming={true}
           expandedToolCalls={expandedToolCalls}
           expandedThinkingBlocks={expandedThinkingBlocks}
           onToolCallToggle={onToolCallToggle}

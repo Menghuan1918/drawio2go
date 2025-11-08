@@ -49,7 +49,10 @@ export default function BottomBar({
       </Button>
 
       {selectionLabel && (
-        <div className="ml-3 bottom-bar-button button-secondary" style={{ cursor: 'default' }}>
+        <div
+          className="ml-3 bottom-bar-button button-secondary"
+          style={{ cursor: "default" }}
+        >
           {selectionLabel}
         </div>
       )}
@@ -57,7 +60,12 @@ export default function BottomBar({
       <div style={{ flex: 1 }}></div>
 
       {onLoad && (
-        <Button variant="secondary" size="md" className="bottom-bar-button button-secondary" onPress={onLoad}>
+        <Button
+          variant="secondary"
+          size="md"
+          className="bottom-bar-button button-secondary"
+          onPress={onLoad}
+        >
           <svg
             className="w-4 h-4"
             fill="none"
@@ -77,7 +85,12 @@ export default function BottomBar({
       )}
 
       {onSave && (
-        <Button variant="primary" size="md" className="bottom-bar-button button-primary" onPress={onSave}>
+        <Button
+          variant="primary"
+          size="md"
+          className="bottom-bar-button button-primary"
+          onPress={onSave}
+        >
           <svg
             className="w-4 h-4"
             fill="none"

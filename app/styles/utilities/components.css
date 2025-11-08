@@ -158,8 +158,9 @@
   color: var(--foreground-secondary, #4b5563);
   white-space: pre-wrap;
   word-wrap: break-word;
-  font-family: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo,
-    Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-family:
+    "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco,
+    Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
 .dark .thinking-block-content {

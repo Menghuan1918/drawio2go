@@ -7,6 +7,7 @@
 ## 类型文件
 
 ### chat.ts
+
 LLM 供应商与聊天消息相关的核心类型定义。
 
 #### 核心类型
@@ -20,6 +21,7 @@ LLM 供应商与聊天消息相关的核心类型定义。
 - **ChatExportData**: 会话导入导出数据格式。
 
 ### socket-protocol.ts
+
 Socket.IO 通讯协议的类型定义。
 
 #### 核心接口
@@ -30,6 +32,7 @@ Socket.IO 通讯协议的类型定义。
 - **SocketEvents**: Socket.IO 事件名称常量
 
 ### global.d.ts
+
 全局类型声明和环境变量定义。
 
 #### 主要内容
@@ -40,11 +43,13 @@ Socket.IO 通讯协议的类型定义。
 - `declare module 'xpath'`：为第三方库补充最小化声明
 
 ### drawio-tools.ts
+
 DrawIO XML 操作的完整类型定义。
 
 #### 前端桥接类型
 
 **GetXMLResult** - 获取 XML 的返回结果
+
 ```typescript
 export interface GetXMLResult {
   success: boolean;
@@ -54,6 +59,7 @@ export interface GetXMLResult {
 ```
 
 **ReplaceXMLResult** - 替换 XML 的返回结果
+
 ```typescript
 export interface ReplaceXMLResult {
   success: boolean;
@@ -63,6 +69,7 @@ export interface ReplaceXMLResult {
 ```
 
 **XMLValidationResult** - XML 验证结果
+
 ```typescript
 export interface XMLValidationResult {
   valid: boolean;
@@ -73,14 +80,22 @@ export interface XMLValidationResult {
 #### drawio_read 查询结果
 
 **DrawioQueryResult** - 统一的查询结果联合类型（包含 matched_xpath 字段，指向命中的节点路径）
+
 ```typescript
 export type DrawioQueryResult =
-  | { type: 'element'; tag_name: string; attributes: Record<string, string>; xml_string: string; matched_xpath: string }
-  | { type: 'attribute'; name: string; value: string; matched_xpath: string }
-  | { type: 'text'; value: string; matched_xpath: string };
+  | {
+      type: "element";
+      tag_name: string;
+      attributes: Record<string, string>;
+      xml_string: string;
+      matched_xpath: string;
+    }
+  | { type: "attribute"; name: string; value: string; matched_xpath: string }
+  | { type: "text"; value: string; matched_xpath: string };
 ```
 
 **DrawioReadResult** - 查询响应
+
 ```typescript
 export interface DrawioReadResult {
   success: boolean;
@@ -95,12 +110,13 @@ export interface DrawioReadResult {
 
 - **SetAttributeOperation** (`type: 'set_attribute'`)
 - **RemoveAttributeOperation** (`type: 'remove_attribute'`)
-- **InsertElementOperation** (`type: 'insert_element'`, `target_xpath`, `new_xml`, `position`) 
+- **InsertElementOperation** (`type: 'insert_element'`, `target_xpath`, `new_xml`, `position`)
 - **RemoveElementOperation** (`type: 'remove_element'`, `xpath`)
 - **ReplaceElementOperation** (`type: 'replace_element'`, `xpath`, `new_xml`)
 - **SetTextContentOperation** (`type: 'set_text_content'`, `xpath`, `value`)
 
 联合类型示例：
+
 ```typescript
 export type DrawioEditOperation =
   | SetAttributeOperation
@@ -112,6 +128,7 @@ export type DrawioEditOperation =
 ```
 
 **DrawioEditBatchResult** - 批量编辑返回结构
+
 ```typescript
 export type DrawioEditBatchResult =
   | { success: true; operations_applied: number }
@@ -121,19 +138,23 @@ export type DrawioEditBatchResult =
 ## 类型设计原则
 
 ### 1. 完整性
+
 - 所有公共 API 都有对应的类型定义
 - 包含所有可能的返回状态和错误情况
 
 ### 2. 详细错误信息
+
 - 每个错误都包含具体的描述信息
 - 批量操作保留触发失败的操作索引
 
 ### 3. 类型安全
+
 - 使用严格的类型检查
 - 避免使用 `any` 类型
 - 提供明确的可选/必需字段标记
 
 ### 4. 开发友好
+
 - 详细的 JSDoc 注释
 - 清晰的字段命名
 - 逻辑性的接口分组
@@ -154,30 +175,36 @@ import {
 } from "../lib/drawio-xml-service";
 
 async function demo() {
-  const read: DrawioReadResult = await executeDrawioRead("//mxCell[@id='cat-head']");
+  const read: DrawioReadResult = await executeDrawioRead(
+    "//mxCell[@id='cat-head']",
+  );
 
   const editOperations: DrawioEditOperation[] = [
     {
-      type: 'set_attribute',
+      type: "set_attribute",
       xpath: "//mxCell[@id='cat-head']",
-      key: 'value',
-      value: 'Cat Head',
+      key: "value",
+      value: "Cat Head",
     },
   ];
 
-  const result: DrawioEditBatchResult = await executeDrawioEditBatch({ operations: editOperations });
+  const result: DrawioEditBatchResult = await executeDrawioEditBatch({
+    operations: editOperations,
+  });
 }
 ```
 
 ## 扩展指南
 
 ### 添加新类型
+
 1. 在相应的 `.ts` 文件中定义接口
 2. 使用 `export` 导出公共类型
 3. 添加详细的 JSDoc 注释
 4. 更新相关的使用文档
 
 ### 类型命名规范
+
 - **接口**: PascalCase (如 `GetXMLResult`)
 - **类型别名**: PascalCase (如 `DrawioEditOperation`)
 - **枚举**: PascalCase (如 `ThemeMode`)

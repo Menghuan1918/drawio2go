@@ -9,7 +9,7 @@
  */
 export interface ToolCallRequest {
   requestId: string;
-  toolName: 'get_drawio_xml' | 'replace_drawio_xml';
+  toolName: "get_drawio_xml" | "replace_drawio_xml";
   input: Record<string, unknown>;
   timeout: number;
 }
@@ -28,12 +28,12 @@ export interface ToolCallResult {
  * Socket.IO 服务器到客户端事件类型
  */
 export interface ServerToClientEvents {
-  'tool:execute': (request: ToolCallRequest) => void;
+  "tool:execute": (request: ToolCallRequest) => void;
 }
 
 /**
  * Socket.IO 客户端到服务器事件类型
  */
 export interface ClientToServerEvents {
-  'tool:result': (result: ToolCallResult) => void;
+  "tool:result": (result: ToolCallResult) => void;
 }

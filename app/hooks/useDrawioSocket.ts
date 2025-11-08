@@ -4,20 +4,17 @@
  * 用于在前端建立 Socket.IO 连接，监听后端的工具调用请求并执行
  */
 
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
+import { useEffect, useRef, useState } from "react";
+import { io, Socket } from "socket.io-client";
 import type {
   ToolCallRequest,
   ToolCallResult,
   ServerToClientEvents,
   ClientToServerEvents,
-} from '@/app/types/socket-protocol';
-import {
-  getDrawioXML,
-  replaceDrawioXML,
-} from '@/app/lib/drawio-tools';
+} from "@/app/types/socket-protocol";
+import { getDrawioXML, replaceDrawioXML } from "@/app/lib/drawio-tools";
 
 /**
  * DrawIO Socket.IO Hook
@@ -26,7 +23,10 @@ import {
  */
 export function useDrawioSocket() {
   const [isConnected, setIsConnected] = useState(false);
-  const socketRef = useRef<Socket<ServerToClientEvents, ClientToServerEvents> | null>(null);
+  const socketRef = useRef<Socket<
+    ServerToClientEvents,
+    ClientToServerEvents
+  > | null>(null);
 
   useEffect(() => {
     // 创建 Socket.IO 客户端
@@ -40,39 +40,58 @@ export function useDrawioSocket() {
     socketRef.current = socket;
 
     // 连接事件
-    socket.on('connect', () => {
-      console.log('[Socket.IO Client] 已连接到服务器, ID:', socket.id);
+    socket.on("connect", () => {
+      console.log("[Socket.IO Client] 已连接到服务器, ID:", socket.id);
       setIsConnected(true);
     });
 
-    socket.on('disconnect', (reason: string) => {
-      console.log('[Socket.IO Client] 已断开连接, 原因:', reason);
+    socket.on("disconnect", (reason: string) => {
+      console.log("[Socket.IO Client] 已断开连接, 原因:", reason);
       setIsConnected(false);
     });
 
-    socket.on('connect_error', (error: Error) => {
-      console.error('[Socket.IO Client] 连接错误:', error.message);
+    socket.on("connect_error", (error: Error) => {
+      console.error("[Socket.IO Client] 连接错误:", error.message);
       setIsConnected(false);
     });
 
     // 监听工具执行请求
-    socket.on('tool:execute', async (request: ToolCallRequest) => {
-      console.log(`[Socket.IO Client] 收到工具调用请求: ${request.toolName} (${request.requestId})`);
+    socket.on("tool:execute", async (request: ToolCallRequest) => {
+      console.log(
+        `[Socket.IO Client] 收到工具调用请求: ${request.toolName} (${request.requestId})`,
+      );
 
       try {
-        let result: { success: boolean; error?: string; message?: string; [key: string]: unknown };
+        let result: {
+          success: boolean;
+          error?: string;
+          message?: string;
+          [key: string]: unknown;
+        };
 
         // 根据工具名称执行相应函数
         switch (request.toolName) {
-          case 'get_drawio_xml':
-            result = getDrawioXML() as unknown as { success: boolean; error?: string; message?: string; [key: string]: unknown };
+          case "get_drawio_xml":
+            result = (await getDrawioXML()) as unknown as {
+              success: boolean;
+              error?: string;
+              message?: string;
+              [key: string]: unknown;
+            };
             break;
 
-          case 'replace_drawio_xml':
+          case "replace_drawio_xml":
             if (!request.input?.drawio_xml) {
-              throw new Error('缺少 drawio_xml 参数');
+              throw new Error("缺少 drawio_xml 参数");
             }
-            result = replaceDrawioXML(request.input.drawio_xml as string) as unknown as { success: boolean; error?: string; message?: string; [key: string]: unknown };
+            result = (await replaceDrawioXML(
+              request.input.drawio_xml as string,
+            )) as unknown as {
+              success: boolean;
+              error?: string;
+              message?: string;
+              [key: string]: unknown;
+            };
             break;
 
           default:
@@ -84,28 +103,29 @@ export function useDrawioSocket() {
           requestId: request.requestId,
           success: result.success,
           result: result,
-          error: result.success ? undefined : (result.error || result.message),
+          error: result.success ? undefined : result.error || result.message,
         };
 
-        socket.emit('tool:result', response);
-        console.log(`[Socket.IO Client] 已返回工具执行结果: ${request.toolName}, success: ${result.success}`);
-
+        socket.emit("tool:result", response);
+        console.log(
+          `[Socket.IO Client] 已返回工具执行结果: ${request.toolName}, success: ${result.success}`,
+        );
       } catch (error) {
         // 返回错误结果
         const response: ToolCallResult = {
           requestId: request.requestId,
           success: false,
-          error: error instanceof Error ? error.message : '未知错误',
+          error: error instanceof Error ? error.message : "未知错误",
         };
 
-        socket.emit('tool:result', response);
+        socket.emit("tool:result", response);
         console.error(`[Socket.IO Client] 工具执行失败:`, error);
       }
     });
 
     // 清理函数
     return () => {
-      console.log('[Socket.IO Client] 断开连接');
+      console.log("[Socket.IO Client] 断开连接");
       socket.disconnect();
     };
   }, []);

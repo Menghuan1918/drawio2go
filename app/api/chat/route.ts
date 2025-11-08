@@ -1,17 +1,17 @@
-import { drawioTools } from '@/app/lib/drawio-ai-tools';
-import { normalizeLLMConfig } from '@/app/lib/llm-config';
-import { LLMConfig } from '@/app/types/chat';
+import { drawioTools } from "@/app/lib/drawio-ai-tools";
+import { normalizeLLMConfig } from "@/app/lib/config-utils";
+import { LLMConfig } from "@/app/types/chat";
 import {
   streamText,
   stepCountIs,
   convertToModelMessages,
   type UIMessage,
-} from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
-import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
-import { NextRequest, NextResponse } from 'next/server';
+} from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { NextRequest, NextResponse } from "next/server";
 
-const isDev = process.env.NODE_ENV === 'development';
+const isDev = process.env.NODE_ENV === "development";
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,8 +21,8 @@ export async function POST(req: NextRequest) {
 
     if (!Array.isArray(messages) || !rawConfig) {
       return NextResponse.json(
-        { error: '缺少必要参数：messages 或 llmConfig' },
-        { status: 400 }
+        { error: "缺少必要参数：messages 或 llmConfig" },
+        { status: 400 },
       );
     }
 
@@ -36,13 +36,13 @@ export async function POST(req: NextRequest) {
       normalizedConfig = normalizeLLMConfig(rawConfig);
     } catch (error) {
       return NextResponse.json(
-        { error: (error as Error)?.message || 'LLM 配置无效' },
-        { status: 400 }
+        { error: (error as Error)?.message || "LLM 配置无效" },
+        { status: 400 },
       );
     }
 
     if (isDev) {
-      console.log('[Chat API] 收到请求:', {
+      console.log("[Chat API] 收到请求:", {
         messagesCount: modelMessages.length,
         provider: normalizedConfig.providerType,
         model: normalizedConfig.modelName,
@@ -53,11 +53,11 @@ export async function POST(req: NextRequest) {
     // 根据 providerType 选择合适的 provider
     let model;
 
-    if (normalizedConfig.providerType === 'openai-reasoning') {
+    if (normalizedConfig.providerType === "openai-reasoning") {
       // OpenAI Reasoning 模型：使用原生 @ai-sdk/openai
       const openaiProvider = createOpenAI({
         baseURL: normalizedConfig.apiUrl,
-        apiKey: normalizedConfig.apiKey || 'dummy-key',
+        apiKey: normalizedConfig.apiKey || "dummy-key",
       });
       model = openaiProvider.chat(normalizedConfig.modelName);
     } else {
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
       const compatibleProvider = createOpenAICompatible({
         name: normalizedConfig.providerType,
         baseURL: normalizedConfig.apiUrl,
-        apiKey: normalizedConfig.apiKey || 'dummy-key',
+        apiKey: normalizedConfig.apiKey || "dummy-key",
       });
       model = compatibleProvider(normalizedConfig.modelName);
     }
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
           return;
         }
 
-        console.log('[Chat API] 步骤完成:', {
+        console.log("[Chat API] 步骤完成:", {
           toolCalls: step.toolCalls.length,
           textLength: step.text.length,
           reasoning: step.reasoning.length,
@@ -92,31 +92,28 @@ export async function POST(req: NextRequest) {
 
     return result.toUIMessageStreamResponse({ sendReasoning: true });
   } catch (error: unknown) {
-    console.error('聊天 API 错误:', error);
+    console.error("聊天 API 错误:", error);
 
-    let errorMessage = '服务器内部错误';
+    let errorMessage = "服务器内部错误";
     let statusCode = 500;
 
     const err = error as Error;
-    if (err.message?.includes('Anthropic')) {
+    if (err.message?.includes("Anthropic")) {
       errorMessage = err.message;
       statusCode = 400;
-    } else if (err.message?.includes('API key')) {
-      errorMessage = 'API 密钥无效或缺失';
+    } else if (err.message?.includes("API key")) {
+      errorMessage = "API 密钥无效或缺失";
       statusCode = 401;
-    } else if (err.message?.includes('model')) {
-      errorMessage = '模型不存在或不可用';
+    } else if (err.message?.includes("model")) {
+      errorMessage = "模型不存在或不可用";
       statusCode = 400;
-    } else if (err.message?.includes('配置参数')) {
+    } else if (err.message?.includes("配置参数")) {
       errorMessage = err.message;
       statusCode = 400;
     } else if (err.message) {
       errorMessage = err.message;
     }
 
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: statusCode }
-    );
+    return NextResponse.json({ error: errorMessage }, { status: statusCode });
   }
 }

@@ -36,12 +36,15 @@ npm install
 ### 2. 开发模式
 
 **仅运行 Next.js 网页版**:
+
 ```bash
 npm run dev
 ```
+
 然后在浏览器中访问 `http://localhost:3000`
 
 **运行 Electron 桌面应用**:
+
 ```bash
 npm run electron:dev
 ```
@@ -49,11 +52,13 @@ npm run electron:dev
 ### 3. 生产构建
 
 **构建 Next.js 应用**:
+
 ```bash
 npm run build
 ```
 
 **构建 Electron 应用**:
+
 ```bash
 npm run electron:build
 ```
@@ -83,11 +88,13 @@ npm run electron:build
 ### 文件操作
 
 #### 保存图表
+
 1. 编辑完成后，点击"保存"按钮
 2. 如果已设置默认路径，文件会自动保存到该目录
 3. 否则会弹出文件选择对话框
 
 #### 加载图表
+
 1. 点击"加载"按钮
 2. 选择要打开的 .drawio 文件
 3. 图表会在编辑器中打开

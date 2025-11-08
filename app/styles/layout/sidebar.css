@@ -50,11 +50,11 @@
 
 /* 侧栏容器 */
 .sidebar-container {
-  padding: 0.5rem;
+  padding: 0.75rem;
   height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem;
   position: relative;
 }
 
@@ -62,7 +62,7 @@
 .sidebar-content {
   flex: 1;
   overflow-y: auto;
-  padding: 0.5rem 0;
+  padding: 0.75rem 0;
 }
 
 /* 侧边栏拖拽分隔条 */
@@ -76,6 +76,7 @@
   background: transparent;
   transition: background-color 0.2s ease;
   z-index: 101;
+  touch-action: none;
 }
 
 .resize-handle:hover {
@@ -107,7 +108,7 @@
   font-size: 1.125rem;
   font-weight: 600;
   color: var(--primary-color);
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 1rem 0;
 }
 
 .section-description {
@@ -118,4 +119,88 @@
 
 .dark .section-description {
   color: var(--foreground-secondary, #9ca3af);
+}
+
+/* 新版设置界面 - 左右分栏布局 */
+.settings-sidebar-new {
+  padding: 0;
+}
+
+.settings-layout {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* 左侧图标导航栏 */
+.settings-nav {
+  width: 60px;
+  background: var(--bg-primary, rgba(51, 136, 187, 0.04));
+  border-right: 1px solid var(--border-light, rgba(51, 136, 187, 0.15));
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem 0.5rem;
+  flex-shrink: 0;
+}
+
+.dark .settings-nav {
+  background: rgba(51, 136, 187, 0.08);
+  border-right-color: rgba(51, 136, 187, 0.2);
+}
+
+/* 图标导航项 */
+.settings-nav-item {
+  width: 100%;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  color: var(--foreground-secondary, #6b7280);
+  cursor: pointer;
+  transition: all 0.2s var(--ease-out-cubic);
+  position: relative;
+  padding: 0;
+}
+
+.settings-nav-item:hover {
+  background: var(--primary-light, #e6f2f9);
+  color: var(--primary-color);
+}
+
+.dark .settings-nav-item:hover {
+  background: var(--primary-light, #1a3d52);
+}
+
+/* 激活状态 */
+.settings-nav-item.active {
+  background: var(--primary-color);
+  color: #ffffff;
+}
+
+.settings-nav-item.active::before {
+  content: "";
+  position: absolute;
+  left: -0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 24px;
+  background: var(--primary-color);
+  border-radius: 0 2px 2px 0;
+}
+
+/* 右侧设置内容区 */
+.settings-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.75rem;
+}
+
+/* 设置面板 */
+.settings-panel {
+  padding: 1rem;
 }

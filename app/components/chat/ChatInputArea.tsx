@@ -34,14 +34,21 @@ export default function ChatInputArea({
   onVersionControl,
   onFileUpload,
 }: ChatInputAreaProps) {
-  const isSendDisabled = !input.trim() || isChatStreaming || configLoading || !llmConfig;
+  const isSendDisabled =
+    !input.trim() || isChatStreaming || configLoading || !llmConfig;
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       if (!isSendDisabled) {
-        const formEvent = new Event('submit', { bubbles: true, cancelable: true });
-        Object.defineProperty(formEvent, 'target', { value: event.currentTarget.form, enumerable: true });
+        const formEvent = new Event("submit", {
+          bubbles: true,
+          cancelable: true,
+        });
+        Object.defineProperty(formEvent, "target", {
+          value: event.currentTarget.form,
+          enumerable: true,
+        });
         onSubmit(formEvent as unknown as FormEvent<HTMLFormElement>);
       }
     }

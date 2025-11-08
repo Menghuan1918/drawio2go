@@ -5,20 +5,29 @@
 **依赖**：里程碑 1, 3
 
 ## 目标
+
 更新 ChatSidebar 组件，连接到新的 Agent API 并展示工具调用过程，集成 Socket.IO 连接状态
 
 ## 任务清单
 
 ### 1. 集成自定义 LLM Config Hook
+
 - [x] 使用 `useLLMConfig` 自定义 Hook：
+
   ```typescript
   import { useLLMConfig } from "@/app/hooks/useLLMConfig";
 
-  const { config: llmConfig, isLoading: configLoading, error: configError } = useLLMConfig();
+  const {
+    config: llmConfig,
+    isLoading: configLoading,
+    error: configError,
+  } = useLLMConfig();
   ```
 
 ### 2. 更新 useChat hook 配置
+
 - [x] 修改 `useChat` 调用，集成 Socket.IO 状态：
+
   ```typescript
   const { messages, sendMessage, status, error: chatError } = useChat();
 
@@ -28,9 +37,12 @@
     }
 
     try {
-      await sendMessage({ text: input.trim() }, {
-        body: { llmConfig },
-      });
+      await sendMessage(
+        { text: input.trim() },
+        {
+          body: { llmConfig },
+        },
+      );
       setInput("");
     } catch (error) {
       console.error("[ChatSidebar] 发送消息失败:", error);
@@ -39,10 +51,19 @@
   ```
 
 ### 3. 实现高级工具调用可视化
+
 - [x] 创建完整的工具调用卡片组件系统：
+
   ```typescript
   // 工具调用状态元数据
-  const TOOL_STATUS_META: Record<string, { label: string; icon: string; tone: "pending" | "success" | "error" | "info" }> = {
+  const TOOL_STATUS_META: Record<
+    string,
+    {
+      label: string;
+      icon: string;
+      tone: "pending" | "success" | "error" | "info";
+    }
+  > = {
     "input-streaming": { label: "准备中", icon: "⏳", tone: "pending" },
     "input-available": { label: "等待执行", icon: "🛠️", tone: "pending" },
     "output-available": { label: "成功", icon: "✅", tone: "success" },
@@ -56,6 +77,7 @@
   ```
 
 - [x] 使用 AI SDK 的 parts 系统渲染消息：
+
   ```typescript
   {message.parts.map((part, index) => {
     if (part.type === "text") {
@@ -88,7 +110,9 @@
   ```
 
 ### 4. 集成 Socket.IO 连接状态
+
 - [x] 在页面组件中初始化 Socket.IO：
+
   ```typescript
   // 在 app/page.tsx 中
   import { useDrawioSocket } from "./hooks/useDrawioSocket";
@@ -97,7 +121,9 @@
   ```
 
 ### 5. 实现智能状态管理
+
 - [x] 多层次状态检查和处理：
+
   ```typescript
   // 配置加载状态
   {configLoading ? (
@@ -124,6 +150,7 @@
   ```
 
 - [x] 智能错误处理和状态显示：
+
   ```typescript
   const combinedError = configError || chatError?.message || null;
 
@@ -142,7 +169,9 @@
   ```
 
 ### 6. 高级输入控件
+
 - [x] 支持多行输入和快捷键：
+
   ```typescript
   <textarea
     placeholder="描述你想要对图表进行的修改，或上传（粘贴）图像来复制图表..."
@@ -161,6 +190,7 @@
   ```
 
 - [x] 智能按钮状态管理：
+
   ```typescript
   const isSendDisabled = !input.trim() || isChatStreaming || configLoading || !llmConfig;
 
@@ -177,7 +207,9 @@
   ```
 
 ### 7. 集成 Markdown 渲染
+
 - [x] 使用 ReactMarkdown 支持富文本消息：
+
   ```typescript
   import ReactMarkdown, { type Components as MarkdownComponents } from "react-markdown";
 
@@ -195,6 +227,7 @@
   ```
 
 ## 验收标准
+
 - [x] 聊天界面能正确连接到 `/api/chat`
 - [x] 使用 `useLLMConfig` Hook 管理配置状态
 - [x] 多层次状态检查（配置加载、配置存在、消息列表）
@@ -209,6 +242,7 @@
 - [x] 支持 Enter 快捷键发送
 
 ## 实际增强功能
+
 - ✅ **高级工具调用可视化**：可展开的工具调用卡片，支持状态追踪
 - ✅ **Markdown 渲染支持**：富文本消息显示，支持代码块、链接等
 - ✅ **多层次状态管理**：配置加载、配置验证、聊天状态等
@@ -217,6 +251,7 @@
 - ✅ **可访问性支持**：工具调用卡片支持键盘导航和屏幕阅读器
 
 ## 测试步骤
+
 1. 确保服务器启动（`pnpm run dev`）
 2. 配置 LLM 设置（API Key、模型等）
 3. 打开聊天侧边栏，验证 Socket.IO 连接
@@ -228,6 +263,7 @@
 9. 验证 Enter 快捷键和发送按钮状态
 
 ## 注意事项
+
 - **Socket.IO 依赖**：确保 `useDrawioSocket` 正确初始化
 - **工具执行环境**：工具调用需要浏览器环境支持
 - **状态同步**：配置状态和聊天状态需要正确同步

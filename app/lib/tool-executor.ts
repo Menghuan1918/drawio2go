@@ -6,8 +6,8 @@
  * 2. executeToolOnServer - 直接在后端执行（预留接口，用于未来的后端工具）
  */
 
-import { v4 as uuidv4 } from 'uuid';
-import type { ToolCallRequest } from '@/app/types/socket-protocol';
+import { v4 as uuidv4 } from "uuid";
+import type { ToolCallRequest } from "@/app/types/socket-protocol";
 
 /**
  * 通过 Socket.IO 在客户端执行工具
@@ -22,24 +22,26 @@ import type { ToolCallRequest } from '@/app/types/socket-protocol';
 export async function executeToolOnClient(
   toolName: string,
   input: Record<string, unknown>,
-  timeout: number = 30000
+  timeout: number = 30000,
 ): Promise<unknown> {
   // 获取全局 Socket.IO 实例
   const io = global.io;
   const pendingRequests = global.pendingRequests;
 
   if (!pendingRequests) {
-    throw new Error('pendingRequests 未初始化');
+    throw new Error("pendingRequests 未初始化");
   }
 
   if (!io) {
-    throw new Error('Socket.IO 服务器未初始化');
+    throw new Error("Socket.IO 服务器未初始化");
   }
 
   // 检查是否有客户端连接
   const connectedClients = io.sockets.sockets.size;
   if (connectedClients === 0) {
-    throw new Error('没有客户端连接，无法执行工具。请确保前端已连接到 Socket.IO 服务器。');
+    throw new Error(
+      "没有客户端连接，无法执行工具。请确保前端已连接到 Socket.IO 服务器。",
+    );
   }
 
   const requestId = uuidv4();
@@ -66,15 +68,17 @@ export async function executeToolOnClient(
     // 构造请求消息
     const request: ToolCallRequest = {
       requestId,
-      toolName: toolName as ToolCallRequest['toolName'],
+      toolName: toolName as ToolCallRequest["toolName"],
       input,
       timeout,
     };
 
     // 广播到所有连接的客户端
-    io.emit('tool:execute', request);
+    io.emit("tool:execute", request);
 
-    console.log(`[Tool Executor] 已发送工具调用请求: ${toolName} (${requestId}), 连接客户端数: ${connectedClients}`);
+    console.log(
+      `[Tool Executor] 已发送工具调用请求: ${toolName} (${requestId}), 连接客户端数: ${connectedClients}`,
+    );
   });
 }
 
@@ -89,7 +93,7 @@ export async function executeToolOnClient(
  */
 export async function executeToolOnServer(
   toolName: string,
-  _input: Record<string, unknown>
+  _input: Record<string, unknown>,
 ): Promise<unknown> {
   // 未来在这里实现后端工具
   // 例如：文件读写、数据库操作等不需要浏览器环境的工具

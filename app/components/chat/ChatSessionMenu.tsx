@@ -32,11 +32,10 @@ export default function ChatSessionMenu({
             className={`chat-session-menu-item ${isActive ? "chat-session-menu-item--active" : ""}`}
             onClick={() => onSessionSelect(sessionId)}
           >
-            <div className="chat-session-menu-item-title">
-              {session.title}
-            </div>
+            <div className="chat-session-menu-item-title">{session.title}</div>
             <div className="chat-session-menu-item-meta">
-              {session.messages.length} 条消息 · {new Date(session.updatedAt).toLocaleDateString()}
+              {session.messages.length} 条消息 ·{" "}
+              {new Date(session.updatedAt).toLocaleDateString()}
             </div>
           </button>
         );

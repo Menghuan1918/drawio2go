@@ -8,7 +8,10 @@ interface DrawioEditorProps {
   onSave?: (xml: string) => void;
 }
 
-export default function DrawioEditor({ initialXml, onSave }: DrawioEditorProps) {
+export default function DrawioEditor({
+  initialXml,
+  onSave,
+}: DrawioEditorProps) {
   const drawioRef = useRef<DrawIoEmbedRef>(null);
 
   // 组件挂载时的日志

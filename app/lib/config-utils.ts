@@ -3,7 +3,7 @@ import { LLMConfig, ProviderType } from "@/app/types/chat";
 export const DEFAULT_SYSTEM_PROMPT = `你是一个专业的 DrawIO XML 绘制助手，负责通过 Socket.IO + XPath 工具链安全地读取和编辑图表。
 
 ### 核心准则
-1. **无推断 (No Inference)**：永远不要猜测或重写 XML 结构，不要对 style、geometry 等领域字段做额外的“智能”解析。
+1. **无推断 (No Inference)**：永远不要猜测或重写 XML 结构，不要对 style、geometry 等领域字段做额外的"智能"解析。
 2. **XPath 驱动**：所有读取或写入都必须先通过标准 XPath 精确定位目标，再结合工具返回的 matched_xpath 字段确认结果。
 3. **原子性**：批量编辑只能通过 \`drawio_edit_batch\` 完成；若任意操作失败，必须让整批回滚，不得在外部自行补救。
 4. **最少读写**：先用 \`drawio_read\` 获取所需元素或属性，再决定是否编辑，避免一次批量里混入无关操作。
@@ -30,43 +30,28 @@ export const DEFAULT_LLM_CONFIG: LLMConfig = {
   temperature: 0.3,
   modelName: "deepseek-chat",
   systemPrompt: DEFAULT_SYSTEM_PROMPT,
-  providerType: "deepseek",
+  providerType: "openai-compatible",
   maxToolRounds: 5,
 };
 
-const PROVIDER_TYPES: ProviderType[] = ["openai-reasoning", "openai-compatible", "deepseek"];
+const PROVIDER_TYPES: ProviderType[] = [
+  "openai-reasoning",
+  "openai-compatible",
+  "deepseek",
+];
 
 export const isProviderType = (value: unknown): value is ProviderType =>
   typeof value === "string" && PROVIDER_TYPES.includes(value as ProviderType);
 
-export const resolveProviderType = (
-  providerType?: unknown,
-  legacyFlag?: unknown
-): ProviderType => {
-  if (isProviderType(providerType)) {
-    return providerType;
-  }
-
-  // 向后兼容：将旧的 provider 类型映射到新类型
-  if (typeof providerType === "string") {
-    if (providerType === "openai" || providerType === "openai-response") {
-      return "openai-compatible";
-    }
-    if (providerType === "anthropic") {
-      return "openai-compatible";
-    }
-  }
-
-  // 兼容旧的 legacyFlag
-  if (legacyFlag === true) {
-    return "openai-compatible";
-  }
-
-  // 默认使用 openai-compatible
-  return "openai-compatible";
-};
-
-export const normalizeApiUrl = (value?: string, fallback: string = DEFAULT_API_URL): string => {
+/**
+ * 规范化 API URL
+ * - 移除尾部斜杠
+ * - 自动添加 /v1 后缀（如果不存在版本号）
+ */
+export const normalizeApiUrl = (
+  value?: string,
+  fallback: string = DEFAULT_API_URL,
+): string => {
   if (!value) {
     return fallback;
   }
@@ -85,16 +70,26 @@ export const normalizeApiUrl = (value?: string, fallback: string = DEFAULT_API_U
   return `${withoutTrailingSlash}/v1`;
 };
 
-export const normalizeLLMConfig = (
-  value?: Partial<LLMConfig> & { useLegacyOpenAIFormat?: boolean }
-): LLMConfig => {
-  const providerType = resolveProviderType(value?.providerType, value?.useLegacyOpenAIFormat);
+/**
+ * 规范化 LLM 配置
+ * - 设置默认值
+ * - 验证类型
+ * - 标准化格式
+ */
+export const normalizeLLMConfig = (value?: Partial<LLMConfig>): LLMConfig => {
+  const providerType = isProviderType(value?.providerType)
+    ? value.providerType
+    : DEFAULT_LLM_CONFIG.providerType;
 
   return {
     apiUrl: normalizeApiUrl(value?.apiUrl),
-    apiKey: typeof value?.apiKey === "string" ? value.apiKey : DEFAULT_LLM_CONFIG.apiKey,
+    apiKey:
+      typeof value?.apiKey === "string"
+        ? value.apiKey
+        : DEFAULT_LLM_CONFIG.apiKey,
     temperature:
-      typeof value?.temperature === "number" && Number.isFinite(value.temperature)
+      typeof value?.temperature === "number" &&
+      Number.isFinite(value.temperature)
         ? value.temperature
         : DEFAULT_LLM_CONFIG.temperature,
     modelName:
@@ -107,7 +102,8 @@ export const normalizeLLMConfig = (
         : DEFAULT_LLM_CONFIG.systemPrompt,
     providerType,
     maxToolRounds:
-      typeof value?.maxToolRounds === "number" && Number.isFinite(value.maxToolRounds)
+      typeof value?.maxToolRounds === "number" &&
+      Number.isFinite(value.maxToolRounds)
         ? value.maxToolRounds
         : DEFAULT_LLM_CONFIG.maxToolRounds,
   };

@@ -1,7 +1,11 @@
 "use client";
 
 import { type ToolMessagePart } from "./constants/toolConstants";
-import { getToolTitle, getToolSummary, getToolStatusMeta } from "./utils/toolUtils";
+import {
+  getToolTitle,
+  getToolSummary,
+  getToolStatusMeta,
+} from "./utils/toolUtils";
 
 interface ToolCallCardProps {
   part: ToolMessagePart;
@@ -9,7 +13,11 @@ interface ToolCallCardProps {
   onToggle: () => void;
 }
 
-export default function ToolCallCard({ part, expanded, onToggle }: ToolCallCardProps) {
+export default function ToolCallCard({
+  part,
+  expanded,
+  onToggle,
+}: ToolCallCardProps) {
   const title = getToolTitle(part.type);
   const meta = getToolStatusMeta(part.state);
 
@@ -25,7 +33,9 @@ export default function ToolCallCard({ part, expanded, onToggle }: ToolCallCardP
       <button type="button" className="tool-call-header" onClick={onToggle}>
         <div className="tool-call-title">{title}</div>
         <div className="tool-call-status">
-          <span className="tool-call-status-icon" aria-hidden>{meta.icon}</span>
+          <span className="tool-call-status-icon" aria-hidden>
+            {meta.icon}
+          </span>
           <span className="tool-call-status-label">{meta.label}</span>
           <svg
             className={`tool-call-chevron ${expanded ? "tool-call-chevron--open" : ""}`.trim()}
@@ -47,7 +57,9 @@ export default function ToolCallCard({ part, expanded, onToggle }: ToolCallCardP
       {expanded ? (
         <div className="tool-call-body">
           {part.state === "output-error" && (
-            <div className="tool-call-error-text">{part.errorText ?? "未知错误"}</div>
+            <div className="tool-call-error-text">
+              {part.errorText ?? "未知错误"}
+            </div>
           )}
           {showInput && (
             <div className="tool-call-section">

@@ -41,20 +41,20 @@ interface DrawioQueryResultBase {
 }
 
 export interface DrawioElementResult extends DrawioQueryResultBase {
-  type: 'element';
+  type: "element";
   tag_name: string;
   attributes: Record<string, string>;
   xml_string: string;
 }
 
 export interface DrawioAttributeResult extends DrawioQueryResultBase {
-  type: 'attribute';
+  type: "attribute";
   name: string;
   value: string;
 }
 
 export interface DrawioTextResult extends DrawioQueryResultBase {
-  type: 'text';
+  type: "text";
   value: string;
 }
 
@@ -71,44 +71,44 @@ interface OperationBase {
 }
 
 export interface SetAttributeOperation extends OperationBase {
-  type: 'set_attribute';
+  type: "set_attribute";
   xpath: string;
   key: string;
   value: string;
 }
 
 export interface RemoveAttributeOperation extends OperationBase {
-  type: 'remove_attribute';
+  type: "remove_attribute";
   xpath: string;
   key: string;
 }
 
 export type InsertPosition =
-  | 'append_child'
-  | 'prepend_child'
-  | 'before'
-  | 'after';
+  | "append_child"
+  | "prepend_child"
+  | "before"
+  | "after";
 
 export interface InsertElementOperation extends OperationBase {
-  type: 'insert_element';
+  type: "insert_element";
   target_xpath: string;
   new_xml: string;
   position?: InsertPosition;
 }
 
 export interface RemoveElementOperation extends OperationBase {
-  type: 'remove_element';
+  type: "remove_element";
   xpath: string;
 }
 
 export interface ReplaceElementOperation extends OperationBase {
-  type: 'replace_element';
+  type: "replace_element";
   xpath: string;
   new_xml: string;
 }
 
 export interface SetTextContentOperation extends OperationBase {
-  type: 'set_text_content';
+  type: "set_text_content";
   xpath: string;
   value: string;
 }
@@ -143,8 +143,8 @@ export interface DrawioSelectionInfo {
  */
 export interface DrawioCellInfo {
   id: string;
-  type: 'vertex' | 'edge' | 'unknown';
-  value: any;
+  type: "vertex" | "edge" | "unknown";
+  value: unknown;
   style: string;
   label: string;
   geometry?: {

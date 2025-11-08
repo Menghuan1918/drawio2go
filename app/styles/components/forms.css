@@ -1,3 +1,25 @@
+/* HeroUI 组件统一圆角样式 - 与底栏按钮一致 (0.375rem = 6px) */
+/* Input 组件圆角和 padding */
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="url"],
+textarea,
+.input {
+  border-radius: 0.375rem !important;
+  padding: 6px !important;
+}
+
+button {
+  border-radius: 0.375rem !important;
+}
+
+/* Select 下拉选项 padding */
+[role="option"],
+.select-item {
+  padding: 10px !important;
+}
+
 /* 温度滑块样式 */
 .temperature-slider {
   -webkit-appearance: none;
@@ -36,18 +58,6 @@
 
 .temperature-slider::-moz-range-thumb:hover {
   transform: scale(1.2);
-}
-
-/* 供应商下拉选择 */
-.provider-select {
-  width: 100%;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.75rem;
-  border: 1px solid var(--border-primary);
-  background: var(--bg-primary);
-  color: inherit;
-  font-size: 0.875rem;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .provider-select:focus {

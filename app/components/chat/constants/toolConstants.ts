@@ -9,7 +9,11 @@ export const TOOL_LABELS: Record<string, string> = {
 
 export const TOOL_STATUS_META: Record<
   string,
-  { label: string; icon: string; tone: "pending" | "success" | "error" | "info" }
+  {
+    label: string;
+    icon: string;
+    tone: "pending" | "success" | "error" | "info";
+  }
 > = {
   "input-streaming": { label: "准备中", icon: "⏳", tone: "pending" },
   "input-available": { label: "等待执行", icon: "🛠️", tone: "pending" },

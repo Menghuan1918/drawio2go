@@ -11,7 +11,9 @@ interface FileDialogOptions {
 /**
  * 使用 Electron 文件保存对话框
  */
-export const showSaveDialog = async (options: FileDialogOptions): Promise<string | null> => {
+export const showSaveDialog = async (
+  options: FileDialogOptions,
+): Promise<string | null> => {
   if (window.electron?.showSaveDialog) {
     try {
       return await window.electron.showSaveDialog(options);
@@ -26,7 +28,9 @@ export const showSaveDialog = async (options: FileDialogOptions): Promise<string
 /**
  * 使用 Electron 文件打开对话框
  */
-export const showOpenDialog = async (options: FileDialogOptions): Promise<string[] | null> => {
+export const showOpenDialog = async (
+  options: FileDialogOptions,
+): Promise<string[] | null> => {
   if (window.electron?.showOpenDialog) {
     try {
       return await window.electron.showOpenDialog(options);
@@ -41,7 +45,10 @@ export const showOpenDialog = async (options: FileDialogOptions): Promise<string
 /**
  * 使用 Electron 写入文件
  */
-export const writeFile = async (filePath: string, content: string): Promise<boolean> => {
+export const writeFile = async (
+  filePath: string,
+  content: string,
+): Promise<boolean> => {
   if (window.electron?.writeFile) {
     try {
       await window.electron.writeFile(filePath, content);

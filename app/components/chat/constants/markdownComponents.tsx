@@ -17,7 +17,7 @@ export const markdownComponents: MarkdownComponents = {
   },
   code({ node: _node, className, children, ...props }) {
     const content = String(children).replace(/\n$/, "");
-    const isInline = !className?.includes('language-');
+    const isInline = !className?.includes("language-");
 
     if (isInline) {
       return (

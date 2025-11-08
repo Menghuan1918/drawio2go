@@ -1,5 +1,5 @@
-import React from 'react';
-import './typing-indicator.css';
+import React from "react";
+import "./typing-indicator.css";
 
 /**
  * AI打字机效果指示器组件

@@ -42,9 +42,19 @@
       "WebFetch(domain:www.drawio.com)",
       "WebFetch(domain:jgraph.github.io)",
       "mcp__heroui-react__get_component_examples",
-      "mcp__heroui-react__get_component_props"
+      "mcp__heroui-react__get_component_props",
+      "mcp__heroui-react__list_components",
+      "mcp__heroui-react__get_component_info",
+      "Bash(mkdir:*)",
+      "Bash(pnpm run rebuild)",
+      "Bash(npx eslint:*)",
+      "Bash(pnpm rebuild:*)",
+      "Bash(pnpm run format:*)",
+      "mcp__heroui-react__get_component_source_styles",
+      "Bash(xargs:*)"
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "outputStyle": "default"
 }
