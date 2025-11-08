@@ -66,7 +66,7 @@
 }
 
 .message-user {
-  background: linear-gradient(135deg, #3388bb 0%, #2a6fa0 100%);
+  background: var(--primary-color);
   color: var(--primary-foreground);
   align-self: flex-end;
   max-width: 85%;
@@ -97,7 +97,7 @@
 
 .dark .message-ai {
   color: var(--foreground, #ffffff);
-  background: linear-gradient(135deg, #1a3d52 0%, #2a4d62 100%);
+  background: var(--primary-light);
 }
 
 .message-header {

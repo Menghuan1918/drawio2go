@@ -26,7 +26,7 @@
 
 .dark .message-ai {
   color: var(--foreground, #ffffff);
-  background: linear-gradient(135deg, #1a3d52 0%, #2a4d62 100%);
+  background: var(--primary-light);
 }
 
 .dark .chat-input-area {

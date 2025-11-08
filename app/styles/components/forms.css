@@ -41,7 +41,7 @@
 /* 供应商下拉选择 */
 .provider-select {
   width: 100%;
-  padding: 0.5rem 0.75rem;
+  padding: 0.75rem 1rem;
   border-radius: 0.75rem;
   border: 1px solid var(--border-primary);
   background: var(--bg-primary);

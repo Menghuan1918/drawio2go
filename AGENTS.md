@@ -7,7 +7,7 @@
 ### 核心技术栈
 
 - **前端框架**: Next.js 15 (App Router) + React 19
-- **UI 库**: HeroUI v3 (Alpha) - 复合组件模式
+- **UI 库**: HeroUI v3 (Beta) - 复合组件模式
 - **样式**: Tailwind CSS v4 (⚠️ 必须 v4，v3 不兼容)
 - **DrawIO 集成**: 原生 iframe 实现
 - **桌面应用**: Electron 38.x
