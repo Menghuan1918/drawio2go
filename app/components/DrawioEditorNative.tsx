@@ -84,7 +84,7 @@ export default function DrawioEditorNative({
   const initializationCompleteRef = useRef(false); // 标记初始化是否完成
 
   // 构建 DrawIO URL
-  const drawioUrl = `https://embed.diagrams.net/?embed=1&proto=json&spin=1&ui=kennedy&libraries=1&saveAndExit=1&noExitBtn=1`;
+  const drawioUrl = `https://embed.diagrams.net/?embed=1&proto=json&spin=1&ui=kennedy&libraries=1&saveAndExit=1&noSaveBtn=1&noExitBtn=1`;
 
   // 首次加载图表（使用 load 动作）
   const loadDiagram = useCallback(

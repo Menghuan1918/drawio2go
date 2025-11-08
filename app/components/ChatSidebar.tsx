@@ -331,20 +331,79 @@ export default function ChatSidebar({}: ChatSidebarProps) {
           [targetSessionId]: finishedMessages,
         }));
 
-        // 更新对话标题
+        // 更新对话标题（如果对话已被删除，则重新创建）
         const title = generateTitle(finishedMessages);
-        await updateConversation(targetSessionId, { title });
+        try {
+          await updateConversation(targetSessionId, { title });
 
-        // 更新本地对话列表中的标题
-        setConversations((prev) =>
-          prev.map((conv) =>
-            conv.id === targetSessionId
-              ? { ...conv, title, updated_at: Date.now() }
-              : conv,
-          ),
-        );
+          // 更新本地对话列表中的标题
+          setConversations((prev) =>
+            prev.map((conv) =>
+              conv.id === targetSessionId
+                ? { ...conv, title, updated_at: Date.now() }
+                : conv,
+            ),
+          );
 
-        console.log("[ChatSidebar] 消息已保存到对话:", targetSessionId);
+          console.log("[ChatSidebar] 消息已保存到对话:", targetSessionId);
+        } catch (updateError) {
+          // 检查是否为"对话不存在"错误
+          const errorMessage =
+            updateError instanceof Error
+              ? updateError.message
+              : String(updateError);
+          if (errorMessage.includes("Conversation not found")) {
+            console.warn(
+              `[ChatSidebar] 对话不存在 (${targetSessionId})，尝试重新创建对话`,
+            );
+
+            // 对话已被删除，需要重新创建并保存消息
+            if (defaultXmlVersionId) {
+              try {
+                const newConv = await createConversation(
+                  defaultXmlVersionId,
+                  title,
+                );
+                console.log(
+                  `[ChatSidebar] 已创建新对话: ${newConv.id} (标题: ${title})`,
+                );
+
+                // 将消息重新映射到新对话ID
+                const remappedMessages = finishedMessages.map((msg) =>
+                  convertUIMessageToCreateInput(msg, newConv.id),
+                );
+                await addMessages(remappedMessages);
+
+                // 更新本地状态
+                setConversations((prev) => [newConv, ...prev]);
+                setActiveConversationId(newConv.id);
+                setConversationMessages((prev) => ({
+                  ...prev,
+                  [newConv.id]: finishedMessages,
+                }));
+
+                console.log(
+                  "[ChatSidebar] 消息已保存到新创建的对话:",
+                  newConv.id,
+                );
+              } catch (recreateError) {
+                console.error(
+                  "[ChatSidebar] 重新创建对话失败:",
+                  recreateError,
+                );
+                throw recreateError;
+              }
+            } else {
+              console.error(
+                "[ChatSidebar] 无法重新创建对话：缺少默认 XML 版本",
+              );
+              throw updateError;
+            }
+          } else {
+            // 其他错误直接抛出
+            throw updateError;
+          }
+        }
       } catch (error) {
         console.error("[ChatSidebar] 保存消息失败:", error);
       } finally {
@@ -368,11 +427,36 @@ export default function ChatSidebar({}: ChatSidebarProps) {
       return;
     }
 
-    const targetSessionId = activeConversationId;
+    let targetSessionId = activeConversationId;
 
+    // 防御性检查：如果没有活动会话，先创建一个
     if (!targetSessionId) {
-      console.error("[ChatSidebar] 无法发送消息：没有活动会话");
-      return;
+      console.warn(
+        "[ChatSidebar] 检测到没有活动会话，尝试自动创建新对话",
+      );
+
+      if (!defaultXmlVersionId) {
+        console.error(
+          "[ChatSidebar] 无法发送消息：缺少默认 XML 版本，无法创建对话",
+        );
+        return;
+      }
+
+      try {
+        const newConv = await createConversation(defaultXmlVersionId, "新对话");
+        console.log(
+          `[ChatSidebar] 已自动创建新对话: ${newConv.id} (标题: 新对话)`,
+        );
+
+        setConversations((prev) => [newConv, ...prev]);
+        setActiveConversationId(newConv.id);
+        setConversationMessages((prev) => ({ ...prev, [newConv.id]: [] }));
+
+        targetSessionId = newConv.id;
+      } catch (error) {
+        console.error("[ChatSidebar] 创建新对话失败:", error);
+        return;
+      }
     }
 
     sendingSessionIdRef.current = targetSessionId;
