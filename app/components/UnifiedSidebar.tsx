@@ -11,6 +11,7 @@ interface UnifiedSidebarProps {
   activeSidebar: "none" | "settings" | "chat";
   onClose: () => void;
   onSettingsChange?: (settings: { defaultPath: string }) => void;
+  currentProjectId?: string;
 }
 
 const MIN_WIDTH = 300;
@@ -23,6 +24,7 @@ export default function UnifiedSidebar({
   activeSidebar,
   onClose,
   onSettingsChange,
+  currentProjectId,
 }: UnifiedSidebarProps) {
   // 存储 Hook
   const { getSetting, setSetting } = useStorageSettings();
@@ -132,7 +134,11 @@ export default function UnifiedSidebar({
         />
       )}
       {activeSidebar === "chat" && (
-        <ChatSidebar isOpen={true} onClose={onClose} />
+        <ChatSidebar
+          isOpen={true}
+          onClose={onClose}
+          currentProjectId={currentProjectId}
+        />
       )}
     </div>
   );

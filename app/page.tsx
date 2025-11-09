@@ -5,14 +5,33 @@ import { useState, useEffect } from "react";
 import DrawioEditorNative from "./components/DrawioEditorNative"; // 使用原生 iframe 实现
 import BottomBar from "./components/BottomBar";
 import UnifiedSidebar from "./components/UnifiedSidebar";
-import { UPDATE_EVENT, saveDrawioXML, getDrawioXML } from "./lib/drawio-tools";
+import ProjectSelector from "./components/ProjectSelector";
+import { UPDATE_EVENT, saveDrawioXML } from "./lib/drawio-tools";
 import { useDrawioSocket } from "./hooks/useDrawioSocket";
 import { DrawioSelectionInfo } from "./types/drawio-tools";
 import { useStorageSettings } from "./hooks/useStorageSettings";
+import { useCurrentProject } from "./hooks/useCurrentProject";
+import { useStorageProjects } from "./hooks/useStorageProjects";
+import { useStorageXMLVersions } from "./hooks/useStorageXMLVersions";
 
 export default function Home() {
   // 存储 Hook
   const { getDefaultPath } = useStorageSettings();
+
+  // 工程管理 Hook
+  const {
+    currentProject,
+    loading: projectLoading,
+    switchProject,
+  } = useCurrentProject();
+
+  const {
+    projects,
+    createProject,
+    getAllProjects,
+  } = useStorageProjects();
+
+  const { getCurrentXML, saveXML } = useStorageXMLVersions();
 
   const [diagramXml, setDiagramXml] = useState<string>("");
   const [currentXml, setCurrentXml] = useState<string>("");
@@ -26,29 +45,38 @@ export default function Home() {
   });
   const [isElectronEnv, setIsElectronEnv] = useState<boolean>(false);
   const [forceReload, setForceReload] = useState<boolean>(false); // 控制是否强制完全重载
+  const [showProjectSelector, setShowProjectSelector] = useState<boolean>(false);
 
   // 初始化 Socket.IO 连接
   const { isConnected } = useDrawioSocket();
 
-  // 加载保存的图表
+  // 加载当前工程的 XML
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      setIsElectronEnv(Boolean(window.electron));
-
-      // 从 IndexedDB 加载图表数据
-      const loadInitialData = async () => {
+    if (currentProject && !projectLoading) {
+      const loadProjectXML = async () => {
         try {
-          const result = await getDrawioXML();
-          if (result.success && result.xml) {
-            setDiagramXml(result.xml);
-            setCurrentXml(result.xml);
+          const xml = await getCurrentXML(currentProject.uuid);
+          if (xml) {
+            setDiagramXml(xml);
+            setCurrentXml(xml);
+          } else {
+            // 如果没有 XML，设置空白图表
+            setDiagramXml("");
+            setCurrentXml("");
           }
         } catch (error) {
-          console.error("加载初始图表数据失败:", error);
+          console.error("加载工程 XML 失败:", error);
         }
       };
 
-      loadInitialData();
+      loadProjectXML();
+    }
+  }, [currentProject, projectLoading, getCurrentXML]);
+
+  // 初始化环境检测
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIsElectronEnv(Boolean(window.electron));
 
       // 加载默认路径设置
       const loadDefaultPath = async () => {
@@ -85,12 +113,12 @@ export default function Home() {
     }
   }, [getDefaultPath]);
 
-  // 自动保存图表到 IndexedDB（自动解码 base64）
+  // 自动保存图表到统一存储层
   const handleAutoSave = async (xml: string) => {
     setCurrentXml(xml);
-    if (typeof window !== "undefined") {
+    if (currentProject && typeof window !== "undefined") {
       try {
-        await saveDrawioXML(xml);
+        await saveXML(xml, currentProject.uuid);
       } catch (error) {
         console.error("自动保存失败:", error);
         // 可以在这里添加用户提示，但不中断编辑流程
@@ -202,6 +230,39 @@ export default function Home() {
     setActiveSidebar((prev) => (prev === "chat" ? "none" : "chat"));
   };
 
+  // 工程选择器处理
+  const handleOpenProjectSelector = () => {
+    setShowProjectSelector(true);
+  };
+
+  const handleCloseProjectSelector = () => {
+    setShowProjectSelector(false);
+  };
+
+  const handleSelectProject = async (projectId: string) => {
+    try {
+      await switchProject(projectId);
+      // 切换工程后会自动触发 useEffect 加载新工程的 XML
+      setForceReload(true);
+      setTimeout(() => setForceReload(false), 100);
+    } catch (error) {
+      console.error("切换工程失败:", error);
+      alert("切换工程失败");
+    }
+  };
+
+  const handleCreateProject = async (name: string, description?: string) => {
+    try {
+      const newProject = await createProject(name, description);
+      await getAllProjects(); // 刷新工程列表
+      await switchProject(newProject.uuid);
+      setShowProjectSelector(false);
+    } catch (error) {
+      console.error("创建工程失败:", error);
+      alert("创建工程失败");
+    }
+  };
+
   return (
     <main className="main-container">
       {/* Socket.IO 连接状态指示器 */}
@@ -242,6 +303,7 @@ export default function Home() {
         activeSidebar={activeSidebar}
         onClose={() => setActiveSidebar("none")}
         onSettingsChange={handleSettingsChange}
+        currentProjectId={currentProject?.uuid}
       />
 
       {/* 底部工具栏 */}
@@ -251,6 +313,8 @@ export default function Home() {
         onSave={handleManualSave}
         onLoad={handleLoad}
         activeSidebar={activeSidebar}
+        currentProjectName={currentProject?.name}
+        onOpenProjectSelector={handleOpenProjectSelector}
         selectionLabel={
           isElectronEnv
             ? `选中了${selectionInfo.count}个对象${
@@ -265,6 +329,16 @@ export default function Home() {
               }`
             : "网页无法使用该功能"
         }
+      />
+
+      {/* 工程选择器 */}
+      <ProjectSelector
+        isOpen={showProjectSelector}
+        onClose={handleCloseProjectSelector}
+        currentProjectId={currentProject?.uuid || null}
+        onSelectProject={handleSelectProject}
+        projects={projects}
+        onCreateProject={handleCreateProject}
       />
     </main>
   );

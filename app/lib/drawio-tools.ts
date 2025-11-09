@@ -13,19 +13,14 @@ import type {
   XMLValidationResult,
 } from "../types/drawio-tools";
 import { getStorage } from "./storage/storage-factory";
+import { DEFAULT_PROJECT_UUID } from "./storage/constants";
 
 /**
- * 固定的项目 UUID（单项目模式）
+ * localStorage 中存储当前项目 ID 的键名
  *
- * 当前所有 DrawIO XML 都存储在 "default" 项目下。
- * 这种设计简化了存储逻辑，适合个人使用场景。
- *
- * 如需多项目支持，需要：
- * 1. 添加项目选择器 UI
- * 2. 在存储层添加项目切换逻辑
- * 3. 修改此常量为动态获取
+ * 与 useCurrentProject.ts 中的 CURRENT_PROJECT_KEY 保持一致
  */
-const PROJECT_UUID = "default";
+const CURRENT_PROJECT_KEY = "currentProjectId";
 
 /**
  * 固定的语义版本号（仅保存最新版）
@@ -41,6 +36,22 @@ const SEMANTIC_VERSION = "latest";
  * 自定义事件名称，用于通知编辑器重新加载
  */
 const UPDATE_EVENT = "drawio-xml-updated";
+
+/**
+ * 获取当前活跃项目的 UUID
+ *
+ * 从 localStorage 读取当前项目 ID，如果未设置则返回默认项目 UUID。
+ * 与 useCurrentProject.ts 的逻辑保持一致。
+ *
+ * @returns 当前项目的 UUID，如果无法获取则返回 "default"
+ */
+function getCurrentProjectUuid(): string {
+  if (typeof window === "undefined") {
+    return DEFAULT_PROJECT_UUID;
+  }
+  const stored = localStorage.getItem(CURRENT_PROJECT_KEY);
+  return stored || DEFAULT_PROJECT_UUID;
+}
 
 /**
  * 验证 XML 格式是否合法
@@ -106,12 +117,22 @@ function decodeBase64XML(xml: string): string {
  * 保存 XML 到存储的内部实现（不触发事件）
  *
  * @param decodedXml - 已解码的 XML 内容
+ * @throws {Error} 当前项目不存在时抛出错误
  */
 async function saveDrawioXMLInternal(decodedXml: string): Promise<void> {
   const storage = await getStorage();
+  const projectUuid = getCurrentProjectUuid();
+
+  // 检查项目是否存在
+  const project = await storage.getProject(projectUuid);
+  if (!project) {
+    throw new Error(
+      `当前项目不存在 (UUID: ${projectUuid})，请检查项目设置或重新选择项目`,
+    );
+  }
 
   // 获取现有版本
-  const existingVersions = await storage.getXMLVersionsByProject(PROJECT_UUID);
+  const existingVersions = await storage.getXMLVersionsByProject(projectUuid);
 
   // 删除所有旧版本（仅保留最新版策略）
   for (const version of existingVersions) {
@@ -120,7 +141,7 @@ async function saveDrawioXMLInternal(decodedXml: string): Promise<void> {
 
   // 创建新版本
   await storage.createXMLVersion({
-    project_uuid: PROJECT_UUID,
+    project_uuid: projectUuid,
     semantic_version: SEMANTIC_VERSION,
     xml_content: decodedXml,
     source_version_id: 0,
@@ -179,7 +200,18 @@ export async function getDrawioXML(): Promise<GetXMLResult> {
 
   try {
     const storage = await getStorage();
-    const versions = await storage.getXMLVersionsByProject(PROJECT_UUID);
+    const projectUuid = getCurrentProjectUuid();
+
+    // 检查项目是否存在
+    const project = await storage.getProject(projectUuid);
+    if (!project) {
+      return {
+        success: false,
+        error: `当前项目不存在 (UUID: ${projectUuid})，请检查项目设置或重新选择项目`,
+      };
+    }
+
+    const versions = await storage.getXMLVersionsByProject(projectUuid);
 
     if (versions.length === 0) {
       return {

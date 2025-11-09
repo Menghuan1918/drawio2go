@@ -42,6 +42,7 @@ import {
 interface ChatSidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  currentProjectId?: string;
 }
 
 // ========== 数据转换工具函数 ==========
@@ -152,7 +153,9 @@ function generateTitle(messages: ChatUIMessage[]): string {
 
 // ========== 主组件 ==========
 
-export default function ChatSidebar({}: ChatSidebarProps) {
+export default function ChatSidebar({
+  currentProjectId,
+}: ChatSidebarProps) {
   const [input, setInput] = useState("");
   const [expandedToolCalls, setExpandedToolCalls] = useState<
     Record<string, boolean>
@@ -265,6 +268,7 @@ export default function ChatSidebar({}: ChatSidebarProps) {
           // 创建默认空白 XML 版本
           const defaultXml = await saveXML(
             '<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/></root></mxGraphModel>',
+            currentProjectId,
             undefined,
             "默认版本",
             "初始版本",
@@ -276,13 +280,17 @@ export default function ChatSidebar({}: ChatSidebarProps) {
         }
         setDefaultXmlVersionId(defaultVersionId);
 
-        // 3. 加载所有对话
-        const allConversations = await getAllConversations();
+        // 3. 加载所有对话（按工程过滤）
+        const allConversations = await getAllConversations(currentProjectId);
         setConversations(allConversations);
 
         // 4. 如果没有对话，创建默认对话
         if (allConversations.length === 0) {
-          const newConv = await createConversation(defaultVersionId, "新对话");
+          const newConv = await createConversation(
+            defaultVersionId,
+            "新对话",
+            currentProjectId,
+          );
           setConversations([newConv]);
           setActiveConversationId(newConv.id);
           setConversationMessages({ [newConv.id]: [] });
@@ -315,6 +323,7 @@ export default function ChatSidebar({}: ChatSidebarProps) {
     getMessages,
     createConversation,
     saveXML,
+    currentProjectId,
   ]);
 
   const fallbackModelName = useMemo(
