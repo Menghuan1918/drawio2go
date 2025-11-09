@@ -123,6 +123,7 @@ class SQLiteManager {
         role TEXT NOT NULL,
         content TEXT NOT NULL,
         tool_invocations TEXT,
+        model_name TEXT,
         created_at INTEGER NOT NULL,
         FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
       )
@@ -381,8 +382,8 @@ class SQLiteManager {
     this.db
       .prepare(
         `
-        INSERT INTO messages (id, conversation_id, role, content, tool_invocations, created_at)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO messages (id, conversation_id, role, content, tool_invocations, model_name, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `,
       )
       .run(
@@ -391,6 +392,7 @@ class SQLiteManager {
         message.role,
         message.content,
         message.tool_invocations || null,
+        message.model_name || null,
         now,
       );
 
@@ -406,8 +408,8 @@ class SQLiteManager {
   createMessages(messages) {
     const now = Date.now();
     const insertStmt = this.db.prepare(`
-      INSERT INTO messages (id, conversation_id, role, content, tool_invocations, created_at)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO messages (id, conversation_id, role, content, tool_invocations, model_name, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
 
     const transaction = this.db.transaction((msgs) => {
@@ -418,6 +420,7 @@ class SQLiteManager {
           msg.role,
           msg.content,
           msg.tool_invocations || null,
+          msg.model_name || null,
           now,
         );
       }

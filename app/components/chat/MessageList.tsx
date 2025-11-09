@@ -1,13 +1,12 @@
 "use client";
 
 import { useRef } from "react";
-import { type LLMConfig } from "@/app/types/chat";
-import type { UIMessage } from "ai";
+import { type LLMConfig, type ChatUIMessage } from "@/app/types/chat";
 import EmptyState from "./EmptyState";
 import MessageItem from "./MessageItem";
 
 interface MessageListProps {
-  messages: UIMessage[];
+  messages: ChatUIMessage[];
   configLoading: boolean;
   llmConfig: LLMConfig | null;
   status: string;
@@ -65,7 +64,7 @@ export default function MessageList({
     : null;
 
   // 创建临时的空白AI消息（用于显示打字指示器）
-  const placeholderAIMessage: UIMessage = {
+  const placeholderAIMessage: ChatUIMessage = {
     id: "temp-ai-placeholder",
     role: "assistant",
     parts: [
@@ -74,6 +73,10 @@ export default function MessageList({
         text: "",
       },
     ],
+    metadata: {
+      modelName: llmConfig?.modelName,
+      createdAt: Date.now(),
+    },
   };
 
   // 渲染消息列表

@@ -175,6 +175,7 @@ export function useStorageConversations() {
       role: "user" | "assistant" | "system",
       content: string,
       toolInvocations?: unknown,
+      modelName?: string | null,
     ): Promise<Message> => {
       setLoading(true);
       setError(null);
@@ -189,6 +190,7 @@ export function useStorageConversations() {
           tool_invocations: toolInvocations
             ? JSON.stringify(toolInvocations)
             : undefined,
+          model_name: modelName ?? null,
         });
 
         setLoading(false);

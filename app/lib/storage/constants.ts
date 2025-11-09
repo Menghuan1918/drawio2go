@@ -59,7 +59,7 @@ export const DB_NAME = "drawio2go";
  * IndexedDB 数据库版本号
  * 变更数据库结构时需要递增此版本号
  */
-export const DB_VERSION = 1;
+export const DB_VERSION = 2;
 
 /**
  * Electron SQLite 数据库文件名

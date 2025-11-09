@@ -195,6 +195,13 @@ pnpm format               # 使用 Prettier 格式化所有代码
 - 统一导出通过 `app/components/chat/index.ts`
 - 职责单一，便于测试和维护
 
+### 2025-11 聊天界面与模型标记
+
+- 聊天消息新增模型信息：`messages` 表增加 `model_name` 字段，Web IndexedDB 版本固定为 2（需要手动清空旧数据），SQLite 直接假设新结构（无自动迁移）
+- `ChatSidebar` 在消息层面写入 `model_name` 元数据，确保用户消息与 AI 回复都能追溯到当时的模型
+- AI 回复区域改为全宽布局，无底色覆盖整个侧边栏；用户消息仍保持气泡样式
+- 新增左上角信息条（Lucide 图标 + 模型名 + 时间戳），与工具调用卡片共用全宽布局
+
 ### 2025-11 OpenAI Compatible 支持
 
 - 支持 OpenAI Reasoning 模型（o1/o3）

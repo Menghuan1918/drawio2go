@@ -7,10 +7,10 @@ import { TypingIndicator } from "./TypingIndicator";
 import { markdownComponents } from "./constants/markdownComponents";
 import { getToolExpansionKey, shouldToolBeExpanded } from "./utils/toolUtils";
 import { type ToolMessagePart } from "./constants/toolConstants";
-import type { UIMessage } from "ai";
+import type { ChatUIMessage } from "@/app/types/chat";
 
 interface MessageContentProps {
-  message: UIMessage;
+  message: ChatUIMessage;
   status?: string;
   isCurrentStreaming?: boolean;
   expandedToolCalls: Record<string, boolean>;

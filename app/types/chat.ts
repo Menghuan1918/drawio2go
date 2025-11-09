@@ -1,3 +1,5 @@
+import type { UIMessage } from "ai";
+
 export type ProviderType =
   | "openai-reasoning"
   | "openai-compatible"
@@ -31,13 +33,18 @@ export interface ChatMessage {
   createdAt?: Date;
 }
 
-import type { UIMessage } from "ai";
+export interface MessageMetadata {
+  modelName?: string | null;
+  createdAt?: number;
+}
+
+export type ChatUIMessage = UIMessage<MessageMetadata>;
 
 // 会话管理相关类型（使用 UIMessage 从 @ai-sdk/react）
 export interface ChatSession {
   id: string; // 唯一标识（UUID）
   title: string; // 会话标题（自动生成）
-  messages: UIMessage[]; // 消息列表（UIMessage 类型）
+  messages: ChatUIMessage[]; // 消息列表
   createdAt: number; // 创建时间戳
   updatedAt: number; // 最后更新时间戳
 }

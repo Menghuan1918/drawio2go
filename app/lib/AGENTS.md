@@ -132,15 +132,32 @@ interface XMLVersion {
 
 #### Conversations 表
 
-聊天会话表，存储 AI 对话历史
+聊天会话表，关联项目与 XML 版本
 
 ```typescript
 interface Conversation {
-  id: string; // 会话 ID
-  title: string; // 会话标题
-  messages: string; // JSON 序列化的消息数组
-  created_at: number; // 创建时间戳
-  updated_at: number; // 更新时间戳
+  id: string;
+  project_uuid: string;
+  xml_version_id: number;
+  title: string;
+  created_at: number;
+  updated_at: number;
+}
+```
+
+#### Messages 表
+
+聊天消息明细表，记录模型元数据与工具调用
+
+```typescript
+interface Message {
+  id: string;
+  conversation_id: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  tool_invocations?: string; // JSON 字符串
+  model_name?: string | null; // 关联的 LLM 模型
+  created_at: number;
 }
 ```
 
@@ -224,7 +241,6 @@ const { settings, saveSettings } = useStorageSettings();
 ### IndexedDB 实现细节
 
 - **数据库名称**: `drawio2go`
-- **版本管理**: 使用 idb 库简化版本迁移
 - **对象存储**: 每个表对应一个对象存储（Object Store）
 - **索引**: 为查询字段创建索引提升性能
 

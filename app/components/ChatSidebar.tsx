@@ -8,13 +8,17 @@ import {
   useCallback,
   type FormEvent,
 } from "react";
-import { useChat, type UIMessage } from "@ai-sdk/react";
+import { useChat } from "@ai-sdk/react";
 import {
   useStorageSettings,
   useStorageConversations,
   useStorageXMLVersions,
 } from "@/app/hooks";
-import type { LLMConfig } from "@/app/types/chat";
+import type {
+  ChatUIMessage,
+  LLMConfig,
+  MessageMetadata,
+} from "@/app/types/chat";
 import type {
   Conversation,
   Message,
@@ -46,9 +50,9 @@ interface ChatSidebarProps {
  * 将存储的 Message 转换为 UIMessage（用于 @ai-sdk/react）
  * AI SDK 5.0 使用 parts 数组结构
  */
-function convertMessageToUIMessage(msg: Message): UIMessage {
+function convertMessageToUIMessage(msg: Message): ChatUIMessage {
   // 尝试解析 tool_invocations
-  const parts: UIMessage["parts"] = [];
+  const parts: ChatUIMessage["parts"] = [];
 
   // 添加文本部分
   if (msg.content) {
@@ -67,7 +71,7 @@ function convertMessageToUIMessage(msg: Message): UIMessage {
           parts.push({
             type: "tool-invocation",
             toolInvocation: invocation,
-          } as unknown as UIMessage["parts"][number]);
+          } as unknown as ChatUIMessage["parts"][number]);
         }
       }
     } catch (e) {
@@ -78,10 +82,16 @@ function convertMessageToUIMessage(msg: Message): UIMessage {
     }
   }
 
+  const metadata: MessageMetadata = {
+    modelName: msg.model_name ?? null,
+    createdAt: msg.created_at,
+  };
+
   return {
     id: msg.id,
     role: msg.role as "user" | "assistant" | "system",
     parts,
+    metadata,
   };
 }
 
@@ -90,7 +100,7 @@ function convertMessageToUIMessage(msg: Message): UIMessage {
  * 提取所有 text parts 合并为 content，保存 tool-invocation parts 为 tool_invocations
  */
 function convertUIMessageToCreateInput(
-  uiMsg: UIMessage,
+  uiMsg: ChatUIMessage,
   conversationId: string,
 ): CreateMessageInput {
   // 提取所有文本部分
@@ -112,19 +122,22 @@ function convertUIMessageToCreateInput(
         )
       : undefined;
 
+  const metadata = (uiMsg.metadata as MessageMetadata | undefined) ?? {};
+
   return {
     id: uiMsg.id,
     conversation_id: conversationId,
     role: uiMsg.role as "user" | "assistant" | "system",
     content,
     tool_invocations,
+    model_name: metadata.modelName ?? null,
   };
 }
 
 /**
  * 生成对话标题（从消息列表）
  */
-function generateTitle(messages: UIMessage[]): string {
+function generateTitle(messages: ChatUIMessage[]): string {
   if (messages.length === 0) return "新对话";
 
   const firstUserMessage = messages.find((msg) => msg.role === "user");
@@ -173,7 +186,7 @@ export default function ChatSidebar({}: ChatSidebarProps) {
     string | null
   >(null);
   const [conversationMessages, setConversationMessages] = useState<
-    Record<string, UIMessage[]>
+    Record<string, ChatUIMessage[]>
   >({});
   const [defaultXmlVersionId, setDefaultXmlVersionId] = useState<number | null>(
     null,
@@ -193,7 +206,7 @@ export default function ChatSidebar({}: ChatSidebarProps) {
     return conversations.find((c) => c.id === activeConversationId) || null;
   }, [conversations, activeConversationId]);
 
-  const initialMessages = useMemo(() => {
+  const initialMessages = useMemo<ChatUIMessage[]>(() => {
     return activeConversationId
       ? conversationMessages[activeConversationId] || []
       : [];
@@ -208,7 +221,7 @@ export default function ChatSidebar({}: ChatSidebarProps) {
       {
         id: string;
         title: string;
-        messages: UIMessage[];
+        messages: ChatUIMessage[];
         createdAt: number;
         updatedAt: number;
       }
@@ -279,7 +292,7 @@ export default function ChatSidebar({}: ChatSidebarProps) {
           setActiveConversationId(latestConv.id);
 
           // 加载所有对话的消息
-          const messagesMap: Record<string, UIMessage[]> = {};
+          const messagesMap: Record<string, ChatUIMessage[]> = {};
           for (const conv of allConversations) {
             const messages = await getMessages(conv.id);
             messagesMap[conv.id] = messages.map(convertMessageToUIMessage);
@@ -304,6 +317,37 @@ export default function ChatSidebar({}: ChatSidebarProps) {
     saveXML,
   ]);
 
+  const fallbackModelName = useMemo(
+    () => llmConfig?.modelName ?? DEFAULT_LLM_CONFIG.modelName,
+    [llmConfig],
+  );
+
+  const ensureMessageMetadata = useCallback(
+    (message: ChatUIMessage): ChatUIMessage => {
+      const metadata = (message.metadata as MessageMetadata | undefined) ?? {};
+      const resolvedMetadata: MessageMetadata = {
+        modelName: metadata.modelName ?? fallbackModelName,
+        createdAt: metadata.createdAt ?? Date.now(),
+      };
+
+      if (
+        metadata.modelName === resolvedMetadata.modelName &&
+        metadata.createdAt === resolvedMetadata.createdAt
+      ) {
+        return message;
+      }
+
+      return {
+        ...message,
+        metadata: {
+          ...metadata,
+          ...resolvedMetadata,
+        },
+      };
+    },
+    [fallbackModelName],
+  );
+
   // ========== useChat 集成 ==========
   const {
     messages,
@@ -311,7 +355,7 @@ export default function ChatSidebar({}: ChatSidebarProps) {
     status,
     stop,
     error: chatError,
-  } = useChat({
+  } = useChat<ChatUIMessage>({
     id: activeConversationId || "default",
     messages: initialMessages,
     onFinish: async ({ messages: finishedMessages }) => {
@@ -360,7 +404,9 @@ export default function ChatSidebar({}: ChatSidebarProps) {
         const finalSessionId: string = targetSessionId;
 
         // 将 UIMessage[] 转换为 CreateMessageInput[]
-        const messagesToSave = finishedMessages.map((msg) =>
+        const normalizedMessages = finishedMessages.map(ensureMessageMetadata);
+
+        const messagesToSave = normalizedMessages.map((msg) =>
           convertUIMessageToCreateInput(msg, finalSessionId),
         );
 
@@ -370,11 +416,11 @@ export default function ChatSidebar({}: ChatSidebarProps) {
         // 更新本地缓存
         setConversationMessages((prev) => ({
           ...prev,
-          [finalSessionId]: finishedMessages,
+          [finalSessionId]: normalizedMessages,
         }));
 
         // 更新对话标题
-        const title = generateTitle(finishedMessages);
+        const title = generateTitle(normalizedMessages);
         await updateConversation(finalSessionId, { title });
 
         // 更新本地对话列表中的标题
@@ -395,11 +441,16 @@ export default function ChatSidebar({}: ChatSidebarProps) {
     },
   });
 
+  const isChatStreaming = status === "submitted" || status === "streaming";
+
+  const displayMessages = useMemo(
+    () => messages.map(ensureMessageMetadata),
+    [messages, ensureMessageMetadata],
+  );
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const isChatStreaming = status === "submitted" || status === "streaming";
+  }, [displayMessages]);
 
   // ========== 事件处理函数 ==========
 
@@ -731,7 +782,7 @@ export default function ChatSidebar({}: ChatSidebarProps) {
 
         {/* 消息列表 */}
         <MessageList
-          messages={messages}
+          messages={displayMessages}
           configLoading={configLoading}
           llmConfig={llmConfig}
           status={status}

@@ -122,6 +122,7 @@ export interface Message {
   role: MessageRole;
   content: string;
   tool_invocations?: string; // JSON 序列化的工具调用记录
+  model_name?: string | null; // 发送消息时使用的模型
   created_at: number;
 }
 
