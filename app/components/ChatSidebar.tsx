@@ -480,7 +480,7 @@ export default function ChatSidebar({ currentProjectId }: ChatSidebarProps) {
       const tempConversationId = `temp-${Date.now()}`;
 
       // 立即启动异步创建对话，不等待完成
-      const createPromise = createConversation("新对话")
+      const createPromise = createConversation("新对话", currentProjectId)
         .then((newConv) => {
           console.log(
             `[ChatSidebar] 异步创建对话完成: ${newConv.id} (标题: 新对话)`,
@@ -546,14 +546,14 @@ export default function ChatSidebar({ currentProjectId }: ChatSidebarProps) {
 
   const handleNewChat = useCallback(async () => {
     try {
-      const newConv = await createConversation("新对话");
+      const newConv = await createConversation("新对话", currentProjectId);
       setConversations((prev) => [newConv, ...prev]);
       setActiveConversationId(newConv.id);
       setConversationMessages((prev) => ({ ...prev, [newConv.id]: [] }));
     } catch (error) {
       console.error("[ChatSidebar] 创建新对话失败:", error);
     }
-  }, [createConversation]);
+  }, [createConversation, currentProjectId]);
 
   const handleHistory = () => {
     setShowSessionMenu(!showSessionMenu);

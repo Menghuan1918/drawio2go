@@ -51,7 +51,10 @@
       "Bash(pnpm rebuild:*)",
       "Bash(pnpm run format:*)",
       "mcp__heroui-react__get_component_source_styles",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr diff:*)"
     ],
     "deny": [],
     "ask": []
