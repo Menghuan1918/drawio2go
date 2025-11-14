@@ -1,0 +1,162 @@
+@layer base {
+  /* DrawIO2Go Light Theme */
+  [data-theme="drawio2go"] {
+    color-scheme: light;
+
+    /* Primitive Colors */
+    --white: oklch(1 0 0);
+    --black: oklch(0 0 0);
+    --snow: oklch(0.9911 0 0);
+    --eclipse: oklch(0.2103 0.0059 285.89);
+
+    /* Foundations */
+    --spacing: 0.25rem;
+    --border-width: 0px;
+    --field-border-width: var(--border-width);
+    --disabled-opacity: 0.5;
+    --ring-offset-width: 2px;
+    --cursor-interactive: pointer;
+    --cursor-disabled: not-allowed;
+
+    /* Radius */
+    --radius-sm: 0.25rem; /* 4px */
+    --radius: 0.5rem; /* 8px */
+    --radius-lg: 0.75rem; /* 12px */
+    --field-radius: calc(var(--radius) * 1.5); /* 12px */
+
+    /* Base Colors */
+    --background: oklch(0.9799 0.0059 239.82);
+    --foreground: var(--eclipse);
+    --foreground-secondary: rgba(15, 23, 42, 0.68);
+    --foreground-tertiary: rgba(15, 23, 42, 0.45);
+
+    --surface: var(--white);
+    --surface-foreground: var(--foreground);
+    --overlay: var(--white);
+    --overlay-foreground: var(--foreground);
+
+    --muted: oklch(0.735 0.013 256.34);
+    --scrollbar: oklch(0.883 0.007 248.74);
+
+    --default: oklch(0.964 0.008 245.11);
+    --default-foreground: var(--foreground);
+
+    /* Accent system */
+    --accent: oklch(0.5843 0.0889 234.67);
+    --accent-foreground: var(--snow);
+    --accent-hover: oklch(0.5216 0.1033 243.38);
+    --accent-soft: color-mix(in oklch, var(--accent) 15%, var(--background));
+    --accent-soft-foreground: var(--accent-foreground);
+
+    --focus: var(--accent);
+    --link: var(--accent);
+
+    /* Field tokens */
+    --field-background: var(--white);
+    --field-foreground: oklch(0.2103 0.0059 285.89);
+    --field-placeholder: rgba(15, 23, 42, 0.52);
+    --field-border: transparent;
+
+    /* Status colors */
+    --success: oklch(0.7227 0.192 149.58);
+    --success-foreground: var(--eclipse);
+    --warning: oklch(0.7686 0.1647 70.08);
+    --warning-foreground: var(--eclipse);
+    --info: oklch(0.6056 0.2189 292.72);
+    --info-foreground: var(--snow);
+    --danger: oklch(0.6368 0.2078 25.33);
+    --danger-foreground: var(--snow);
+
+    /* Components */
+    --segment: var(--white);
+    --segment-foreground: var(--foreground);
+
+    /* Misc */
+    --border: color-mix(in oklch, var(--accent) 12%, transparent);
+    --divider: oklch(0.92 0.007 240.21);
+
+    /* Shadows */
+    --surface-shadow: var(--shadow-1);
+    --overlay-shadow: var(--shadow-4);
+    --field-shadow: 0 0 0 1px color-mix(in oklch, var(--accent) 12%, transparent);
+
+    --skeleton-animation: shimmer;
+  }
+
+  /* DrawIO2Go Dark Theme */
+  .dark[data-theme="drawio2go-dark"],
+  [data-theme="drawio2go-dark"] {
+    color-scheme: dark;
+
+    --background: oklch(0.2054 0.0288 239.43);
+    --foreground: var(--snow);
+    --foreground-secondary: rgba(248, 250, 252, 0.75);
+    --foreground-tertiary: rgba(248, 250, 252, 0.5);
+
+    --surface: oklch(0.2508 0.0393 241.72);
+    --surface-foreground: var(--foreground);
+    --overlay: oklch(0.286 0.038 241.5);
+    --overlay-foreground: var(--foreground);
+
+    --muted: oklch(0.58 0.03 257.1);
+    --scrollbar: oklch(0.41 0.02 253.5);
+
+    --default: oklch(0.32 0.02 245.2);
+    --default-foreground: var(--foreground);
+
+    --accent: oklch(0.69 0.0889 234.67);
+    --accent-foreground: var(--snow);
+    --accent-hover: oklch(0.74 0.0889 234.67);
+    --accent-soft: color-mix(in oklch, var(--accent) 22%, var(--background));
+    --accent-soft-foreground: var(--accent-foreground);
+
+    --focus: var(--accent);
+    --link: var(--accent);
+
+    --field-background: var(--default);
+    --field-foreground: var(--foreground);
+    --field-placeholder: rgba(248, 250, 252, 0.55);
+    --field-border: rgba(255, 255, 255, 0.08);
+
+    --success: oklch(0.7227 0.192 149.58);
+    --success-foreground: var(--foreground);
+    --warning: oklch(0.8203 0.1388 76.34);
+    --warning-foreground: var(--foreground);
+    --info: oklch(0.65 0.19 292.72);
+    --info-foreground: var(--snow);
+    --danger: oklch(0.594 0.1967 24.63);
+    --danger-foreground: var(--snow);
+
+    --segment: color-mix(in oklch, var(--surface) 85%, var(--background));
+    --segment-foreground: var(--foreground);
+
+    --border: color-mix(in oklch, var(--accent) 35%, transparent);
+    --divider: oklch(0.32 0.01 240.35);
+
+    --surface-shadow: 0 0 0 0 transparent inset;
+    --overlay-shadow: 0 0 0 0 transparent inset;
+    --field-shadow: 0 0 0 0 transparent inset;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-default: var(--default);
+  --color-default-foreground: var(--default-foreground);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-border: var(--divider);
+  --radius-sm: var(--radius-sm, 0.25rem);
+  --radius: var(--radius, 0.5rem);
+  --radius-lg: var(--radius-lg, 0.75rem);
+}

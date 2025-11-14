@@ -1,50 +1,40 @@
-/* ==================== CSS模块化架构 ==================== */
+/* ==================== CSS 模块化架构 ==================== */
 /*
- * 模块化CSS架构 - 按功能拆分的样式系统
- *
- * 导入顺序说明：
- * 1. 外部框架 (Tailwind CSS v4 + HeroUI v3)
- * 2. 基础样式 (重置、变量、全局样式)
- * 3. 布局组件 (容器、侧边栏、顶栏)
- * 4. 业务组件 (按钮、聊天、表单、弹窗、会话)
- * 5. 工具类 (动画、Markdown、滚动条等)
- * 6. 主题样式 (浅色/深色主题)
+ * 导入顺序：theme → base → components → utilities
+ * 通过 @layer 确保 HeroUI 主题、Tailwind 工具类与自定义样式保持一致顺序
  */
+@layer theme, base, components, utilities;
 
-/* 外部框架导入 - 必须放在第一位 */
+/* 外部框架 */
 @import "tailwindcss";
 @import "@heroui/styles";
 
+/* HeroUI 主题 */
+@import "./styles/themes/drawio2go.css" layer(theme);
+
 /* 基础样式模块 */
-@import "./styles/base/variables.css";
-@import "./styles/base/reset.css";
-@import "./styles/base/globals.css";
+@import "./styles/base/reset.css" layer(base);
+@import "./styles/base/variables.css" layer(base);
+@import "./styles/base/globals.css" layer(base);
 
 /* 布局样式模块 */
-@import "./styles/layout/container.css";
-@import "./styles/layout/sidebar.css";
+@import "./styles/layout/container.css" layer(components);
+@import "./styles/layout/sidebar.css" layer(components);
 
 /* 组件样式模块 */
-@import "./styles/components/buttons.css";
-@import "./styles/components/chat.css";
-@import "./styles/components/forms.css";
-@import "./styles/components/modal.css";
-@import "./styles/components/sessions.css";
-
-/* 版本管理样式模块 */
-@import "./styles/components/version-animations.css";
-@import "./styles/components/version-sidebar.css";
-@import "./styles/components/version-wip.css";
-@import "./styles/components/version-timeline.css";
-@import "./styles/components/version-dialog.css";
+@import "./styles/components/chat.css" layer(components);
+@import "./styles/components/forms.css" layer(components);
+@import "./styles/components/modal.css" layer(components);
+@import "./styles/components/sessions.css" layer(components);
+@import "./styles/components/version-animations.css" layer(components);
+@import "./styles/components/version-sidebar.css" layer(components);
+@import "./styles/components/version-wip.css" layer(components);
+@import "./styles/components/version-timeline.css" layer(components);
+@import "./styles/components/version-dialog.css" layer(components);
 
 /* 工具类模块 */
-@import "./styles/utilities/animations.css";
-@import "./styles/utilities/markdown.css";
-@import "./styles/utilities/components.css";
-@import "./styles/utilities/scrollbars.css";
-@import "./styles/utilities/tool-calls.css";
-
-/* 主题样式模块 */
-@import "./styles/themes/light.css";
-@import "./styles/themes/dark.css";
+@import "./styles/utilities/animations.css" layer(utilities);
+@import "./styles/utilities/markdown.css" layer(utilities);
+@import "./styles/utilities/components.css" layer(utilities);
+@import "./styles/utilities/scrollbars.css" layer(utilities);
+@import "./styles/utilities/tool-calls.css" layer(utilities);

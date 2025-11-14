@@ -39,11 +39,11 @@
 
   /* ========== 色彩系统 ========== */
 
-  /* 主题色 #3388BB */
-  --primary-color: #3388bb;
-  --primary-hover: #2a6fa0;
-  --primary-light: #e6f2f9;
-  --primary-foreground: #ffffff;
+  /* 主题色映射到 HeroUI */
+  --primary-color: var(--accent, #3388bb);
+  --primary-hover: var(--accent-hover, #2a6fa0);
+  --primary-light: var(--accent-soft, #e6f2f9);
+  --primary-foreground: var(--accent-foreground, #ffffff);
 
   /* 语义化颜色 */
   --success-color: #22c55e;
@@ -63,14 +63,14 @@
   --gray-bg: rgba(156, 163, 175, 0.04);
 
   /* 边框颜色 */
-  --border-primary: rgba(51, 136, 187, 0.25);
-  --border-light: rgba(51, 136, 187, 0.15);
-  --border-hover: rgba(51, 136, 187, 0.3);
+  --border-primary: color-mix(in oklch, var(--accent, #3388bb) 35%, transparent);
+  --border-light: color-mix(in oklch, var(--accent, #3388bb) 20%, transparent);
+  --border-hover: color-mix(in oklch, var(--accent, #3388bb) 45%, transparent);
 
   /* 背景颜色 */
-  --bg-primary: rgba(51, 136, 187, 0.04);
-  --bg-secondary: rgba(51, 136, 187, 0.08);
-  --bg-hover: rgba(51, 136, 187, 0.12);
+  --bg-primary: color-mix(in oklch, var(--accent, #3388bb) 8%, transparent);
+  --bg-secondary: color-mix(in oklch, var(--accent, #3388bb) 12%, transparent);
+  --bg-hover: color-mix(in oklch, var(--accent, #3388bb) 16%, transparent);
 
   /* ========== Material Design 阴影层级 ========== */
   --shadow-1: 0 1px 3px rgba(51, 136, 187, 0.12); /* 轻微提升 */
@@ -105,7 +105,7 @@
 [data-theme="dark"],
 .dark {
   /* 深色模式下的颜色覆盖 */
-  --primary-light: #1a3d52;
+  --primary-light: color-mix(in oklch, var(--accent, #3388bb) 22%, var(--background, #0f1b27));
   --shadow-sidebar: -2px 0 8px rgba(51, 136, 187, 0.15);
   --text-primary: rgba(248, 250, 252, 0.95);
   --text-secondary: rgba(248, 250, 252, 0.7);

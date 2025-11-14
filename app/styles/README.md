@@ -13,11 +13,11 @@ app/styles/
 │   ├── container.css      # 主容器和编辑器布局
 │   └── sidebar.css        # 侧边栏相关样式
 ├── components/            # 组件样式模块
-│   ├── buttons.css        # 按钮组件样式
 │   ├── chat.css           # 聊天相关组件样式
 │   ├── forms.css          # 表单控件样式
 │   ├── modal.css          # 弹窗组件样式
-│   └── sessions.css       # 会话管理样式
+│   ├── sessions.css       # 会话管理样式
+│   └── version-*.css      # 版本管理子模块
 ├── utilities/             # 工具类模块
 │   ├── animations.css     # 动画关键帧定义
 │   ├── markdown.css       # Markdown内容样式
@@ -25,8 +25,7 @@ app/styles/
 │   ├── scrollbars.css     # 滚动条样式
 │   └── tool-calls.css     # Tool Call卡片样式
 └── themes/                # 主题相关模块
-    ├── light.css          # 浅色主题特有样式
-    └── dark.css           # 深色主题特有样式
+    └── drawio2go.css      # HeroUI 自定义主题（浅/深色）
 ```
 
 ## 🎯 设计原则
@@ -40,43 +39,42 @@ app/styles/
 ### 2. 导入顺序
 
 ```css
-/* 1. 外部框架 - 必须放在第一位 */
+@layer theme, base, components, utilities;
+
+/* 1. 外部框架 */
 @import "tailwindcss";
 @import "@heroui/styles";
 
-/* 2. 基础样式 - 变量、重置、全局样式 */
-@import "./styles/base/variables.css";
-@import "./styles/base/reset.css";
-@import "./styles/base/globals.css";
+/* 2. HeroUI 主题 */
+@import "./styles/themes/drawio2go.css" layer(theme);
 
-/* 3. 布局组件 - 容器、侧边栏、顶栏 */
-@import "./styles/layout/container.css";
-@import "./styles/layout/sidebar.css";
+/* 3. 基础样式 */
+@import "./styles/base/reset.css" layer(base);
+@import "./styles/base/variables.css" layer(base);
+@import "./styles/base/globals.css" layer(base);
 
-/* 4. 业务组件 - 按钮、聊天、表单、弹窗、会话 */
-@import "./styles/components/buttons.css";
-@import "./styles/components/chat.css";
-@import "./styles/components/forms.css";
-@import "./styles/components/modal.css";
-@import "./styles/components/sessions.css";
+/* 4. 布局/业务组件 */
+@import "./styles/layout/container.css" layer(components);
+@import "./styles/layout/sidebar.css" layer(components);
+@import "./styles/components/chat.css" layer(components);
+@import "./styles/components/forms.css" layer(components);
+@import "./styles/components/modal.css" layer(components);
+@import "./styles/components/sessions.css" layer(components);
+@import "./styles/components/version-*.css" layer(components);
 
-/* 5. 工具类 - 动画、Markdown、滚动条等 */
-@import "./styles/utilities/animations.css";
-@import "./styles/utilities/markdown.css";
-@import "./styles/utilities/components.css";
-@import "./styles/utilities/scrollbars.css";
-@import "./styles/utilities/tool-calls.css";
-
-/* 6. 主题样式 - 浅色/深色主题 */
-@import "./styles/themes/light.css";
-@import "./styles/themes/dark.css";
+/* 5. 工具类 */
+@import "./styles/utilities/animations.css" layer(utilities);
+@import "./styles/utilities/markdown.css" layer(utilities);
+@import "./styles/utilities/components.css" layer(utilities);
+@import "./styles/utilities/scrollbars.css" layer(utilities);
+@import "./styles/utilities/tool-calls.css" layer(utilities);
 ```
 
 ### 3. CSS变量系统
 
 - **设计令牌**：统一管理颜色、间距、阴影等设计变量
 - **语义化命名**：使用有意义的变量名，如 `--primary-color`、`--border-primary`
-- **主题支持**：深色模式通过变量覆盖实现
+- **主题支持**：通过 `themes/drawio2go.css` 维护 `[data-theme="drawio2go(-dark)"]`
 
 ## 🎨 主要优化
 
@@ -113,9 +111,10 @@ app/styles/
 
 ### 3. 主题开发
 
-- 新增主题变量在 `base/variables.css` 中定义
-- 主题特定样式放在 `themes/` 目录下
-- 保持主题切换的平滑过渡
+- HeroUI 主题变量统一放在 `themes/drawio2go.css` 中，按 `[data-theme="drawio2go"]`/`[data-theme="drawio2go-dark"]` 分组
+- `base/variables.css` 仅保留设计令牌及兼容性别名（如 `--primary-color` → `--accent`）
+- 在 `drawio2go.css` 的 `@theme inline` 区域暴露 `--color-*`/`--radius-*` 供 Tailwind 使用
+- 切换深浅色时只需修改 `<html class="light|dark" data-theme="drawio2go(-dark)">`
 
 ## 🔧 维护指南
 

@@ -176,56 +176,80 @@
 
 ```
 app/styles/
-├── base/              # 基础样式
-│   ├── variables.css  # 设计令牌（必须最先导入）
-│   └── reset.css      # 样式重置
-├── components/        # 组件样式
-│   ├── buttons.css
+├── base/                # 基础样式（变量、Reset、全局）
+│   ├── variables.css
+│   ├── reset.css
+│   └── globals.css
+├── components/          # 业务组件样式
 │   ├── chat.css
+│   ├── forms.css
 │   ├── modal.css
-│   ├── version-sidebar.css
-│   ├── version-wip.css
-│   ├── version-timeline.css
+│   ├── sessions.css
+│   ├── version-animations.css
 │   ├── version-dialog.css
-│   └── version-animations.css
-├── layout/            # 布局样式
-│   ├── sidebar.css
-│   └── bottom-bar.css
-├── themes/            # 主题样式
-│   └── dark-mode.css
-└── utilities/         # 工具样式
-    └── animations.css
+│   ├── version-sidebar.css
+│   ├── version-timeline.css
+│   └── version-wip.css
+├── layout/              # 布局相关
+│   ├── container.css
+│   └── sidebar.css
+├── themes/
+│   └── drawio2go.css    # HeroUI 自定义主题（浅/深色）
+└── utilities/
+    ├── animations.css
+    ├── components.css
+    ├── markdown.css
+    ├── scrollbars.css
+    └── tool-calls.css
 ```
 
 ### 导入顺序（globals.css）
 
 ```css
-/* 1. Tailwind CSS v4 基础 */
+@layer theme, base, components, utilities;
+
+/* 1. 外部框架 */
 @import "tailwindcss";
+@import "@heroui/styles";
 
-/* 2. 基础样式（变量必须最先） */
-@import "./styles/base/variables.css";
-@import "./styles/base/reset.css";
+/* 2. HeroUI 主题 */
+@import "./styles/themes/drawio2go.css" layer(theme);
 
-/* 3. 布局样式 */
-@import "./styles/layout/sidebar.css";
-@import "./styles/layout/bottom-bar.css";
+/* 3. 基础样式 */
+@import "./styles/base/reset.css" layer(base);
+@import "./styles/base/variables.css" layer(base);
+@import "./styles/base/globals.css" layer(base);
 
-/* 4. 组件样式 */
-@import "./styles/components/buttons.css";
-@import "./styles/components/chat.css";
-/* ... 其他组件 */
+/* 4. 布局与组件 */
+@import "./styles/layout/container.css" layer(components);
+@import "./styles/layout/sidebar.css" layer(components);
+@import "./styles/components/chat.css" layer(components);
+@import "./styles/components/forms.css" layer(components);
+@import "./styles/components/modal.css" layer(components);
+@import "./styles/components/sessions.css" layer(components);
+@import "./styles/components/version-*.css" layer(components);
 
-/* 5. 主题样式 */
-@import "./styles/themes/dark-mode.css";
-
-/* 6. 工具样式 */
-@import "./styles/utilities/animations.css";
+/* 5. 工具样式 */
+@import "./styles/utilities/*.css" layer(utilities);
 ```
 
 ---
 
 ## Material Design 实践指南
+
+### 自定义主题（drawio2go.css）
+
+- 主题文件位于 `app/styles/themes/drawio2go.css`，包含 `[data-theme="drawio2go"]`（浅色）与 `[data-theme="drawio2go-dark"]`（深色）两套变量。
+- 根节点必须按照以下约定设置：
+
+  ```html
+  <html class="light" data-theme="drawio2go">
+  <html class="dark" data-theme="drawio2go-dark">
+  ```
+
+- `@theme inline` 已将 `--color-background`、`--color-accent`、`--radius` 等暴露给 Tailwind，故可直接使用 `bg-background`、`text-foreground`、`rounded-lg` 等工具类。
+- 所有旧的 `--primary-*` 变量已映射至 HeroUI 的 `--accent`/`--accent-hover`/`--accent-soft`，请勿再写入硬编码 Hex。
+- 需要新增主题变量时，请在 `drawio2go.css` 中定义，并在 `@theme inline` 中同步暴露 Tailwind token。
 
 ### ✅ 应该做的
 
@@ -371,15 +395,15 @@ import { Button, Card } from '@heroui/react'
 
 ### Q2: 如何确保深色模式兼容？
 
-在 `variables.css` 中覆盖变量：
+- HTML 根节点切换策略：
 
-```css
-[data-theme="dark"],
-.dark {
-  --primary-light: #1a3d52;
-  --shadow-sidebar: -2px 0 8px rgba(51, 136, 187, 0.15);
-}
-```
+  ```html
+  <html class="light" data-theme="drawio2go">
+  <html class="dark" data-theme="drawio2go-dark">
+  ```
+
+- 颜色、圆角、阴影全部放在 `drawio2go.css` 中按 data-theme 维护；其他自定义变量（如 `--shadow-sidebar`）可继续在 `variables.css` 里使用 `.dark` 选择器做补丁。
+- Tailwind 工具类会根据 `@theme inline` 输出的 `--color-*` 自动读取主题色，不需要在组件里写额外条件判断。
 
 ### Q3: 新增组件时应该如何命名类？
 

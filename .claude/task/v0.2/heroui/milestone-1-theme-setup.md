@@ -4,7 +4,7 @@
 
 **优先级**：⭐⭐⭐ 最高
 **预计时间**：2-3 小时
-**状态**：🔲 待开始
+**状态**：✅ 已完成（2025-11-14）
 **依赖**：无
 **阻塞**：Milestone 2, 3, 4, 5
 
@@ -16,35 +16,37 @@
 
 ### 1. 颜色转换与配置
 
-- [ ] **将主题色 #3388BB 转换为 oklch 格式**
+- [x] **将主题色 #3388BB 转换为 oklch 格式**
   - 使用 [OKLCH Color Tool](https://oklch.com) 进行转换
   - 记录转换结果：`oklch(0.5843 0.0889 234.67)`
   - 计算 hover 态、light 态的 oklch 值
+  - 实际写入：`--accent: oklch(0.5843 0.0889 234.67)`、`--accent-hover: oklch(0.5216 0.1033 243.38)`、`--accent-soft: color-mix(in oklch, var(--accent) 15%, var(--background))`
 
-- [ ] **配置浅色模式主题色变量**
+- [x] **配置浅色模式主题色变量**
   - `--accent`: 主题色
   - `--accent-foreground`: 主题色上的前景色（文字）
   - `--accent-hover`: hover 态
   - `--accent-soft`: 软化色（15% 透明度）
 
-- [ ] **配置深色模式主题色变量**
+- [x] **配置深色模式主题色变量**
   - 适配深色背景的主题色亮度
   - 确保对比度符合 WCAG 标准
+  - 实际应用：`--accent: oklch(0.69 0.0889 234.67)`、`--accent-hover: oklch(0.74 0.0889 234.67)`、`--accent-soft: color-mix(in oklch, var(--accent) 22%, var(--background))`
 
 ### 2. 圆角系统映射
 
-- [ ] **映射三级圆角到 HeroUI**
+- [x] **映射三级圆角到 HeroUI**
   - 当前：`--radius-sm: 4px`, `--radius: 8px`, `--radius-lg: 12px`
   - HeroUI：设置 `--radius: 0.5rem` (8px) 作为基准
   - 验证 HeroUI 自动计算的其他圆角值是否符合需求
 
-- [ ] **配置 field-radius**
+- [x] **配置 field-radius**
   - `--field-radius: calc(var(--radius) * 1.5)` = 12px
   - 用于表单输入框的圆角
 
 ### 3. 间距系统保留
 
-- [ ] **保留现有间距变量**
+- [x] **保留现有间距变量**
   ```css
   --spacing-xs: 4px --spacing-sm: 8px --spacing-md: 16px --spacing-lg: 24px
     --spacing-xl: 32px;
@@ -53,37 +55,40 @@
 
 ### 4. 阴影系统映射
 
-- [ ] **映射 Material Design 阴影到 HeroUI**
+- [x] **映射 Material Design 阴影到 HeroUI**
   - `--shadow-1` → `--surface-shadow` (轻微提升)
   - `--shadow-2` → `--overlay-shadow` (中等提升)
   - 深色模式：阴影设置为 transparent（Material Design 规范）
 
 ### 5. 创建自定义主题文件
 
-- [ ] **创建 `app/styles/themes/drawio2go.css`**
+- [x] **创建 `app/styles/themes/drawio2go.css`**
   - 包含浅色模式配置 `[data-theme="drawio2go"]`
   - 包含深色模式配置 `[data-theme="drawio2go-dark"]`
   - 参考 HeroUI 官方主题结构
+  - 包含 `@theme inline` 暴露 `--color-*`、`--radius-*` 供 Tailwind 使用
 
 ### 6. 更新全局样式入口
 
-- [ ] **修改 `app/globals.css`**
+- [x] **修改 `app/globals.css`**
   - 导入 Tailwind CSS
   - 导入 HeroUI 样式
   - 导入自定义主题
   - 保留必要的全局样式（滚动条、Markdown等）
   - 删除即将废弃的样式导入（buttons.css 等）
+  - 采用 `@layer theme, base, components, utilities` 统一控制顺序
 
 ### 7. 更新 HTML 主题属性
 
-- [ ] **修改根 HTML 元素**
+- [x] **修改根 HTML 元素**
   - 浅色模式：`<html class="light" data-theme="drawio2go">`
   - 深色模式：`<html class="dark" data-theme="drawio2go-dark">`
   - 确保 body 应用 `bg-background text-foreground`
+  - `app/layout.tsx` 默认输出 `class="light" data-theme="drawio2go"` 并允许客户端切换
 
 ### 8. 配置 Tailwind 主题扩展
 
-- [ ] **在主题文件中使用 `@theme inline` 指令**
+- [x] **在主题文件中使用 `@theme inline` 指令**
   - 将自定义颜色变量暴露给 Tailwind
   - 确保可以使用 `bg-primary`、`text-primary` 等工具类
 
@@ -214,35 +219,35 @@
 
 ### 功能验证
 
-- [ ] **主题色应用正确**
+- [x] **主题色应用正确**
   - HeroUI Button `color="primary"` 显示 #3388BB
   - hover 态颜色正确
   - 深色模式主题色对比度足够
 
-- [ ] **圆角显示正确**
+- [x] **圆角显示正确**
   - Button 圆角为 8px
   - Input 圆角为 12px
   - Card 圆角为 8px
 
-- [ ] **阴影显示正确**
+- [x] **阴影显示正确**
   - 浅色模式：卡片有轻微蓝色阴影
   - 深色模式：无阴影或透明阴影
 
-- [ ] **深色模式切换正常**
+- [x] **深色模式切换正常**
   - 主题色、背景色、前景色切换正确
   - 无闪烁或样式错乱
 
 ### 代码验证
 
-- [ ] **CSS 变量定义完整**
+- [x] **CSS 变量定义完整**
   - 使用浏览器 DevTools 检查所有 HeroUI 必需变量已定义
   - 无 CSS 警告或错误
 
-- [ ] **Tailwind 工具类可用**
+- [x] **Tailwind 工具类可用**
   - `bg-accent`、`text-accent` 等类可用
   - 圆角工具类生效（`rounded-lg` 等）
 
-- [ ] **无样式冲突**
+- [x] **无样式冲突**
   - 检查浏览器 DevTools 无样式覆盖冲突
   - 无 !important 使用（本里程碑范围内）
 
@@ -298,5 +303,5 @@
 
 **创建日期**：2025-11-14
 **预计开始**：待定
-**实际开始**：-
-**完成日期**：-
+**实际开始**：2025-11-14
+**完成日期**：2025-11-14

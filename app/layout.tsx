@@ -12,8 +12,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="zh-CN" suppressHydrationWarning>
-      <body>{children}</body>
+    <html
+      lang="zh-CN"
+      className="light"
+      data-theme="drawio2go"
+      suppressHydrationWarning
+    >
+      <body className="bg-background text-foreground antialiased">
+        {children}
+      </body>
     </html>
   );
 }
