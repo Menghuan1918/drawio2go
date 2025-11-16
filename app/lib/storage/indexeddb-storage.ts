@@ -13,7 +13,12 @@ import type {
   Message,
   CreateMessageInput,
 } from "./types";
-import { DB_NAME, DB_VERSION, DEFAULT_PROJECT_UUID } from "./constants";
+import {
+  DB_NAME,
+  DB_VERSION,
+  DEFAULT_PROJECT_UUID,
+  WIP_VERSION,
+} from "./constants";
 
 /**
  * IndexedDB 存储实现（Web 环境）
@@ -281,7 +286,7 @@ export class IndexedDBStorage implements StorageAdapter {
 
   async updateXMLVersion(
     id: string,
-    updates: Partial<Omit<XMLVersion, "id" | "created_at">>,
+    updates: Partial<Omit<XMLVersion, "id">>,
   ): Promise<void> {
     const db = await this.ensureDB();
     const existing = await db.get("xml_versions", id);
@@ -290,11 +295,18 @@ export class IndexedDBStorage implements StorageAdapter {
       throw new Error(`XML Version not found: ${id}`);
     }
 
+    const targetSemanticVersion =
+      updates.semantic_version ?? existing.semantic_version;
+
     const updated: XMLVersion = {
       ...existing,
       ...updates,
       id: existing.id, // 确保 id 不被覆盖
-      created_at: existing.created_at, // 确保 created_at 不被覆盖
+      created_at:
+        updates.created_at ??
+        (targetSemanticVersion === WIP_VERSION
+          ? Date.now()
+          : existing.created_at),
     };
 
     await db.put("xml_versions", updated);

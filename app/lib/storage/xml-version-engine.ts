@@ -50,8 +50,12 @@ export async function computeVersionPayload({
     };
   }
 
+  // WIP 版本是独立草稿，不应作为其他版本的 diff 链基础
+  const effectiveLatestVersion =
+    latestVersion?.semantic_version === WIP_VERSION ? null : latestVersion;
+
   // 历史版本：使用关键帧 + Diff 混合策略
-  if (!latestVersion) {
+  if (!effectiveLatestVersion) {
     return {
       xml_content: newXml,
       is_keyframe: true,
@@ -61,7 +65,7 @@ export async function computeVersionPayload({
   }
 
   const baseXml = await materializeVersionXml(
-    latestVersion,
+    effectiveLatestVersion,
     resolveVersionById,
   );
   if (baseXml === newXml) {
@@ -79,9 +83,9 @@ export async function computeVersionPayload({
   const baseline = Math.max(baseXml.length, 1);
   const changeRatio = changedCharacters / baseline;
 
-  const nextDepth = latestVersion.is_keyframe
+  const nextDepth = effectiveLatestVersion.is_keyframe
     ? 1
-    : latestVersion.diff_chain_depth + 1;
+    : effectiveLatestVersion.diff_chain_depth + 1;
 
   const needsKeyframe =
     changeRatio > DIFF_KEYFRAME_THRESHOLD || nextDepth > MAX_DIFF_CHAIN_LENGTH;
@@ -102,7 +106,7 @@ export async function computeVersionPayload({
     xml_content: patchText,
     is_keyframe: false,
     diff_chain_depth: nextDepth,
-    source_version_id: latestVersion.id,
+    source_version_id: effectiveLatestVersion.id,
   };
 }
 

@@ -313,6 +313,75 @@ class SQLiteManager {
       .all(projectUuid);
   }
 
+  updateXMLVersion(id, updates = {}) {
+    const entries = Object.entries(updates).filter(
+      ([key, value]) => key !== "id" && value !== undefined,
+    );
+
+    if (entries.length === 0) {
+      return;
+    }
+
+    const fields = [];
+    const values = [];
+
+    for (const [key, value] of entries) {
+      switch (key) {
+        case "metadata": {
+          const serialized =
+            value == null
+              ? null
+              : typeof value === "string"
+                ? value
+                : JSON.stringify(value);
+          fields.push("metadata = ?");
+          values.push(serialized);
+          break;
+        }
+        case "preview_image": {
+          fields.push("preview_image = ?");
+          values.push(value || null);
+          break;
+        }
+        case "is_keyframe": {
+          fields.push("is_keyframe = ?");
+          values.push(value ? 1 : 0);
+          break;
+        }
+        case "diff_chain_depth": {
+          fields.push("diff_chain_depth = ?");
+          values.push(typeof value === "number" ? value : 0);
+          break;
+        }
+        case "created_at": {
+          fields.push("created_at = ?");
+          values.push(typeof value === "number" ? value : Date.now());
+          break;
+        }
+        case "project_uuid":
+        case "semantic_version":
+        case "name":
+        case "description":
+        case "source_version_id":
+        case "xml_content": {
+          fields.push(`${key} = ?`);
+          values.push(value);
+          break;
+        }
+        default:
+          break;
+      }
+    }
+
+    if (fields.length === 0) {
+      return;
+    }
+
+    this.db
+      .prepare(`UPDATE xml_versions SET ${fields.join(", ")} WHERE id = ?`)
+      .run(...values, id);
+  }
+
   deleteXMLVersion(id) {
     this.db.prepare("DELETE FROM xml_versions WHERE id = ?").run(id);
   }

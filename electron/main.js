@@ -474,6 +474,13 @@ ipcMain.handle(
   },
 );
 
+ipcMain.handle("storage:updateXMLVersion", async (event, id, updates) => {
+  if (updates?.preview_image) {
+    updates.preview_image = Buffer.from(updates.preview_image);
+  }
+  return storageManager.updateXMLVersion(id, updates);
+});
+
 ipcMain.handle("storage:deleteXMLVersion", async (event, id) => {
   return storageManager.deleteXMLVersion(id);
 });

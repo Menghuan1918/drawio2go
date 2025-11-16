@@ -107,7 +107,7 @@ declare global {
       getXMLVersionsByProject: (projectUuid: string) => Promise<XMLVersion[]>;
       updateXMLVersion: (
         id: string,
-        updates: Partial<Omit<XMLVersion, "id" | "created_at">>,
+        updates: Partial<Omit<XMLVersion, "id">>,
       ) => Promise<void>;
       deleteXMLVersion: (id: string) => Promise<void>;
 

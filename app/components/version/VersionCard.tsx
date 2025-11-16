@@ -52,6 +52,7 @@ export function VersionCard({
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
+    second: "2-digit",
   });
 
   // 处理回滚按钮点击

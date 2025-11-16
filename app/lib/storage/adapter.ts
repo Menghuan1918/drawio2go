@@ -134,7 +134,7 @@ export interface StorageAdapter {
    */
   updateXMLVersion(
     id: string,
-    updates: Partial<Omit<XMLVersion, "id" | "created_at">>,
+    updates: Partial<Omit<XMLVersion, "id">>,
   ): Promise<void>;
 
   /**

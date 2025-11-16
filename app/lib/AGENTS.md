@@ -57,7 +57,9 @@
 - 提供 `getDrawioXML()`、`replaceDrawioXML()`、`saveDrawioXML()` 三个接口
 - **WIP 工作区自动保存**：
   - 编辑器变更自动保存到 WIP 版本（v0.0.0）
-  - WIP 版本不计入历史记录，仅用于实时保存
+  - WIP 版本不计入历史记录，仅用于实时保存，永远视为关键帧
+  - 每次写入都会刷新 `created_at`，用于在 UI 中显示“最后更新”时间
+  - WIP 不会参与关键帧 + Diff 链路计算，也不会被当作历史版本的 diff 基线
   - 用户手动创建版本时从 WIP 复制并生成语义化版本号
   - 详见 `storage/constants.ts` 中的 WIP_VERSION 常量
 

@@ -71,6 +71,7 @@ export function useStorageXMLVersions() {
         );
 
         let versionId: string;
+        const timestamp = Date.now();
 
         if (wipVersion) {
           // 更新现有 WIP 版本
@@ -85,6 +86,7 @@ export function useStorageXMLVersions() {
             is_keyframe: payload.is_keyframe,
             diff_chain_depth: payload.diff_chain_depth,
             source_version_id: payload.source_version_id,
+            created_at: timestamp,
           });
           versionId = wipVersion.id;
         } else {

@@ -188,6 +188,13 @@ pnpm format               # 使用 Prettier 格式化所有代码
 
 ## 最近更新
 
+### 2025-11-16 WIP 草稿独立存储强化
+
+- **草稿隔离**：WIP (0.0.0) 永远视为关键帧，不会被纳入关键帧 + Diff 链路，也不会作为计算 Diff 的源版本。
+- **时间戳刷新**：每次自动保存或 AI 工具写入 WIP 时都会刷新 `created_at`，确保侧栏的最后更新时间可实时反映当前草稿。
+- **AI 工具对齐**：`drawio-tools.ts` 的保存/替换 API 直接写入 WIP 草稿，不再生成额外的 `latest` 版本号，行为与统一存储 Hook 保持一致。
+- **跨端一致性**：IndexedDB/Electron (SQLite) 均支持更新 WIP 的 `created_at`，Electron 端补齐了 `updateXMLVersion` IPC 能力。
+
 ### 2025-11-14 HeroUI 复杂组件迁移
 
 - **HeroUI Alert**：聊天输入区的 `ErrorBanner` 改为 HeroUI `Alert` 复合组件，移除自定义 `.error-banner` 样式并提供刷新按钮操作。

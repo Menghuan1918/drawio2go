@@ -13,7 +13,7 @@ import type {
   XMLValidationResult,
 } from "../types/drawio-tools";
 import { getStorage } from "./storage/storage-factory";
-import { DEFAULT_PROJECT_UUID } from "./storage/constants";
+import { DEFAULT_PROJECT_UUID, WIP_VERSION } from "./storage/constants";
 import {
   computeVersionPayload,
   materializeVersionXml,
@@ -26,11 +26,6 @@ import { v4 as uuidv4 } from "uuid";
  * 与 useCurrentProject.ts 中的 CURRENT_PROJECT_KEY 保持一致
  */
 const CURRENT_PROJECT_KEY = "currentProjectId";
-
-/**
- * 固定的语义版本号（目前仍使用单一标签）
- */
-const SEMANTIC_VERSION = "latest";
 
 /**
  * 获取当前活跃项目的 UUID
@@ -127,11 +122,13 @@ async function saveDrawioXMLInternal(decodedXml: string): Promise<void> {
   }
 
   const existingVersions = await storage.getXMLVersionsByProject(projectUuid);
-  const latestVersion = existingVersions[0] ?? null;
+  const wipVersion = existingVersions.find(
+    (version) => version.semantic_version === WIP_VERSION,
+  );
   const payload = await computeVersionPayload({
     newXml: decodedXml,
-    semanticVersion: SEMANTIC_VERSION,
-    latestVersion,
+    semanticVersion: WIP_VERSION,
+    latestVersion: null,
     resolveVersionById: (id) => storage.getXMLVersion(id),
   });
 
@@ -139,10 +136,24 @@ async function saveDrawioXMLInternal(decodedXml: string): Promise<void> {
     return;
   }
 
+  if (wipVersion) {
+    await storage.updateXMLVersion(wipVersion.id, {
+      project_uuid: projectUuid,
+      semantic_version: WIP_VERSION,
+      xml_content: payload.xml_content,
+      source_version_id: payload.source_version_id,
+      is_keyframe: payload.is_keyframe,
+      diff_chain_depth: payload.diff_chain_depth,
+      metadata: null,
+      created_at: Date.now(),
+    });
+    return;
+  }
+
   await storage.createXMLVersion({
     id: uuidv4(),
     project_uuid: projectUuid,
-    semantic_version: SEMANTIC_VERSION,
+    semantic_version: WIP_VERSION,
     xml_content: payload.xml_content,
     source_version_id: payload.source_version_id,
     is_keyframe: payload.is_keyframe,
@@ -206,8 +217,9 @@ export async function getDrawioXML(): Promise<GetXMLResult> {
       };
     }
 
-    // 获取最新版本（数组已按创建时间倒序排列）
-    const latestVersion = versions[0];
+    // 优先返回 WIP 版本
+    const latestVersion =
+      versions.find((v) => v.semantic_version === WIP_VERSION) ?? versions[0];
     const resolvedXml = await materializeVersionXml(latestVersion, (id) =>
       storage.getXMLVersion(id),
     );
