@@ -73,7 +73,7 @@ interface VersionCardProps {
 - **操作按钮**: 导出 DrawIO 文件 + 回滚到此版本
 - **SVG 预览**: 将 `preview_svg` 转为 ObjectURL，展示 16:10 缩略图；缺失数据时显示占位提示
 - **页面信息**: 解析 `page_count`/`page_names`，展示“共 X 页”徽章并提供 Tooltip 列出页面名称
-- **多页入口**: 在展开视图内通过 “查看所有页面” 按钮懒加载 `pages_svg`，渲染页面缩略图栅格，下一里程碑可直接复用
+- **多页入口**: 展开视图内可展开缩略图栅格，点击缩略图或“全屏浏览”按钮唤起 PageSVGViewer
 - **徽章系统**:
   - 最新徽章（绿色）
   - 关键帧徽章（黄色，Key 图标）
@@ -125,6 +125,30 @@ interface CreateVersionDialogProps {
 - **SVG 进度**: 通过 `editorRef` + `exportAllPagesSVG` 显示“第 X/Y 页”进度，禁用提交直到完成
 - **异步保存**: 调用存储层 API 创建版本快照并写入 `preview_svg/pages_svg`
 - **成功提示**: 展示页数 + SVG 状态的成功文案，1.4 秒后自动关闭对话框
+
+#### version/PageSVGViewer.tsx - 多页面 SVG 查看器
+
+**历史版本多页面预览器** - 全屏/半屏模式渲染 `pages_svg` 中的每一页 SVG。
+
+##### Props
+
+```typescript
+interface PageSVGViewerProps {
+  version: XMLVersion;
+  isOpen: boolean;
+  onClose: () => void;
+  defaultPageIndex?: number;
+}
+```
+
+##### 特性
+
+- **懒加载处理**: 打开时解析 `version.pages_svg`，失败回退到错误提示
+- **多种导航**: 上/下一页按钮、页码选择器、键盘左右键，Top Bar 显示当前页信息
+- **缩放/平移**: Ctrl/Cmd + 滚轮缩放、按钮放大/缩小、重置/适应窗口、放大后可拖拽平移
+- **导出能力**: 支持导出当前页 SVG，或者导出所有页的 JSON（可供后续批量处理）
+- **全屏/半屏切换**: 一键进入全屏体验，自动锁定 body 滚动，Esc 快捷关闭
+- **可访问性**: `role="dialog"` + 键盘快捷键（Esc 关闭、0 重置、± 缩放）
 
 ---
 

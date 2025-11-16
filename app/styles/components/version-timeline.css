@@ -294,6 +294,18 @@
   border-radius: calc(var(--radius) - 0.25rem);
 }
 
+.version-preview--interactive {
+  cursor: pointer;
+  transition:
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.version-preview--interactive:hover {
+  box-shadow: var(--shadow-2);
+  transform: translateY(-1px);
+}
+
 .version-preview--placeholder {
   flex-direction: column;
   gap: 0.5rem;
@@ -419,6 +431,12 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-compact-xs);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast),
+    border-color var(--transition-fast);
 }
 
 .version-pages-grid__thumb {
@@ -458,6 +476,17 @@
   text-overflow: ellipsis;
 }
 
+.version-pages-grid__item:hover {
+  box-shadow: var(--shadow-2);
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+}
+
+.version-pages-grid__item:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
 .version-card__name {
   margin: 0;
   font-size: var(--font-size-compact-md);
@@ -494,6 +523,256 @@
   gap: var(--spacing-compact-sm);
   padding-top: var(--spacing-compact-sm);
   border-top: 1px solid var(--border-light);
+}
+
+/* ================================
+   多页面 SVG 查看器
+   ================================ */
+
+.page-svg-viewer__overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(18, 20, 26, 0.65);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  z-index: 1500;
+}
+
+.page-svg-viewer__overlay--fullscreen {
+  padding: 0;
+}
+
+.page-svg-viewer__container {
+  width: min(1100px, 94vw);
+  height: min(860px, 92vh);
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-8);
+}
+
+.page-svg-viewer__container--fullscreen {
+  width: 100vw;
+  height: 100vh;
+  border-radius: 0;
+}
+
+.page-svg-viewer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.page-svg-viewer__title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.page-svg-viewer__heading {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.page-svg-viewer__subtext {
+  font-size: var(--font-size-compact-sm);
+  color: var(--text-secondary);
+}
+
+.page-svg-viewer__header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-compact-xs);
+}
+
+.page-svg-viewer__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+}
+
+.page-svg-viewer__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.page-svg-viewer__nav {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.page-svg-viewer__counter {
+  min-width: 72px;
+  text-align: center;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.page-svg-viewer__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  min-width: 0;
+}
+
+.page-svg-viewer__select {
+  min-width: 180px;
+}
+
+.page-svg-viewer__select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  padding: 0.35rem 0.75rem;
+  font-size: var(--font-size-compact-sm);
+  color: var(--text-primary);
+  background: var(--background, #ffffff);
+}
+
+.page-svg-viewer__select-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.page-svg-viewer__select-content {
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  background: var(--background, #ffffff);
+  box-shadow: var(--shadow-4);
+}
+
+.page-svg-viewer__select-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.page-svg-viewer__select-item {
+  border-radius: var(--radius);
+  padding: 0.35rem 0.75rem;
+  font-size: var(--font-size-compact-sm);
+  color: var(--text-primary);
+}
+
+.page-svg-viewer__select-item[data-selected="true"] {
+  background: var(--bg-primary);
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.page-svg-viewer__page-name {
+  max-width: 320px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.page-svg-viewer__actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-compact-xs);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.page-svg-viewer__stage {
+  flex: 1;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-light);
+  background: var(--bg-secondary);
+  position: relative;
+  overflow: hidden;
+  min-height: 360px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-svg-viewer__stage--pannable {
+  cursor: grab;
+}
+
+.page-svg-viewer__stage--panning {
+  cursor: grabbing;
+}
+
+.page-svg-viewer__status {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.page-svg-viewer__status--error {
+  color: var(--error-color);
+}
+
+.page-svg-viewer__canvas {
+  will-change: transform;
+  transition: transform 120ms ease-out;
+  max-width: 100%;
+  max-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-svg-viewer__image {
+  max-width: 100%;
+  max-height: 100%;
+  pointer-events: none;
+  user-select: none;
+}
+
+.page-svg-viewer__footer {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-top: 1px solid var(--border-light);
+  background: var(--bg-primary);
+}
+
+.page-svg-viewer__hint {
+  font-size: var(--font-size-compact-xs);
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .page-svg-viewer__body {
+    padding: var(--spacing-sm);
+  }
+
+  .page-svg-viewer__actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .page-svg-viewer__stage {
+    min-height: 260px;
+  }
 }
 
 /* ================================

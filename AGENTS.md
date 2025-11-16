@@ -54,7 +54,8 @@ app/
 │       ├── WIPIndicator.tsx      # WIP 工作区指示器
 │       ├── VersionCard.tsx       # 版本卡片（折叠式）
 │       ├── VersionTimeline.tsx   # 版本时间线
-│       └── CreateVersionDialog.tsx # 创建版本对话框
+│       ├── CreateVersionDialog.tsx # 创建版本对话框
+│       └── PageSVGViewer.tsx     # 多页 SVG 查看器
 ├── lib/                # 工具库 [详细文档 → app/lib/AGENTS.md]
 │   ├── drawio-tools.ts          # DrawIO XML 操作工具集
 │   ├── drawio-ai-tools.ts       # DrawIO AI 工具调用接口
@@ -192,6 +193,15 @@ pnpm format               # 使用 Prettier 格式化所有代码
 | **桌面应用**    | `electron/AGENTS.md`       | Electron 配置、安全策略和调试指南        |
 
 ## 最近更新
+
+### 2025-11-16 多页面 SVG 查看器（里程碑5）
+
+- **PageSVGViewer 上线**：新增全屏多页浏览器，支持懒加载 `pages_svg`、键盘快捷键、Ctrl/Cmd 滚轮缩放、拖拽平移
+- **版本卡片集成**：`VersionCard` 的“全屏浏览”按钮与缩略图点击均可唤起查看器，并继承页码定位
+- **可访问性增强**：对预览图与缩略图添加 `role="button"/tabIndex`、键盘 Enter/Space 支持
+- **样式更新**：`version-timeline.css` 追加查看器布局、交互动效及缩略图 focus 样式
+- **公共工具**：抽离 `version-utils.ts`，复用 Blob 解析与 `page_names` 解析逻辑
+- **相关文件**：`app/components/version/PageSVGViewer.tsx`, `app/components/version/VersionCard.tsx`, `app/components/version/version-utils.ts`, `app/styles/components/version-timeline.css`
 
 ### 2025-11-16 WIP 草稿独立存储强化与工程管理优化
 

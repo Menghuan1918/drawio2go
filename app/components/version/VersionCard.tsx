@@ -20,11 +20,18 @@ import {
   ImageOff,
   LayoutGrid,
   Loader2,
+  Maximize2,
 } from "lucide-react";
 import { materializeVersionXml } from "@/app/lib/storage/xml-version-engine";
 import { useStorageXMLVersions } from "@/app/hooks/useStorageXMLVersions";
 import { deserializeSVGsFromBlob } from "@/app/lib/svg-export-utils";
 import type { XMLVersion } from "@/app/lib/storage/types";
+import { PageSVGViewer } from "./PageSVGViewer";
+import {
+  createBlobFromSource,
+  parsePageNames,
+  type BinarySource,
+} from "./version-utils";
 
 interface VersionCardProps {
   version: XMLVersion;
@@ -33,90 +40,10 @@ interface VersionCardProps {
   defaultExpanded?: boolean;
 }
 
-type BinarySource =
-  | Blob
-  | ArrayBuffer
-  | ArrayBufferView
-  | { data?: number[]; buffer?: ArrayBufferLike }
-  | null
-  | undefined;
-
 interface PageThumbnail {
   index: number;
   name: string;
   url: string;
-}
-
-function cloneArrayBufferLike(
-  source: ArrayBufferLike,
-  byteOffset = 0,
-  length?: number,
-): ArrayBuffer {
-  const view = new Uint8Array(source, byteOffset, length ?? undefined);
-  const clone = new Uint8Array(view.byteLength);
-  clone.set(view);
-  return clone.buffer;
-}
-
-function createBlobFromSource(
-  source: BinarySource,
-  mimeType: string,
-): Blob | null {
-  if (!source) return null;
-  if (source instanceof Blob) return source;
-
-  if (source instanceof ArrayBuffer) {
-    return new Blob([source.slice(0)], { type: mimeType });
-  }
-
-  if (ArrayBuffer.isView(source)) {
-    const view = source as ArrayBufferView;
-    if (view.buffer instanceof ArrayBuffer) {
-      const cloned = view.buffer.slice(
-        view.byteOffset,
-        view.byteOffset + view.byteLength,
-      );
-      return new Blob([cloned], { type: mimeType });
-    }
-    const cloned = cloneArrayBufferLike(
-      view.buffer,
-      view.byteOffset,
-      view.byteLength,
-    );
-    return new Blob([cloned], { type: mimeType });
-  }
-
-  if (typeof source === "object" && source?.buffer) {
-    if (source.buffer instanceof ArrayBuffer) {
-      return new Blob([source.buffer.slice(0)], { type: mimeType });
-    }
-    const cloned = cloneArrayBufferLike(source.buffer);
-    return new Blob([cloned], { type: mimeType });
-  }
-
-  if (typeof source === "object" && Array.isArray(source?.data)) {
-    const cloned = Uint8Array.from(source.data ?? []);
-    return new Blob([cloned.buffer], { type: mimeType });
-  }
-
-  return null;
-}
-
-function parsePageNames(raw?: string | null) {
-  if (!raw) return [] as string[];
-  try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.map((name, index) => {
-      if (typeof name === "string" && name.trim().length > 0) {
-        return name;
-      }
-      return `Page ${index + 1}`;
-    });
-  } catch (error) {
-    console.warn("page_names 解析失败", error);
-    return [];
-  }
 }
 
 /**
@@ -136,6 +63,8 @@ export function VersionCard({
   const [pageThumbs, setPageThumbs] = React.useState<PageThumbnail[]>([]);
   const [isLoadingPages, setIsLoadingPages] = React.useState(false);
   const [pagesError, setPagesError] = React.useState<string | null>(null);
+  const [viewerOpen, setViewerOpen] = React.useState(false);
+  const [viewerInitialPage, setViewerInitialPage] = React.useState(0);
   const pageObjectUrlsRef = React.useRef<string[]>([]);
   const { getXMLVersion } = useStorageXMLVersions();
 
@@ -155,6 +84,23 @@ export function VersionCard({
   );
 
   const hasMultiplePages = (version.page_count ?? 0) > 1;
+
+  const openViewer = React.useCallback((pageIndex: number) => {
+    setViewerInitialPage(Math.max(0, pageIndex));
+    setViewerOpen(true);
+  }, []);
+
+  const handlePreviewActivate = React.useCallback(() => {
+    if (!hasMultiplePages) return;
+    openViewer(0);
+  }, [hasMultiplePages, openViewer]);
+
+  const handleThumbnailActivate = React.useCallback(
+    (pageIndex: number) => {
+      openViewer(pageIndex);
+    },
+    [openViewer],
+  );
 
   // 格式化创建时间
   const createdAt = new Date(version.created_at).toLocaleString("zh-CN", {
@@ -377,7 +323,29 @@ export function VersionCard({
 
               <div className="version-card__media">
                 {previewUrl ? (
-                  <div className="version-preview">
+                  <div
+                    className={`version-preview${hasMultiplePages ? " version-preview--interactive" : ""}`}
+                    role={hasMultiplePages ? "button" : undefined}
+                    tabIndex={hasMultiplePages ? 0 : undefined}
+                    aria-label={
+                      hasMultiplePages
+                        ? `打开多页 SVG 查看器，当前共 ${version.page_count} 页`
+                        : undefined
+                    }
+                    onClick={
+                      hasMultiplePages ? handlePreviewActivate : undefined
+                    }
+                    onKeyDown={
+                      hasMultiplePages
+                        ? (event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              handlePreviewActivate();
+                            }
+                          }
+                        : undefined
+                    }
+                  >
                     <img
                       src={previewUrl}
                       alt={`${versionLabel} 预览图`}
@@ -430,12 +398,21 @@ export function VersionCard({
                         variant="ghost"
                         onPress={() => setShowAllPages((prev) => !prev)}
                         aria-expanded={showAllPages}
-                        aria-label="查看全部页面"
+                        aria-label={
+                          showAllPages ? "收起页面缩略图" : "展开页面缩略图"
+                        }
                       >
                         <LayoutGrid className="w-3.5 h-3.5" />
-                        {showAllPages
-                          ? "收起页面"
-                          : `查看所有 ${version.page_count} 页`}
+                        {showAllPages ? "收起缩略图" : "展开缩略图"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onPress={() => openViewer(0)}
+                        aria-label={`打开多页查看器，当前共 ${version.page_count} 页`}
+                      >
+                        <Maximize2 className="w-3.5 h-3.5" />
+                        查看所有 {version.page_count} 页
                       </Button>
                     </div>
                   )}
@@ -470,9 +447,12 @@ export function VersionCard({
                   {!isLoadingPages && !pagesError && pageThumbs.length > 0 && (
                     <div className="version-pages-grid__inner">
                       {pageThumbs.map((thumb) => (
-                        <div
+                        <button
                           key={`${version.id}-page-${thumb.index}`}
+                          type="button"
                           className="version-pages-grid__item"
+                          onClick={() => handleThumbnailActivate(thumb.index)}
+                          title={`打开第 ${thumb.index + 1} 页 ${thumb.name}`}
                         >
                           <div className="version-pages-grid__thumb">
                             <img
@@ -489,7 +469,7 @@ export function VersionCard({
                               {thumb.name}
                             </span>
                           </div>
-                        </div>
+                        </button>
                       ))}
                     </div>
                   )}
@@ -530,6 +510,12 @@ export function VersionCard({
           </Disclosure.Content>
         </Disclosure>
       </Card.Content>
+      <PageSVGViewer
+        version={version}
+        isOpen={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+        defaultPageIndex={viewerInitialPage}
+      />
     </Card.Root>
   );
 }

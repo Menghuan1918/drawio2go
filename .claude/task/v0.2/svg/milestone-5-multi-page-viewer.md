@@ -14,8 +14,8 @@
 
 ### 1. 创建 PageSVGViewer 组件
 
-- [ ] 创建 `app/components/version/PageSVGViewer.tsx`
-- [ ] 定义组件接口
+- [x] 创建 `app/components/version/PageSVGViewer.tsx`
+- [x] 定义组件接口
   ```typescript
   interface PageSVGViewerProps {
     version: XMLVersion;
@@ -24,14 +24,14 @@
     defaultPageIndex?: number; // 默认显示的页面索引
   }
   ```
-- [ ] 实现基础组件结构
+- [x] 实现基础组件结构
   - 使用 Dialog/Modal 或全屏模式
   - 包含页面切换器
   - 包含关闭按钮
 
 ### 2. 实现 SVG 数据加载
 
-- [ ] 从 `version.pages_svg` 加载所有页面 SVG
+- [x] 从 `version.pages_svg` 加载所有页面 SVG
 
   ```typescript
   const [allPages, setAllPages] = useState<Array<{
@@ -47,18 +47,18 @@
   }, [version.pages_svg, isOpen]);
   ```
 
-- [ ] 添加加载状态指示器
-- [ ] 处理加载失败情况
+- [x] 添加加载状态指示器
+- [x] 处理加载失败情况
 
 ### 3. 实现页面切换功能
 
-- [ ] 添加当前页面状态
+- [x] 添加当前页面状态
   ```typescript
   const [currentPageIndex, setCurrentPageIndex] = useState(
     defaultPageIndex || 0,
   );
   ```
-- [ ] 创建页面切换器 UI
+- [x] 创建页面切换器 UI
   - **方案A：标签页式**
     ```typescript
     <Tabs value={currentPageIndex} onChange={setCurrentPageIndex}>
@@ -81,12 +81,12 @@
     <span>{currentPageIndex + 1} / {allPages.length}</span>
     <Button onClick={() => setCurrentPageIndex(i + 1)}>下一页 →</Button>
     ```
-- [ ] 支持键盘快捷键（左右箭头切换页面）
-- [ ] 禁用边界按钮（首页禁用上一页，末页禁用下一页）
+- [x] 支持键盘快捷键（左右箭头切换页面）
+- [x] 禁用边界按钮（首页禁用上一页，末页禁用下一页）
 
 ### 4. 实现 SVG 显示
 
-- [ ] 显示当前页面的 SVG
+- [x] 显示当前页面的 SVG
   ```typescript
   {allPages && (
     <div className="svg-container">
@@ -97,18 +97,18 @@
     </div>
   )}
   ```
-- [ ] 添加 SVG 缩放功能
+- [x] 添加 SVG 缩放功能
   - 适应窗口大小
   - 支持放大/缩小
   - 支持还原原始大小
-- [ ] 添加 SVG 拖拽平移功能（放大时）
-- [ ] 优化大尺寸 SVG 的显示性能
+- [x] 添加 SVG 拖拽平移功能（放大时）
+- [x] 优化大尺寸 SVG 的显示性能
 
 ### 5. 添加辅助功能
 
-- [ ] 显示页面名称
-- [ ] 显示当前页码（如 "2 / 5"）
-- [ ] 添加"导出当前页"按钮
+- [x] 显示页面名称
+- [x] 显示当前页码（如 "2 / 5"）
+- [x] 添加"导出当前页"按钮
   ```typescript
   const handleExportPage = () => {
     const svg = allPages[currentPageIndex].svg;
@@ -121,16 +121,16 @@
     URL.revokeObjectURL(url);
   };
   ```
-- [ ] 添加"导出所有页"按钮（可选）
-- [ ] 添加全屏模式切换
+- [x] 添加"导出所有页"按钮（可选）
+- [x] 添加全屏模式切换
 
 ### 6. 集成到 VersionCard
 
-- [ ] 在 `VersionCard.tsx` 中添加查看器状态
+- [x] 在 `VersionCard.tsx` 中添加查看器状态
   ```typescript
   const [viewerOpen, setViewerOpen] = useState(false);
   ```
-- [ ] 点击"查看所有页面"时打开查看器
+- [x] 点击"查看所有页面"时打开查看器
 
   ```typescript
   <Button onClick={() => setViewerOpen(true)}>
@@ -144,28 +144,28 @@
   />
   ```
 
-- [ ] 点击缩略图时打开查看器并定位到第一页
+- [x] 点击缩略图时打开查看器并定位到第一页
 
 ### 7. 样式设计
 
-- [ ] 设计查看器布局
+- [x] 设计查看器布局
   - 顶部：页面切换器
   - 中间：SVG 显示区域（占据大部分空间）
   - 底部：工具栏（缩放、导出等）
-- [ ] 响应式设计，移动端适配
-- [ ] 添加过渡动画（页面切换时）
-- [ ] 优化视觉效果
+- [x] 响应式设计，移动端适配
+- [x] 添加过渡动画（页面切换时）
+- [x] 优化视觉效果
 
 ### 8. 测试
 
-- [ ] 测试单页版本（虽然不会打开查看器，但要确保不报错）
-- [ ] 测试多页版本（2页、5页、10页）
-- [ ] 测试页面切换功能
-- [ ] 测试键盘快捷键
-- [ ] 测试缩放和拖拽功能
-- [ ] 测试导出功能
-- [ ] 测试加载失败情况
-- [ ] 测试性能（大量页面或大尺寸 SVG）
+- [x] 测试单页版本（虽然不会打开查看器，但要确保不报错）
+- [x] 测试多页版本（2页、5页、10页）
+- [x] 测试页面切换功能
+- [x] 测试键盘快捷键
+- [x] 测试缩放和拖拽功能
+- [x] 测试导出功能
+- [x] 测试加载失败情况
+- [x] 测试性能（大量页面或大尺寸 SVG）
 
 ## 🎯 验收标准
 
@@ -191,3 +191,37 @@
 - 依赖 **里程碑2** 完成（数据库包含 `pages_svg` 字段）
 - 依赖 **里程碑3** 完成（版本已保存所有页面 SVG）
 - 依赖 **里程碑4** 完成（VersionCard 中调用查看器）
+
+---
+
+## ✅ 里程碑完成状态
+
+**状态**: 已完成 ✅
+**完成日期**: 2025-11-16
+
+### 实现亮点
+
+1. **完整的组件实现** - `PageSVGViewer.tsx` (529行)，提供全屏/半屏多页浏览体验
+2. **公共工具抽离** - `version-utils.ts` 统一处理 Blob 解析与页面名称解析
+3. **增强的交互体验**:
+   - 多种导航方式（箭头按钮、下拉选择、键盘快捷键）
+   - Ctrl/Cmd + 滚轮缩放
+   - 拖拽平移（放大时）
+   - 全屏模式切换
+4. **完善的可访问性**:
+   - 预览图与缩略图支持键盘操作（Enter/Space）
+   - ARIA 标签与 role 属性
+   - focus-visible 样式
+5. **导出功能** - 支持导出当前页 SVG 或所有页 JSON
+6. **完整的样式系统** - 新增 ~250 行 CSS，包含交互动效与响应式设计
+7. **文档更新** - 同步更新 AGENTS.md 与组件文档
+
+### 涉及文件
+
+- ✅ `app/components/version/PageSVGViewer.tsx` (新建)
+- ✅ `app/components/version/version-utils.ts` (新建)
+- ✅ `app/components/version/VersionCard.tsx` (修改)
+- ✅ `app/components/version/index.ts` (修改)
+- ✅ `app/styles/components/version-timeline.css` (修改)
+- ✅ `AGENTS.md` (更新)
+- ✅ `app/components/AGENTS.md` (更新)
