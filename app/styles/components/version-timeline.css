@@ -121,7 +121,7 @@
   height: 2.5rem;
   margin: 0 auto var(--spacing-sm);
   border-radius: 999px;
-  background: rgba(51, 136, 187, 0.12);
+  background: var(--bg-secondary);
   color: var(--primary-color);
   display: flex;
   align-items: center;

@@ -43,7 +43,7 @@
 
 /* 行内代码样式 */
 .inline-code {
-  background: rgba(51, 136, 187, 0.12);
+  background: var(--bg-secondary);
   color: inherit;
   padding: 0.1rem 0.4rem;
   border-radius: 0.3rem;
@@ -60,27 +60,27 @@
   padding: 0.6rem;
   border-radius: 0.5rem;
   overflow-x: auto;
-  border: 1px solid rgba(51, 136, 187, 0.15);
+  border: 1px solid var(--border-light);
   font-size: 0.8125rem;
 }
 
 .dark .code-block {
   background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(51, 136, 187, 0.2);
+  border-color: var(--border-light);
 }
 
 /* 引用样式 */
 .message-quote {
   margin: 0;
   padding: 0.4rem 0.6rem;
-  border-left: 3px solid rgba(51, 136, 187, 0.65);
-  background: rgba(51, 136, 187, 0.08);
+  border-left: 3px solid var(--accent);
+  background: var(--bg-primary);
   border-radius: 0.35rem;
   font-size: 0.875rem;
 }
 
 .dark .message-quote {
-  background: rgba(51, 136, 187, 0.12);
+  background: var(--bg-secondary);
 }
 
 /* 链接样式 */

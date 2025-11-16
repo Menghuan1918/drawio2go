@@ -153,7 +153,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(51, 136, 187, 0.12);
+  background: var(--bg-secondary);
   color: var(--primary-color);
 }
 

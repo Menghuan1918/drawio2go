@@ -71,11 +71,33 @@
     --segment: var(--white);
     --segment-foreground: var(--foreground);
 
-    /* Misc */
+    /* Border System */
     --border: color-mix(in oklch, var(--accent) 12%, transparent);
+    --border-primary: color-mix(in oklch, var(--accent) 35%, transparent);
+    --border-light: color-mix(in oklch, var(--accent) 20%, transparent);
+    --border-hover: color-mix(in oklch, var(--accent) 45%, transparent);
     --divider: oklch(0.92 0.007 240.21);
 
-    /* Shadows */
+    /* Background System */
+    --bg-primary: color-mix(in oklch, var(--accent) 8%, transparent);
+    --bg-secondary: color-mix(in oklch, var(--accent) 12%, transparent);
+    --bg-hover: color-mix(in oklch, var(--accent) 16%, transparent);
+
+    /* Gray Scale System */
+    --gray-primary: oklch(0.5437 0.0149 258.28);
+    --gray-light: oklch(0.6415 0.0134 255.25);
+    --gray-border: color-mix(in oklch, var(--gray-light) 25%, transparent);
+    --gray-bg: color-mix(in oklch, var(--gray-light) 4%, transparent);
+
+    /* Material Design Shadow System (OKLCH) */
+    --shadow-1: 0 1px 3px color-mix(in oklch, var(--accent) 12%, transparent);
+    --shadow-2: 0 2px 6px color-mix(in oklch, var(--accent) 16%, transparent);
+    --shadow-4: 0 4px 12px color-mix(in oklch, var(--accent) 16%, transparent);
+    --shadow-8: 0 8px 24px color-mix(in oklch, var(--accent) 16%, transparent);
+    --shadow-sidebar: -2px 0 8px
+      color-mix(in oklch, var(--accent) 8%, transparent);
+
+    /* Component Shadows */
     --surface-shadow: var(--shadow-1);
     --overlay-shadow: var(--shadow-4);
     --field-shadow: 0 0 0 1px
@@ -131,9 +153,33 @@
     --segment: color-mix(in oklch, var(--surface) 85%, var(--background));
     --segment-foreground: var(--foreground);
 
+    /* Border System */
     --border: color-mix(in oklch, var(--accent) 35%, transparent);
+    --border-primary: color-mix(in oklch, var(--accent) 45%, transparent);
+    --border-light: color-mix(in oklch, var(--accent) 30%, transparent);
+    --border-hover: color-mix(in oklch, var(--accent) 55%, transparent);
     --divider: oklch(0.32 0.01 240.35);
 
+    /* Background System */
+    --bg-primary: color-mix(in oklch, var(--accent) 15%, transparent);
+    --bg-secondary: color-mix(in oklch, var(--accent) 22%, transparent);
+    --bg-hover: color-mix(in oklch, var(--accent) 28%, transparent);
+
+    /* Gray Scale System */
+    --gray-primary: oklch(0.58 0.03 257.1);
+    --gray-light: oklch(0.68 0.025 256);
+    --gray-border: color-mix(in oklch, var(--gray-light) 35%, transparent);
+    --gray-bg: color-mix(in oklch, var(--gray-light) 8%, transparent);
+
+    /* Material Design Shadow System (OKLCH) */
+    --shadow-1: 0 1px 3px color-mix(in oklch, var(--black) 40%, transparent);
+    --shadow-2: 0 2px 6px color-mix(in oklch, var(--black) 50%, transparent);
+    --shadow-4: 0 4px 12px color-mix(in oklch, var(--black) 50%, transparent);
+    --shadow-8: 0 8px 24px color-mix(in oklch, var(--black) 60%, transparent);
+    --shadow-sidebar: -2px 0 8px
+      color-mix(in oklch, var(--accent) 15%, transparent);
+
+    /* Component Shadows */
     --surface-shadow: 0 0 0 0 transparent inset;
     --overlay-shadow: 0 0 0 0 transparent inset;
     --field-shadow: 0 0 0 0 transparent inset;

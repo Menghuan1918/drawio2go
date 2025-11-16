@@ -1,7 +1,7 @@
 /* Tool Call 卡片样式 */
 .tool-call-card {
-  border: 1px solid rgba(51, 136, 187, 0.3);
-  background: rgba(51, 136, 187, 0.08);
+  border: 1px solid var(--border-primary);
+  background: var(--bg-primary);
   border-radius: 0.75rem;
   padding: 0.6rem;
   display: flex;
@@ -12,11 +12,11 @@
 
 .tool-call-card:hover {
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(51, 136, 187, 0.15);
+  box-shadow: var(--shadow-2);
 }
 
 .tool-call-card--pending {
-  border-color: rgba(51, 136, 187, 0.4);
+  border-color: var(--border-hover);
 }
 
 .tool-call-card--success {
@@ -30,11 +30,11 @@
 }
 
 .dark .tool-call-card {
-  background: rgba(51, 136, 187, 0.12);
+  background: var(--bg-secondary);
 }
 
 .tool-call-card--expanded {
-  box-shadow: 0 6px 18px rgba(51, 136, 187, 0.12);
+  box-shadow: var(--shadow-4);
 }
 
 .tool-call-header {
@@ -121,7 +121,7 @@
   border-radius: 0.5rem;
   padding: 0.75rem;
   overflow-x: auto;
-  border: 1px solid rgba(51, 136, 187, 0.15);
+  border: 1px solid var(--border-light);
 }
 
 .tool-call-error-text {
@@ -132,7 +132,7 @@
 
 .dark .tool-call-json {
   background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(51, 136, 187, 0.2);
+  border-color: var(--border-light);
 }
 
 .dark .tool-call-error-text {

@@ -62,7 +62,9 @@
       "Bash(pnpm eslint:*)",
       "Bash(git -C /home/aaa/Code/drawio2go log --oneline -5)",
       "mcp__heroui-react__get_theme_info",
-      "mcp__heroui-react__get_docs"
+      "mcp__heroui-react__get_docs",
+      "Bash(find:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

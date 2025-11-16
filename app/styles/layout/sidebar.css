@@ -20,7 +20,7 @@
 
 .dark .unified-sidebar {
   background: var(--background, #1a1a1a);
-  box-shadow: -2px 0 8px rgba(51, 136, 187, 0.15);
+  box-shadow: var(--shadow-sidebar);
 }
 
 /* 设置侧拉栏样式 */
@@ -45,7 +45,7 @@
 
 .dark .settings-sidebar {
   background: var(--background, #1a1a1a);
-  box-shadow: -2px 0 8px rgba(51, 136, 187, 0.15);
+  box-shadow: var(--shadow-sidebar);
 }
 
 /* 侧栏容器 */
@@ -106,13 +106,13 @@
 
 .sidebar-tab-item[data-selected="true"] {
   color: var(--primary-color);
-  border-color: rgba(51, 136, 187, 0.3);
-  background: rgba(51, 136, 187, 0.08);
+  border-color: var(--border-primary);
+  background: var(--bg-primary);
   font-weight: 600;
 }
 
 .dark .sidebar-tab-item[data-selected="true"] {
-  background: rgba(51, 136, 187, 0.15);
+  background: var(--bg-primary);
 }
 
 .sidebar-panel {
@@ -202,8 +202,8 @@
 /* 左侧图标导航栏 */
 .settings-nav {
   width: 60px;
-  background: var(--bg-primary, rgba(51, 136, 187, 0.04));
-  border-right: 1px solid var(--border-light, rgba(51, 136, 187, 0.15));
+  background: var(--bg-primary);
+  border-right: 1px solid var(--border-light);
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -212,8 +212,8 @@
 }
 
 .dark .settings-nav {
-  background: rgba(51, 136, 187, 0.08);
-  border-right-color: rgba(51, 136, 187, 0.2);
+  background: var(--bg-primary);
+  border-right-color: var(--border-light);
 }
 
 /* 图标导航项 */

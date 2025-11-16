@@ -1,4 +1,14 @@
-/* CSS变量定义 - Material Design 规范 */
+/**
+ * 文件名：variables.css
+ * 用途：项目特定的非主题变量（间距、动画、布局）
+ * 依赖：无
+ * 说明：
+ *   - 所有色彩相关变量已迁移到 themes/drawio2go.css
+ *   - 此文件仅保留与主题无关的设计令牌
+ *   - 间距、动画、布局尺寸等在不同主题下保持一致
+ * 最后更新：2025-11-14
+ */
+
 :root {
   /* ========== 基础设计令牌 ========== */
 
@@ -14,7 +24,7 @@
   --spacing-lg: 1.5rem; /* 24px */
   --spacing-xl: 2rem; /* 32px */
 
-  /* 紧凑模式间距 (优化信息密度) */
+  /* 紧凑模式间距 (用于优化信息密度) */
   --spacing-compact-xs: 0.375rem; /* 6px */
   --spacing-compact-sm: 0.5rem; /* 8px */
   --spacing-compact-md: 0.75rem; /* 12px */
@@ -32,63 +42,17 @@
   --card-padding-compact: var(--spacing-compact-lg); /* 16px */
   --card-padding-compact-collapsed: var(--spacing-compact-md); /* 12px */
 
-  /* 布局尺寸 */
+  /* ========================================
+   * 布局尺寸
+   * ======================================== */
+
   --sidebar-width: 400px;
   --top-bar-height: 44px;
   --sidebar-tabs-height: 48px;
 
-  /* ========== 色彩系统 ========== */
-
-  /* 主题色映射到 HeroUI */
-  --primary-color: var(--accent, #3388bb);
-  --primary-hover: var(--accent-hover, #2a6fa0);
-  --primary-light: var(--accent-soft, #e6f2f9);
-  --primary-foreground: var(--accent-foreground, #ffffff);
-
-  /* 语义化颜色 */
-  --success-color: #22c55e;
-  --error-color: #ef4444;
-  --warning-color: #f59e0b;
-  --info-color: #8b5cf6; /* 紫色 - 用于信息徽章 */
-
-  /* 文本颜色 */
-  --text-primary: rgba(15, 23, 42, 0.95);
-  --text-secondary: rgba(15, 23, 42, 0.68);
-  --text-tertiary: rgba(15, 23, 42, 0.45);
-
-  /* 灰度颜色 - 用于思考框等中性元素 */
-  --gray-primary: #6b7280;
-  --gray-light: #9ca3af;
-  --gray-border: rgba(156, 163, 175, 0.25);
-  --gray-bg: rgba(156, 163, 175, 0.04);
-
-  /* 边框颜色 */
-  --border-primary: color-mix(
-    in oklch,
-    var(--accent, #3388bb) 35%,
-    transparent
-  );
-  --border-light: color-mix(in oklch, var(--accent, #3388bb) 20%, transparent);
-  --border-hover: color-mix(in oklch, var(--accent, #3388bb) 45%, transparent);
-
-  /* 背景颜色 */
-  --bg-primary: color-mix(in oklch, var(--accent, #3388bb) 8%, transparent);
-  --bg-secondary: color-mix(in oklch, var(--accent, #3388bb) 12%, transparent);
-  --bg-hover: color-mix(in oklch, var(--accent, #3388bb) 16%, transparent);
-
-  /* ========== Material Design 阴影层级 ========== */
-  --shadow-1: 0 1px 3px rgba(51, 136, 187, 0.12); /* 轻微提升 */
-  --shadow-2: 0 2px 6px rgba(51, 136, 187, 0.16); /* 标准提升 */
-  --shadow-4: 0 4px 12px rgba(51, 136, 187, 0.16); /* 中等提升 */
-  --shadow-8: 0 8px 24px rgba(51, 136, 187, 0.16); /* 高层级提升 */
-  --shadow-sidebar: -2px 0 8px rgba(51, 136, 187, 0.08);
-
-  /* 兼容旧版阴影名称 */
-  --shadow-sm: var(--shadow-1);
-  --shadow-md: var(--shadow-2);
-  --shadow-lg: var(--shadow-4);
-
-  /* ========== 动画系统 ========== */
+  /* ========================================
+   * 动画系统
+   * ======================================== */
 
   /* 缓动函数 */
   --ease-out-cubic: cubic-bezier(0.4, 0, 0.2, 1);
@@ -103,19 +67,30 @@
   --transition-fast: var(--duration-short) var(--ease-out-cubic);
   --transition-normal: var(--duration-medium) var(--ease-out-cubic);
   --transition-slow: var(--duration-long) var(--ease-out-cubic);
-}
 
-/* 深色模式变量覆盖 */
-[data-theme="dark"],
-.dark {
-  /* 深色模式下的颜色覆盖 */
-  --primary-light: color-mix(
-    in oklch,
-    var(--accent, #3388bb) 22%,
-    var(--background, #0f1b27)
-  );
-  --shadow-sidebar: -2px 0 8px rgba(51, 136, 187, 0.15);
-  --text-primary: rgba(248, 250, 252, 0.95);
-  --text-secondary: rgba(248, 250, 252, 0.7);
-  --text-tertiary: rgba(248, 250, 252, 0.5);
+  /* ========================================
+   * 兼容性映射（映射到主题变量）
+   * ======================================== */
+
+  /* 主题色兼容 */
+  --primary-color: var(--accent);
+  --primary-hover: var(--accent-hover);
+  --primary-light: var(--accent-soft);
+  --primary-foreground: var(--accent-foreground);
+
+  /* 语义色兼容 */
+  --success-color: var(--success);
+  --error-color: var(--danger);
+  --warning-color: var(--warning);
+  --info-color: var(--info);
+
+  /* 文本颜色兼容 */
+  --text-primary: var(--foreground);
+  --text-secondary: var(--foreground-secondary);
+  --text-tertiary: var(--foreground-tertiary);
+
+  /* 阴影兼容 */
+  --shadow-sm: var(--shadow-1);
+  --shadow-md: var(--shadow-2);
+  --shadow-lg: var(--shadow-4);
 }

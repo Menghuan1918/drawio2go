@@ -105,13 +105,14 @@
 }
 
 /* 统一顶栏按钮背景色 - 与状态显示器一致 */
-.top-bar-project[data-variant="secondary"],
-.top-bar-button[data-variant="secondary"] {
-  background: var(--bg-secondary) !important;
-  border-color: var(--border-light) !important;
+/* 使用双重选择器提高优先级，覆盖 HeroUI 默认样式 */
+.top-bar-project.top-bar-project[data-variant="secondary"],
+.top-bar-button.top-bar-button[data-variant="secondary"] {
+  background: var(--bg-secondary);
+  border-color: var(--border-light);
 }
 
-.top-bar-project[data-variant="secondary"]:hover,
-.top-bar-button[data-variant="secondary"]:hover {
-  background: var(--bg-hover) !important;
+.top-bar-project.top-bar-project[data-variant="secondary"]:hover,
+.top-bar-button.top-bar-button[data-variant="secondary"]:hover {
+  background: var(--bg-hover);
 }
