@@ -131,15 +131,18 @@ interface CreateVersionDialogProps {
 - **通信协议**: PostMessage API
 - **安全检查**: 验证 `event.origin.includes('diagrams.net')`
 - **状态管理**: useRef 追踪 XML 变化
+- **导出能力**: 支持 `exportDiagram()` (XML) 与 `exportSVG()` (SVG)，均通过 postMessage 的 `{ action: 'export', format }` 调用
 
 #### 消息协议
 
 ```typescript
 // 发送消息
 {action: 'load', xml: string, autosave: true}
+{action: 'merge', xml: string}
+{action: 'export', format: 'xml' | 'svg'}
 
 // 接收消息
-{event: 'init'|'save'|'autosave'|'export', ...}
+{event: 'init'|'save'|'autosave'|'export'|'merge'|'load'|'drawio-selection', ...}
 ```
 
 #### Props
@@ -149,6 +152,13 @@ interface DrawioEditorNativeProps {
   initialXml?: string; // 初始 XML 数据
   onSave?: (xml: string) => void; // 保存回调
 }
+
+#### Ref API
+
+- `loadDiagram(xml: string): Promise<void>`：向 iframe 发送 `load`，并在收到 `load` 事件后 resolve（用于多页面导出等需要顺序等待的场景）
+- `mergeDiagram(xml: string)`：发送 `merge`，10s 超时自动回退为 `load`
+- `exportDiagram(): Promise<string>`：导出 XML
+- `exportSVG(): Promise<string>`：导出 SVG，内部维护 Promise 队列避免多个导出响应串扰
 ```
 
 ### 2. DrawioEditor.tsx

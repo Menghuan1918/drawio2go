@@ -10,7 +10,16 @@
 - **drawio-xml-service.ts**: 服务端 XML 转接层，负责 XPath 查询与批量编辑
 - **drawio-ai-tools.ts**: AI 工具定义（`drawio_read` / `drawio_edit_batch`）
 - **tool-executor.ts**: 工具执行路由器，通过 Socket.IO 与前端通讯
+- **svg-export-utils.ts**: DrawIO 页面解析 + 单页重建 + SVG 导出/序列化工具
 - **config-utils.ts**: LLM 配置规范化工具（默认值、类型校验、URL 规范化）
+- **svg-export-utils.ts**: DrawIO 多页面 SVG 导出工具（页面拆分、单页 XML 重建、结果序列化）
+
+### svg-export-utils.ts
+
+- `parsePages(xml)`: 解析 `<diagram>` 列表，返回 `{ id, name, index, xmlContent, element }`
+- `createSinglePageXml(diagram)`: 复制 diagram 并生成完整 mxfile 字符串，保持 host/agent 等元数据
+- `exportAllPagesSVG(editor, fullXml, options)`: 顺序执行 `loadDiagram → exportSVG` 并可接收 `onProgress`，结束后自动恢复原始 XML
+- `serializeSVGsToBlob` / `deserializeSVGsFromBlob`: 用 JSON Blob 存储/读取多页 SVG 结果
 - **storage/**: 统一存储抽象层（适配器模式）
   - **current-project.ts**: 当前工程 ID 持久化工具
   - **xml-version-engine.ts**: XML 版本恢复引擎（Diff 重放）

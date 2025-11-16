@@ -11,11 +11,21 @@ import {
 } from "react";
 import { DrawioSelectionInfo } from "../types/drawio-tools";
 
+type DrawioExportFormat = "xml" | "svg";
+
+type PendingExportEntry = {
+  resolve: (payload: string) => void;
+  timeout: ReturnType<typeof setTimeout>;
+};
+
+const EXPORT_TIMEOUT_MS = 10000;
+
 // 暴露给父组件的 ref 接口
 export interface DrawioEditorRef {
-  loadDiagram: (xml: string) => void;
+  loadDiagram: (xml: string) => Promise<void>;
   mergeDiagram: (xml: string) => void;
   exportDiagram: () => Promise<string>;
+  exportSVG: () => Promise<string>;
 }
 
 interface DrawioEditorNativeProps {
@@ -96,8 +106,45 @@ const DrawioEditorNative = forwardRef<DrawioEditorRef, DrawioEditorNativeProps>(
     const autosaveReceivedRef = useRef(false); // 是否收到 autosave 事件
     const autosaveTimerRef = useRef<NodeJS.Timeout | null>(null); // autosave 监测定时器
     const initializationCompleteRef = useRef(false); // 标记初始化是否完成
-    // 用于 exportDiagram Promise 的 resolve 函数
-    const exportResolveRef = useRef<((xml: string) => void) | null>(null);
+    const loadResolversRef = useRef<Array<() => void>>([]); // load 回调队列
+    const pendingExportsRef = useRef<Map<string, PendingExportEntry[]>>(new Map()); // export 回调队列
+
+    const settleExport = (format: string, payload: string) => {
+      const normalizedFormat = (format || "xml").toLowerCase();
+      const queue = pendingExportsRef.current.get(normalizedFormat);
+      if (!queue || queue.length === 0) {
+        return false;
+      }
+
+      const entry = queue.shift();
+      if (entry) {
+        clearTimeout(entry.timeout);
+        entry.resolve(payload);
+      }
+
+      if (queue.length === 0) {
+        pendingExportsRef.current.delete(normalizedFormat);
+      } else {
+        pendingExportsRef.current.set(normalizedFormat, queue);
+      }
+
+      return true;
+    };
+
+    const flushPendingExports = () => {
+      pendingExportsRef.current.forEach((queue) => {
+        queue.forEach((entry) => {
+          clearTimeout(entry.timeout);
+          entry.resolve("");
+        });
+      });
+      pendingExportsRef.current.clear();
+    };
+
+    const flushPendingLoads = () => {
+      loadResolversRef.current.forEach((resolve) => resolve());
+      loadResolversRef.current = [];
+    };
 
     // 构建 DrawIO URL
     const drawioUrl = `https://embed.diagrams.net/?embed=1&proto=json&spin=1&ui=kennedy&libraries=1&saveAndExit=1&noSaveBtn=1&noExitBtn=1`;
@@ -105,45 +152,84 @@ const DrawioEditorNative = forwardRef<DrawioEditorRef, DrawioEditorNativeProps>(
     // 首次加载图表（使用 load 动作）
     const loadDiagram = useCallback(
       (xml: string | undefined, skipReadyCheck = false) => {
-        if (
-          iframeRef.current &&
-          iframeRef.current.contentWindow &&
-          (isReady || skipReadyCheck)
-        ) {
-          const loadData = {
-            action: "load",
-            xml: xml || "",
-            autosave: true,
-          };
-          console.log("📤 发送 load 命令（完全加载）");
-          iframeRef.current.contentWindow.postMessage(
-            JSON.stringify(loadData),
-            "*",
-          );
-        }
+        return new Promise<void>((resolve) => {
+          if (
+            iframeRef.current &&
+            iframeRef.current.contentWindow &&
+            (isReady || skipReadyCheck)
+          ) {
+            const loadData = {
+              action: "load",
+              xml: xml || "",
+              autosave: true,
+            };
+            console.log("📤 发送 load 命令（完全加载）");
+            loadResolversRef.current.push(resolve);
+            iframeRef.current.contentWindow.postMessage(
+              JSON.stringify(loadData),
+              "*",
+            );
+          } else {
+            resolve();
+          }
+        });
       },
       [isReady],
     );
 
     // 导出当前图表的 XML（返回 Promise）
-    const exportDiagram = useCallback((): Promise<string> => {
-      return new Promise((resolve) => {
-        if (iframeRef.current && iframeRef.current.contentWindow && isReady) {
-          exportResolveRef.current = resolve;
-          const exportData = {
-            action: "export",
-            format: "xml",
-          };
-          console.log("📤 发送 export 命令");
-          iframeRef.current.contentWindow.postMessage(
-            JSON.stringify(exportData),
-            "*",
-          );
-        } else {
-          resolve(""); // 未就绪时返回空字符串
-        }
-      });
-    }, [isReady]);
+    const requestExport = useCallback(
+      (format: DrawioExportFormat): Promise<string> => {
+        return new Promise((resolve) => {
+          if (iframeRef.current && iframeRef.current.contentWindow && isReady) {
+            const exportData = {
+              action: "export",
+              format,
+            };
+
+            const formatKey = format.toLowerCase();
+            const entry: PendingExportEntry = {
+              resolve: (payload: string) => {
+                clearTimeout(entry.timeout);
+                resolve(payload);
+              },
+              timeout: setTimeout(() => {
+                console.warn(`⚠️ ${format} 导出超时 ${EXPORT_TIMEOUT_MS}ms`);
+                const queue = pendingExportsRef.current.get(formatKey);
+                if (queue) {
+                  const index = queue.indexOf(entry);
+                  if (index > -1) {
+                    queue.splice(index, 1);
+                  }
+                  if (queue.length === 0) {
+                    pendingExportsRef.current.delete(formatKey);
+                  } else {
+                    pendingExportsRef.current.set(formatKey, queue);
+                  }
+                }
+                resolve("");
+              }, EXPORT_TIMEOUT_MS),
+            };
+
+            const queue = pendingExportsRef.current.get(formatKey) || [];
+            queue.push(entry);
+            pendingExportsRef.current.set(formatKey, queue);
+
+            console.log(`📤 发送 export 命令 (${format})`);
+            iframeRef.current.contentWindow.postMessage(
+              JSON.stringify(exportData),
+              "*",
+            );
+          } else {
+            resolve("");
+          }
+        });
+      },
+      [isReady],
+    );
+
+    const exportDiagram = useCallback(() => requestExport("xml"), [requestExport]);
+    const exportSVG = useCallback(() => requestExport("svg"), [requestExport]);
 
     // 更新图表（使用 merge 动作，保留编辑状态，带超时回退）
     const mergeWithFallback = useCallback(
@@ -184,11 +270,12 @@ const DrawioEditorNative = forwardRef<DrawioEditorRef, DrawioEditorNativeProps>(
     useImperativeHandle(
       ref,
       () => ({
-        loadDiagram: (xml: string) => loadDiagram(xml),
+        loadDiagram: async (xml: string) => loadDiagram(xml),
         mergeDiagram: (xml: string) => mergeWithFallback(xml),
         exportDiagram,
+        exportSVG,
       }),
-      [loadDiagram, mergeWithFallback, exportDiagram],
+      [loadDiagram, mergeWithFallback, exportDiagram, exportSVG],
     );
 
     // 使用 ref 保存最新的函数引用，确保防抖函数始终能访问到最新版本
@@ -239,16 +326,7 @@ const DrawioEditorNative = forwardRef<DrawioEditorRef, DrawioEditorNativeProps>(
             console.log("🔍 请求 export 以获取 DrawIO 当前 XML");
             // 使用 setTimeout 确保 setIsReady 状态已更新
             setTimeout(() => {
-              if (iframeRef.current && iframeRef.current.contentWindow) {
-                const exportData = {
-                  action: "export",
-                  format: "xml",
-                };
-                iframeRef.current.contentWindow.postMessage(
-                  JSON.stringify(exportData),
-                  "*",
-                );
-              }
+              requestExport("xml");
             }, 100);
 
             // 启动 autosave 监测定时器（2秒后检查）
@@ -263,34 +341,48 @@ const DrawioEditorNative = forwardRef<DrawioEditorRef, DrawioEditorNativeProps>(
             }, 2000);
           } else if (data.event === "export") {
             console.log("📦 收到 export 响应");
-            const exportedXml = data.xml ? decodeBase64XML(data.xml) : "";
-            exportedXmlRef.current = exportedXml;
+            const rawPayload =
+              typeof data.xml === "string"
+                ? data.xml
+                : typeof data.data === "string"
+                  ? data.data
+                  : "";
+            const exportedContent = rawPayload
+              ? decodeBase64XML(rawPayload)
+              : "";
+            const reportedFormat =
+              typeof data.format === "string" && data.format.length > 0
+                ? data.format.toLowerCase()
+                : "xml";
 
-            // 如果有等待中的 Promise，resolve 它
-            if (exportResolveRef.current) {
-              exportResolveRef.current(exportedXml);
-              exportResolveRef.current = null;
+            const resolved = settleExport(reportedFormat, exportedContent);
+            if (!resolved && reportedFormat !== "xml") {
+              // fallback: 某些情况下 DrawIO 不回传 format，默认按 xml 处理
+              settleExport("xml", exportedContent);
             }
 
-            // 对比 XML 是否相同（仅在初始化阶段）
-            if (!initializationCompleteRef.current) {
-              const normalizedExported = exportedXml.trim();
-              const normalizedInitial = (initialXml || "").trim();
+            if (reportedFormat === "xml") {
+              exportedXmlRef.current = exportedContent;
 
-              if (normalizedExported !== normalizedInitial) {
-                console.log("🔄 检测到 XML 不同，执行 load 操作");
-                console.log(
-                  `  - 存储 XML 长度: ${normalizedInitial.length} 字符`,
-                );
-                console.log(
-                  `  - DrawIO XML 长度: ${normalizedExported.length} 字符`,
-                );
-                loadDiagram(initialXml, true);
-              } else {
-                console.log("✅ XML 相同，跳过 load 操作");
+              if (!initializationCompleteRef.current) {
+                const normalizedExported = exportedContent.trim();
+                const normalizedInitial = (initialXml || "").trim();
+
+                if (normalizedExported !== normalizedInitial) {
+                  console.log("🔄 检测到 XML 不同，执行 load 操作");
+                  console.log(
+                    `  - 存储 XML 长度: ${normalizedInitial.length} 字符`,
+                  );
+                  console.log(
+                    `  - DrawIO XML 长度: ${normalizedExported.length} 字符`,
+                  );
+                  loadDiagram(initialXml, true);
+                } else {
+                  console.log("✅ XML 相同，跳过 load 操作");
+                }
+                isFirstLoadRef.current = false; // 标记首次加载已完成
+                initializationCompleteRef.current = true; // 标记初始化完成
               }
-              isFirstLoadRef.current = false; // 标记首次加载已完成
-              initializationCompleteRef.current = true; // 标记初始化完成
             }
           } else if (data.event === "merge") {
             console.log("✅ merge 操作完成");
@@ -307,6 +399,8 @@ const DrawioEditorNative = forwardRef<DrawioEditorRef, DrawioEditorNativeProps>(
             }
           } else if (data.event === "load") {
             console.log("✅ DrawIO 已加载内容");
+            const resolver = loadResolversRef.current.shift();
+            resolver?.();
           } else if (data.event === "drawio-selection") {
             // 处理选区信息
             const count = Number(data.count ?? 0) || 0;
@@ -346,6 +440,10 @@ const DrawioEditorNative = forwardRef<DrawioEditorRef, DrawioEditorNativeProps>(
           clearTimeout(autosaveTimerRef.current);
           autosaveTimerRef.current = null;
         }
+
+        // 结束未完成的 load/export Promise，避免内存泄漏
+        flushPendingLoads();
+        flushPendingExports();
       };
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
