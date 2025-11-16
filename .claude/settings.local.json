@@ -66,7 +66,14 @@
       "Bash(find:*)",
       "Bash(git add:*)",
       "Bash(du:*)",
-      "Bash(git check-ignore:*)"
+      "Bash(git check-ignore:*)",
+      "Bash(git -C /home/aaa/Code/drawio2go diff --name-only)",
+      "Bash(git -C /home/aaa/Code/drawio2go status --short)",
+      "Bash(git -C /home/aaa/Code/drawio2go diff app/lib/drawio-tools.ts)",
+      "Bash(git -C /home/aaa/Code/drawio2go diff app/lib/storage/current-project.ts)",
+      "Bash(git -C /home/aaa/Code/drawio2go ls-files:*)",
+      "Bash(git -C /home/aaa/Code/drawio2go diff --stat AGENTS.md app/hooks/AGENTS.md app/lib/AGENTS.md)",
+      "Bash(git -C /home/aaa/Code/drawio2go diff --stat -- '**/AGENTS.md')"
     ],
     "deny": [],
     "ask": []

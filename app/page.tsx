@@ -81,15 +81,16 @@ export default function Home() {
   // 加载当前工程的 XML
   useEffect(() => {
     if (currentProject && !projectLoading) {
-      // 确保 WIP 版本存在
-      ensureWIPVersion(currentProject.uuid).catch((error) => {
-        console.error("初始化 WIP 版本失败:", error);
-      });
-
-      // 加载工程 XML
-      loadProjectXml().catch((error) => {
-        console.error("加载工程 XML 失败:", error);
-      });
+      (async () => {
+        try {
+          // 先确保 WIP 版本存在
+          await ensureWIPVersion(currentProject.uuid);
+          // 然后加载工程 XML 到编辑器
+          await loadProjectXml();
+        } catch (error) {
+          console.error("初始化工程失败:", error);
+        }
+      })();
     }
   }, [currentProject, projectLoading, loadProjectXml, ensureWIPVersion]);
 
@@ -311,6 +312,61 @@ export default function Home() {
       }`
     : "网页无法使用该功能";
 
+  // 如果正在加载项目，显示加载界面
+  if (projectLoading && !currentProject) {
+    return (
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#f5f5f5",
+          zIndex: 10000,
+        }}
+      >
+        <div
+          style={{
+            background: "white",
+            padding: "40px",
+            borderRadius: "12px",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+            textAlign: "center",
+            maxWidth: "400px",
+          }}
+        >
+          <div
+            style={{
+              width: "60px",
+              height: "60px",
+              border: "4px solid #e0e0e0",
+              borderTop: "4px solid #4CAF50",
+              borderRadius: "50%",
+              margin: "0 auto 20px",
+              animation: "spin 1s linear infinite",
+            }}
+          />
+          <h2 style={{ margin: "0 0 10px", fontSize: "20px", color: "#333" }}>
+            正在加载项目...
+          </h2>
+          <p style={{ margin: 0, fontSize: "14px", color: "#666" }}>
+            请稍候，正在从存储层加载项目数据
+          </p>
+          <style>{`
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}</style>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <main className={`main-container ${isSidebarOpen ? "sidebar-open" : ""}`}>
       {/* Socket.IO 连接状态指示器 */}
@@ -330,6 +386,70 @@ export default function Home() {
           }}
         >
           ⚠️ Socket.IO 未连接，AI 工具功能不可用
+        </div>
+      )}
+
+      {/* 项目加载失败提示 */}
+      {!projectLoading && !currentProject && (
+        <div
+          style={{
+            position: "fixed",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            background: "white",
+            padding: "40px",
+            borderRadius: "12px",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
+            textAlign: "center",
+            maxWidth: "500px",
+            zIndex: 10000,
+          }}
+        >
+          <div
+            style={{
+              fontSize: "48px",
+              marginBottom: "20px",
+            }}
+          >
+            ⚠️
+          </div>
+          <h2
+            style={{
+              margin: "0 0 10px",
+              fontSize: "24px",
+              color: "#d32f2f",
+            }}
+          >
+            项目加载失败
+          </h2>
+          <p
+            style={{
+              margin: "0 0 20px",
+              fontSize: "14px",
+              color: "#666",
+              lineHeight: "1.6",
+            }}
+          >
+            无法加载当前项目，这可能是由于存储层初始化失败或网络问题。
+            <br />
+            请刷新页面重试，或查看浏览器控制台了解详细错误信息。
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              background: "#4CAF50",
+              color: "white",
+              border: "none",
+              padding: "12px 24px",
+              borderRadius: "6px",
+              fontSize: "16px",
+              cursor: "pointer",
+              boxShadow: "0 2px 8px rgba(76,175,80,0.3)",
+            }}
+          >
+            刷新页面
+          </button>
         </div>
       )}
 

@@ -100,13 +100,51 @@ function ProjectManager() {
 
 #### 特性
 
-- **统一持久化**: currentProjectId 永远保存在统一存储层的 `settings` 表，不再触达 localStorage
-- **自动兜底**: 如不存在任何工程，会即时创建 "New Project" + 空白 XML 版本并写入 currentProjectId
+- **统一持久化**: `currentProjectId` 保存在统一存储层的 `settings` 表，由 `current-project.ts` 管理
+- **自动兜底**: 如不存在任何工程，自动创建 "New Project" + 空白 XML 版本（v0.0.0 WIP）
+- **超时保护**: 所有异步操作添加超时保护（3-10秒），避免无限等待
+- **React 严格模式兼容**: 使用 ref 防止双重挂载导致的重复加载
+- **自动激活版本**: 创建默认工程时自动设置 `active_xml_version_id` 指向 WIP 版本
 - **状态接口**:
   - `currentProject` / `loading` / `error`
   - `loadCurrentProject()`: 重新拉取并返回最新工程
   - `switchProject(projectId)`: 切换工程并同步存储
   - `refreshCurrentProject()`: 仅刷新当前工程的元数据
+
+#### 工作流程
+
+1. **初始化**: 从统一存储层读取 `currentProjectId`
+2. **工程不存在**: 创建默认工程 "New Project" + 空白 XML 版本
+3. **工程存在**: 加载工程信息并设置为当前工程
+4. **切换工程**: 更新存储层中的 `currentProjectId` 并刷新状态
+
+#### 默认工程创建流程
+
+```typescript
+// 1. 创建工程记录
+const newProject = {
+  uuid: `project-${Date.now()}-${random}`,
+  name: "New Project",
+  description: "默认工程",
+};
+
+// 2. 创建空白 XML 版本（v0.0.0 WIP）
+const xmlVersion = {
+  id: uuidv4(),
+  project_uuid: newProject.uuid,
+  semantic_version: "0.0.0", // WIP 版本
+  name: "初始版本",
+  source_version_id: ZERO_SOURCE_VERSION_ID,
+  xml_content: emptyXML, // 空白画布
+  is_keyframe: true,
+  diff_chain_depth: 0,
+};
+
+// 3. 更新工程的激活版本
+await storage.updateProject(uuid, {
+  active_xml_version_id: xmlVersion.id,
+});
+```
 
 #### 使用示例
 
@@ -114,9 +152,11 @@ function ProjectManager() {
 import { useCurrentProject } from "@/app/hooks/useCurrentProject";
 
 function ProjectAwareSidebar() {
-  const { currentProject, loading, switchProject } = useCurrentProject();
+  const { currentProject, loading, error, switchProject } =
+    useCurrentProject();
 
   if (loading) return <Skeleton />;
+  if (error) return <ErrorBanner message={error.message} />;
 
   return (
     <ProjectSelector
@@ -126,6 +166,12 @@ function ProjectAwareSidebar() {
   );
 }
 ```
+
+#### 错误处理
+
+- 所有异步操作都有超时保护
+- 加载失败时自动创建默认工程
+- 提供详细的控制台日志便于调试
 
 ### 4. useStorageConversations
 
@@ -252,6 +298,7 @@ function EditorPage() {
 export { useDrawioSocket } from "./useDrawioSocket";
 export { useStorageSettings } from "./useStorageSettings";
 export { useStorageProjects } from "./useStorageProjects";
+export { useCurrentProject } from "./useCurrentProject";
 export { useStorageConversations } from "./useStorageConversations";
 export { useStorageXMLVersions } from "./useStorageXMLVersions";
 ```

@@ -12,6 +12,8 @@
 - **tool-executor.ts**: 工具执行路由器，通过 Socket.IO 与前端通讯
 - **config-utils.ts**: LLM 配置规范化工具（默认值、类型校验、URL 规范化）
 - **storage/**: 统一存储抽象层（适配器模式）
+  - **current-project.ts**: 当前工程 ID 持久化工具
+  - **xml-version-engine.ts**: XML 版本恢复引擎（Diff 重放）
 
 ## DrawIO Socket.IO 调用流程
 
@@ -100,7 +102,9 @@
 - **indexeddb-storage.ts**: IndexedDB 实现（Web 环境）
 - **storage-factory.ts**: 存储工厂，运行时创建存储实例
 - **types.ts**: 存储层类型定义
-- **constants.ts**: 常量定义（表名、默认值等）
+- **constants.ts**: 常量定义（表名、默认值、WIP_VERSION 等）
+- **current-project.ts**: 当前工程 ID 持久化工具（读取/写入 `settings` 表）
+- **xml-version-engine.ts**: XML 版本恢复引擎（通过 Diff 链重放恢复历史版本）
 - **index.ts**: 统一导出
 
 ### 表结构
@@ -219,6 +223,63 @@ abstract class StorageAdapter {
 }
 ```
 
+### 辅助工具
+
+#### current-project.ts - 当前工程 ID 持久化
+
+**功能**: 管理当前激活工程 ID 的存储和读取
+
+```typescript
+// 读取当前工程 ID（从 settings 表）
+export async function getStoredCurrentProjectId(
+  storage: StorageAdapter,
+): Promise<string | null>;
+
+// 持久化当前工程 ID
+export async function persistCurrentProjectId(
+  projectId: string,
+  storage: StorageAdapter,
+): Promise<void>;
+```
+
+**使用场景**:
+
+- `useCurrentProject` Hook 加载和切换工程时
+- 确保刷新页面后恢复到上次激活的工程
+
+#### xml-version-engine.ts - XML 版本恢复引擎
+
+**功能**: 通过 Diff 链重放恢复任意历史版本的完整 XML
+
+**核心函数**:
+
+```typescript
+export async function restoreXMLFromVersion(
+  versionId: string,
+  storage: StorageAdapter,
+): Promise<string>;
+```
+
+**工作原理**:
+
+1. **查找目标版本**: 根据 `versionId` 获取版本记录
+2. **关键帧检测**: 如果是关键帧（`is_keyframe=true`），直接返回完整 XML
+3. **构建 Diff 链**: 向上追溯 `source_version_id`，直到找到关键帧
+4. **Diff 重放**: 从关键帧开始，依次应用 Diff 补丁（使用 `diff-match-patch`）
+5. **返回结果**: 返回完整恢复的 XML 内容
+
+**使用场景**:
+
+- 版本回滚功能（恢复到历史版本）
+- 版本导出功能（导出历史版本的完整 DrawIO 文件）
+- 版本对比功能（对比不同版本的 XML 差异）
+
+**错误处理**:
+
+- 版本不存在 → 抛出错误
+- Diff 链断裂（找不到父版本）→ 抛出错误
+- Diff 应用失败 → 抛出错误
+
 ### 使用方式
 
 #### 1. 通过工厂创建实例
@@ -237,6 +298,17 @@ import { useStorageSettings, useStorageProjects } from "@/hooks";
 
 // Hooks 内部自动处理存储实例创建和初始化
 const { settings, saveSettings } = useStorageSettings();
+```
+
+#### 3. 使用版本恢复引擎
+
+```typescript
+import { restoreXMLFromVersion } from "@/lib/storage/xml-version-engine";
+import { getStorage } from "@/lib/storage";
+
+// 恢复历史版本
+const storage = await getStorage();
+const xml = await restoreXMLFromVersion("version-uuid", storage);
 ```
 
 ### SQLite 实现细节
