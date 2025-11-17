@@ -115,7 +115,7 @@ export function VersionCard({
   );
 
   // 格式化创建时间
-  const createdAt = new Date(version.created_at).toLocaleString("zh-CN", {
+  const createdAtFull = new Date(version.created_at).toLocaleString("zh-CN", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -123,6 +123,17 @@ export function VersionCard({
     minute: "2-digit",
     second: "2-digit",
   });
+
+  // 紧凑格式时间（折叠状态）
+  const createdAtCompact = new Date(version.created_at).toLocaleString(
+    "zh-CN",
+    {
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    },
+  );
 
   // 管理 preview_svg 的 Object URL
   React.useEffect(() => {
@@ -331,14 +342,42 @@ export function VersionCard({
                   <span className="version-number">{versionLabel}</span>
                   {isLatest && <span className="latest-badge">最新</span>}
                   {version.is_keyframe ? (
-                    <span className="keyframe-badge">
-                      <Key className="w-2.5 h-2.5" />
-                      关键帧
-                    </span>
+                    <TooltipRoot>
+                      <span className="keyframe-badge">
+                        <Key className="w-3 h-3" />
+                      </span>
+                      <TooltipContent>关键帧</TooltipContent>
+                    </TooltipRoot>
                   ) : (
-                    <span className="diff-badge">
-                      <GitBranch className="w-2.5 h-2.5" />
-                      Diff +{version.diff_chain_depth}
+                    <TooltipRoot>
+                      <span className="diff-badge">
+                        <GitBranch className="w-3 h-3" />
+                        +{version.diff_chain_depth}
+                      </span>
+                      <TooltipContent>
+                        差异链深度 +{version.diff_chain_depth}
+                      </TooltipContent>
+                    </TooltipRoot>
+                  )}
+                  {/* 页面数徽章（仅多页时显示） */}
+                  {version.page_count > 1 && (
+                    <TooltipRoot>
+                      <span className="page-count-badge">
+                        <LayoutGrid className="w-3 h-3" />
+                        {version.page_count}
+                      </span>
+                      <TooltipContent>
+                        {version.page_count} 个页面
+                      </TooltipContent>
+                    </TooltipRoot>
+                  )}
+                  {/* 内联描述（自适应宽度，仅有描述时显示） */}
+                  {version.description && (
+                    <span
+                      className="version-card__compact-description"
+                      title={version.description}
+                    >
+                      {version.description}
                     </span>
                   )}
                 </div>
@@ -352,7 +391,7 @@ export function VersionCard({
                   )}
                   <span className="version-card__time">
                     <Clock className="w-3 h-3" />
-                    {createdAt}
+                    {createdAtCompact}
                   </span>
                   <ChevronDown
                     className={`version-card__chevron${isExpanded ? " rotated" : ""}`}
@@ -537,7 +576,7 @@ export function VersionCard({
                 </div>
                 <div className="version-card__meta-item">
                   <Clock className="w-3 h-3" />
-                  <span>{createdAt}</span>
+                  <span>{createdAtFull}</span>
                 </div>
               </div>
 

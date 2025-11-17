@@ -25,22 +25,24 @@
   --spacing-xl: 2rem; /* 32px */
 
   /* 紧凑模式间距 (用于优化信息密度) */
-  --spacing-compact-xs: 0.375rem; /* 6px */
+  --spacing-compact-xs: 0; /* 0px - 超紧凑：无内边距 */
   --spacing-compact-sm: 0.5rem; /* 8px */
-  --spacing-compact-md: 0.75rem; /* 12px */
+  --spacing-compact-md: 0.25rem; /* 4px - 超紧凑：卡片间距 */
   --spacing-compact-lg: 1rem; /* 16px */
   --spacing-compact-xl: 1.25rem; /* 20px */
 
   /* 紧凑模式字号 */
-  --font-size-compact-xs: 0.6875rem; /* 11px */
+  --font-size-compact-xs: 0.625rem; /* 10px - 极致紧凑：时间戳字体 */
   --font-size-compact-sm: 0.75rem; /* 12px */
-  --font-size-compact-md: 0.8125rem; /* 13px */
+  --font-size-compact-md: 0.75rem; /* 12px - 极致紧凑：版本号字体 */
 
   /* 紧凑模式组件尺寸 */
-  --badge-height-compact: 1.125rem; /* 18px */
-  --badge-padding-compact: 0 0.375rem; /* 0 6px */
-  --card-padding-compact: var(--spacing-compact-lg); /* 16px */
-  --card-padding-compact-collapsed: var(--spacing-compact-md); /* 12px */
+  --badge-height-compact: 0.875rem; /* 14px - 超紧凑 */
+  --badge-padding-compact: 0 0.25rem; /* 0 4px - 极致紧凑 */
+  --card-padding-compact: 0.625rem; /* 10px - 极致紧凑：展开状态 */
+  --card-padding-compact-collapsed: 0; /* 0px - 超紧凑：无内边距 */
+  --card-radius-compact: var(--radius-sm); /* 4px - 极致紧凑：卡片圆角 */
+  --card-min-height-compact: 1.25rem; /* 20px - 超紧凑：最小行高 */
 
   /* ========================================
    * 布局尺寸

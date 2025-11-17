@@ -9,8 +9,8 @@ import { WIP_VERSION } from "@/app/lib/storage/constants";
 import type { XMLVersion } from "@/app/lib/storage/types";
 import type { VersionPair } from "@/app/hooks/useVersionCompare";
 
-// 虚拟滚动阈值 - 版本数量超过此值时启用虚拟滚动
-const VIRTUAL_SCROLL_THRESHOLD = 50;
+// 虚拟滚动阈值 - 版本数量超过此值时启用虚拟滚动（极致紧凑优化）
+const VIRTUAL_SCROLL_THRESHOLD = 30;
 
 interface VersionTimelineProps {
   projectUuid: string;
@@ -27,7 +27,7 @@ interface VersionTimelineProps {
 /**
  * 版本时间线组件 - 支持虚拟滚动
  * 显示所有历史版本的时间线列表（不包括 WIP 版本）
- * 当版本数 > 50 时自动启用虚拟滚动优化性能
+ * 当版本数 > 30 时自动启用虚拟滚动优化性能（极致紧凑优化）
  */
 export function VersionTimeline({
   versions,

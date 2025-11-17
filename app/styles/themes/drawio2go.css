@@ -90,6 +90,7 @@
     --gray-bg: color-mix(in oklch, var(--gray-light) 4%, transparent);
 
     /* Material Design Shadow System (OKLCH) */
+    --shadow-xs: 0 1px 2px color-mix(in oklch, var(--accent) 6%, transparent); /* 极淡阴影 - 紧凑模式 */
     --shadow-1: 0 1px 3px color-mix(in oklch, var(--accent) 12%, transparent);
     --shadow-2: 0 2px 6px color-mix(in oklch, var(--accent) 16%, transparent);
     --shadow-4: 0 4px 12px color-mix(in oklch, var(--accent) 16%, transparent);
@@ -172,6 +173,7 @@
     --gray-bg: color-mix(in oklch, var(--gray-light) 8%, transparent);
 
     /* Material Design Shadow System (OKLCH) */
+    --shadow-xs: 0 1px 2px color-mix(in oklch, var(--black) 20%, transparent); /* 极淡阴影 - 紧凑模式 */
     --shadow-1: 0 1px 3px color-mix(in oklch, var(--black) 40%, transparent);
     --shadow-2: 0 2px 6px color-mix(in oklch, var(--black) 50%, transparent);
     --shadow-4: 0 4px 12px color-mix(in oklch, var(--black) 50%, transparent);

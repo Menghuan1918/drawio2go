@@ -65,7 +65,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-compact-md);
-  padding-left: 1.25rem;
+  padding-left: 1rem; /* 极致紧凑：16px */
 }
 
 .timeline-list::before {
@@ -187,12 +187,11 @@
 
 .version-card {
   position: relative;
-  border-radius: var(--radius-lg);
+  border-radius: var(--card-radius-compact); /* 极致紧凑：4px */
   border: 1px solid var(--border-light);
   background: var(--background, #ffffff);
-  box-shadow: var(--shadow-1);
+  box-shadow: var(--shadow-xs); /* 极致紧凑：更淡阴影 */
   transition:
-    transform var(--transition-fast),
     border-color var(--transition-fast),
     box-shadow var(--transition-fast);
   cursor: pointer;
@@ -213,14 +212,12 @@
 }
 
 .version-card:hover {
-  border-color: var(--primary-color);
-  box-shadow: var(--shadow-2);
-  transform: translateX(2px) scale(1.01);
+  border-color: var(--primary-color); /* 仅保留高亮边框 */
 }
 
 .version-card--latest {
   border-color: var(--primary-color);
-  box-shadow: var(--shadow-2);
+  box-shadow: var(--shadow-1); /* 极致紧凑：更淡阴影 */
 }
 
 .version-card--latest::before {
@@ -233,7 +230,7 @@
 
 .version-card--selected {
   border-color: var(--primary-color);
-  box-shadow: var(--shadow-2);
+  box-shadow: var(--shadow-1); /* 极致紧凑：更淡阴影 */
   background: var(--bg-secondary);
 }
 
@@ -313,17 +310,19 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--spacing-compact-sm);
-  min-height: 2.5rem;
+  gap: 6px; /* 超紧凑：收紧间距 */
+  min-height: var(--card-min-height-compact); /* 超紧凑：20px */
+  line-height: 1.2; /* 超紧凑：极致行高 */
 }
 
 .version-card__compact-left {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap; /* 单行布局：禁止换行 */
   align-items: center;
-  gap: 0.3rem;
-  flex: 1;
-  min-width: 0;
+  gap: 0.25rem; /* 超紧凑：4px */
+  flex: 1 1 0; /* 自适应收缩 */
+  min-width: 0; /* 允许收缩到最小尺寸 */
+  overflow: hidden; /* 隐藏溢出内容 */
 }
 
 .version-card__compact-right {
@@ -342,8 +341,8 @@
 }
 
 .version-card__chevron {
-  width: 1rem;
-  height: 1rem;
+  width: 0.875rem; /* 超紧凑：14px */
+  height: 0.875rem; /* 超紧凑：14px */
   color: var(--text-secondary);
   transition: transform var(--transition-normal);
   flex-shrink: 0;
@@ -1440,6 +1439,40 @@
 .diff-badge svg {
   width: 0.625rem;
   height: 0.625rem;
+}
+
+/* 页面数徽章（仅多页时显示） */
+.page-count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  height: var(--badge-height-compact);
+  padding: var(--badge-padding-compact);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-compact-xs);
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  flex-shrink: 0;
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--info-color);
+}
+
+.page-count-badge svg {
+  width: 0.625rem;
+  height: 0.625rem;
+}
+
+/* 内联描述（自适应宽度） */
+.version-card__compact-description {
+  flex: 1 1 auto; /* 占据剩余空间，可收缩 */
+  min-width: 60px; /* 最小可读宽度 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-size-compact-xs); /* 10px */
+  color: var(--text-secondary);
+  line-height: 1.4;
+  opacity: 0.85; /* 稍微降低透明度，与徽章区分 */
 }
 
 /* ================================

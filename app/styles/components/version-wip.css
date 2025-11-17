@@ -18,7 +18,7 @@
 }
 
 .wip-indicator__body {
-  padding: var(--spacing-compact-lg);
+  padding: 0.75rem; /* 极致紧凑：12px */
   display: flex;
   flex-direction: column;
   gap: var(--spacing-compact-md);
@@ -34,8 +34,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2rem; /* 极致紧凑：32px */
+  height: 2rem; /* 极致紧凑：32px */
   border-radius: var(--radius);
   background: var(--primary-light);
   color: var(--primary-color);
