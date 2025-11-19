@@ -14,6 +14,7 @@
 - **compression-utils.ts**: Web/Node 共享的 `CompressionStream` / `DecompressionStream` deflate-raw 压缩工具
 - **svg-smart-diff.ts**: SVG 智能差异对比引擎（基于 data-cell-id + 几何语义匹配的元素级高亮）
 - **config-utils.ts**: LLM 配置规范化工具（默认值、类型校验、URL 规范化）
+- **version-utils.ts**: 语义化版本号工具（解析、过滤子版本、子版本计数与递增推荐）
 
 ### svg-export-utils.ts
 

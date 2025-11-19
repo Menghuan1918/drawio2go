@@ -25,6 +25,7 @@ import {
   Square,
   Activity,
   ZoomIn,
+  Layers,
 } from "lucide-react";
 import { materializeVersionXml } from "@/app/lib/storage/xml-version-engine";
 import { useStorageXMLVersions } from "@/app/hooks/useStorageXMLVersions";
@@ -37,6 +38,7 @@ import {
   type BinarySource,
 } from "./version-utils";
 import { decompressBlob } from "@/app/lib/compression-utils";
+import { countSubVersions, isSubVersion } from "@/app/lib/version-utils";
 
 interface VersionCardProps {
   version: XMLVersion;
@@ -49,6 +51,8 @@ interface VersionCardProps {
   compareOrder?: number | null;
   onToggleSelect?: (versionId: string) => void;
   onQuickCompare?: () => void;
+  allVersions: XMLVersion[];
+  onNavigateToSubVersions?: (parentVersion: string) => void;
 }
 
 interface PageThumbnail {
@@ -72,6 +76,8 @@ export function VersionCard({
   compareOrder = null,
   onToggleSelect,
   onQuickCompare,
+  allVersions,
+  onNavigateToSubVersions,
 }: VersionCardProps) {
   const [isExporting, setIsExporting] = React.useState(false);
   const [isExpanded, setIsExpanded] = React.useState(defaultExpanded && !isWIP);
@@ -86,6 +92,18 @@ export function VersionCard({
   const { getXMLVersion, loadVersionSVGFields } = useStorageXMLVersions();
   const [resolvedVersion, setResolvedVersion] =
     React.useState<XMLVersion>(version);
+  const isSubVersionEntry = React.useMemo(
+    () => isSubVersion(version.semantic_version),
+    [version.semantic_version],
+  );
+  const subVersionCount = React.useMemo(() => {
+    if (isSubVersionEntry) return 0;
+    return countSubVersions(allVersions, version.semantic_version);
+  }, [allVersions, isSubVersionEntry, version.semantic_version]);
+  const shouldShowSubVersionBadge =
+    !isWIP && !isSubVersionEntry && subVersionCount > 0;
+  const shouldShowSubVersionButton =
+    shouldShowSubVersionBadge && Boolean(onNavigateToSubVersions);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -396,7 +414,7 @@ export function VersionCard({
 
   return (
     <Card.Root
-      className={`version-card${isLatest ? " version-card--latest" : ""}${effectiveExpanded ? " version-card--expanded" : " version-card--collapsed"}${compareMode ? " version-card--compare" : ""}${selected ? " version-card--selected" : ""}${isWIP ? " version-card--wip" : ""}`}
+      className={`version-card${isLatest ? " version-card--latest" : ""}${effectiveExpanded ? " version-card--expanded" : " version-card--collapsed"}${compareMode ? " version-card--compare" : ""}${selected ? " version-card--selected" : ""}${isSubVersionEntry ? " version-card--sub-version" : ""}${isWIP ? " version-card--wip" : ""}`}
       variant="secondary"
       onClick={handleCardAreaClick}
     >
@@ -489,6 +507,20 @@ export function VersionCard({
                       </span>
                       <TooltipContent>
                         {version.page_count} 个页面
+                      </TooltipContent>
+                    </TooltipRoot>
+                  )}
+                  {shouldShowSubVersionBadge && (
+                    <TooltipRoot>
+                      <span
+                        className="version-card__sub-version-badge"
+                        aria-label={`包含 ${subVersionCount} 个子版本`}
+                      >
+                        <Layers className="w-3 h-3" />
+                        {subVersionCount}
+                      </span>
+                      <TooltipContent>
+                        {`包含 ${subVersionCount} 个子版本`}
                       </TooltipContent>
                     </TooltipRoot>
                   )}
@@ -716,6 +748,19 @@ export function VersionCard({
 
               {!isWIP && (
                 <div className="version-card__actions">
+                  {shouldShowSubVersionButton && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onPress={() =>
+                        onNavigateToSubVersions?.(version.semantic_version)
+                      }
+                      aria-label={`查看 ${subVersionCount} 个子版本`}
+                    >
+                      <Layers className="w-3.5 h-3.5" />
+                      查看 {subVersionCount} 个子版本
+                    </Button>
+                  )}
                   {onQuickCompare && (
                     <Button size="sm" variant="ghost" onPress={onQuickCompare}>
                       <LayoutGrid className="w-3.5 h-3.5" />

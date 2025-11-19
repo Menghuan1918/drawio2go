@@ -61,14 +61,14 @@
       "mcp__heroui-react__get_theme_info",
       "mcp__heroui-react__get_docs",
       "Bash(find:*)",
-      "Bash(git add:*)",
       "Bash(du:*)",
       "Bash(git check-ignore:*)",
       "Bash(git -C /home/aaa/Code/drawio2go diff:*)",
       "Bash(git -C /home/aaa/Code/drawio2go status:*)",
       "Bash(git -C /home/aaa/Code/drawio2go ls-files:*)",
       "Bash(git -C /home/aaa/Code/drawio2go add:*)",
-      "Bash(git diff:*)"
+      "Bash(git diff:*)",
+      "mcp__codex__codex"
     ],
     "deny": [],
     "ask": []

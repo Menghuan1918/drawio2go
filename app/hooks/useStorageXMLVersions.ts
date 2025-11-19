@@ -22,6 +22,12 @@ import {
   type SvgExportProgress,
 } from "@/app/lib/svg-export-utils";
 import { compressBlob } from "@/app/lib/compression-utils";
+import {
+  filterSubVersions,
+  getNextSubVersion,
+  getParentVersion,
+  isSubVersion,
+} from "@/app/lib/version-utils";
 
 /**
  * XML 版本管理 Hook
@@ -48,6 +54,14 @@ export function useStorageXMLVersions() {
    */
   const MAX_SVG_CACHE_SIZE = 50;
   const svgCacheRef = useRef<Map<string, XMLVersionSVGData>>(new Map());
+  /**
+   * 在内存中缓存最近一次加载的版本列表，按项目隔离以规避跨项目竞态
+   */
+  const versionsCacheRef = useRef<{
+    projectUuid: string;
+    versions: XMLVersion[];
+    updatedAt: number;
+  } | null>(null);
 
   /**
    * 保存 XML 到 WIP 版本（活跃工作区）
@@ -93,6 +107,11 @@ export function useStorageXMLVersions() {
         // 检查 WIP 版本是否已存在
         const existingVersions =
           await storage.getXMLVersionsByProject(projectUuid);
+        versionsCacheRef.current = {
+          projectUuid,
+          versions: existingVersions,
+          updatedAt: Date.now(),
+        };
         const wipVersion = existingVersions.find(
           (v) => v.semantic_version === WIP_VERSION,
         );
@@ -165,6 +184,11 @@ export function useStorageXMLVersions() {
       try {
         const storage = await getStorage();
         const versions = await storage.getXMLVersionsByProject(projectUuid);
+        versionsCacheRef.current = {
+          projectUuid,
+          versions,
+          updatedAt: Date.now(),
+        };
 
         if (versions.length === 0) {
           setLoading(false);
@@ -207,6 +231,11 @@ export function useStorageXMLVersions() {
       try {
         const storage = await getStorage();
         const versions = await storage.getXMLVersionsByProject(projectUuid);
+        versionsCacheRef.current = {
+          projectUuid,
+          versions,
+          updatedAt: Date.now(),
+        };
         setLoading(false);
         return versions;
       } catch (err) {
@@ -215,6 +244,26 @@ export function useStorageXMLVersions() {
         setLoading(false);
         throw error;
       }
+    },
+    [],
+  );
+
+  /**
+   * 获取指定主版本的所有子版本（基于最近一次缓存的版本列表）
+   *
+   * @param parentVersion 父版本号，如 "1.0.0"
+   */
+  const getSubVersions = useCallback(
+    (projectUuid: string, parentVersion: string): XMLVersion[] => {
+      const normalized = parentVersion?.trim();
+      if (!normalized) return [];
+
+      const cache = versionsCacheRef.current;
+      if (!cache || cache.projectUuid !== projectUuid) {
+        return [];
+      }
+
+      return filterSubVersions(cache.versions, normalized);
     },
     [],
   );
@@ -416,6 +465,15 @@ export function useStorageXMLVersions() {
           page_names: JSON.stringify(finalPageNames),
         });
 
+        // 刷新缓存以包含最新创建的版本
+        const updatedVersions =
+          await storage.getXMLVersionsByProject(projectUuid);
+        versionsCacheRef.current = {
+          projectUuid,
+          versions: updatedVersions,
+          updatedAt: Date.now(),
+        };
+
         setLoading(false);
         if (exportError) {
           // 将 SVG 导出失败视为软错误，仅记录日志
@@ -485,61 +543,70 @@ export function useStorageXMLVersions() {
   );
 
   /**
-   * 获取推荐的下一个版本号（minor 递增策略）
+   * 获取推荐的下一个版本号
    *
    * @param projectUuid 项目 UUID
-   * @returns 推荐的版本号（如 "1.1.0"）
+   * @param parentVersion 可选父版本：提供后返回子版本建议，否则返回主版本建议
+   * @returns 推荐的版本号（如 "1.1.0" 或 "1.0.0.1"）
    */
   const getRecommendedVersion = useCallback(
-    async (projectUuid: string): Promise<string> => {
+    async (projectUuid: string, parentVersion?: string): Promise<string> => {
       setLoading(true);
       setError(null);
 
       try {
         const storage = await getStorage();
-
-        // 获取所有历史版本（排除 WIP）
         const versions = await storage.getXMLVersionsByProject(projectUuid);
-        const historicalVersions = versions
-          .filter((v) => v.semantic_version !== WIP_VERSION)
-          .map((v) => v.semantic_version)
-          .sort((a, b) => {
-            // 语义化版本排序
-            const aParts = a.split(".").map(Number);
-            const bParts = b.split(".").map(Number);
-            for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
-              const aNum = aParts[i] || 0;
-              const bNum = bParts[i] || 0;
-              if (aNum !== bNum) return bNum - aNum;
-            }
-            return 0;
-          });
+        versionsCacheRef.current = {
+          projectUuid,
+          versions,
+          updatedAt: Date.now(),
+        };
 
-        if (historicalVersions.length === 0) {
-          // 没有历史版本，推荐 1.0.0
-          setLoading(false);
-          return DEFAULT_FIRST_VERSION;
-        }
+        const normalizedParent = parentVersion?.trim();
+        let recommended: string;
 
-        // 获取最大版本号并递增 minor 版本
-        const latestVersion = historicalVersions[0];
-        const parts = latestVersion.split(".").map(Number);
-
-        if (parts.length >= 3) {
-          // x.y.z 格式：递增 y，重置 z 为 0
-          const [major, minor] = parts;
-          setLoading(false);
-          return `${major}.${minor + 1}.0`;
-        } else if (parts.length === 4) {
-          // x.y.z.h 格式：递增 z，重置 h 为 0
-          const [major, minor, patch] = parts;
-          setLoading(false);
-          return `${major}.${minor}.${patch + 1}.0`;
+        if (normalizedParent) {
+          recommended = getNextSubVersion(versions, normalizedParent);
         } else {
-          // 异常情况，返回默认值
-          setLoading(false);
-          return DEFAULT_FIRST_VERSION;
+          const historicalVersions = versions
+            .filter((v) => v.semantic_version !== WIP_VERSION)
+            .map((v) => v.semantic_version)
+            .filter((semanticVersion) => !isSubVersion(semanticVersion))
+            .sort((a, b) => {
+              const aParts = a.split(".").map(Number);
+              const bParts = b.split(".").map(Number);
+              for (
+                let i = 0;
+                i < Math.max(aParts.length, bParts.length);
+                i += 1
+              ) {
+                const aNum = aParts[i] || 0;
+                const bNum = bParts[i] || 0;
+                if (aNum !== bNum) return bNum - aNum;
+              }
+              return 0;
+            });
+
+          if (historicalVersions.length === 0) {
+            recommended = DEFAULT_FIRST_VERSION;
+          } else {
+            // 推荐策略: 基于最新主版本递增 minor 版本号
+            // 例如: 1.2.0 -> 1.3.0
+            const latestVersion = historicalVersions[0];
+            const parts = latestVersion.split(".").map(Number);
+
+            if (parts.length === 3) {
+              const [major, minor] = parts;
+              recommended = `${major}.${minor + 1}.0`;
+            } else {
+              recommended = DEFAULT_FIRST_VERSION;
+            }
+          }
         }
+
+        setLoading(false);
+        return recommended;
       } catch (err) {
         const error = err as Error;
         setError(error);
@@ -557,10 +624,21 @@ export function useStorageXMLVersions() {
    * @returns 是否有效及错误信息
    */
   const validateVersion = useCallback(
-    (version: string): { valid: boolean; error?: string } => {
+    (
+      projectUuid: string,
+      version: string,
+    ): { valid: boolean; error?: string } => {
+      const normalized = version.trim();
+      if (!normalized) {
+        return {
+          valid: false,
+          error: "版本号不能为空",
+        };
+      }
+
       // 检查格式：x.y.z 或 x.y.z.h
       const versionRegex = /^\d+\.\d+\.\d+(\.\d+)?$/;
-      if (!versionRegex.test(version)) {
+      if (!versionRegex.test(normalized)) {
         return {
           valid: false,
           error: "版本号格式错误，应为 x.y.z 或 x.y.z.h 格式",
@@ -568,11 +646,50 @@ export function useStorageXMLVersions() {
       }
 
       // 不允许使用保留的 WIP 版本号
-      if (version === WIP_VERSION) {
+      if (normalized === WIP_VERSION) {
         return {
           valid: false,
           error: "0.0.0 是系统保留版本号，请使用其他版本号",
         };
+      }
+
+      if (isSubVersion(normalized)) {
+        const parts = normalized.split(".");
+        const sub = Number(parts[3]);
+
+        if (!Number.isSafeInteger(sub)) {
+          return {
+            valid: false,
+            error: "子版本号必须为有效整数",
+          };
+        }
+
+        if (sub < 1 || sub > 999) {
+          return {
+            valid: false,
+            error: "子版本号范围必须在 1-999 之间",
+          };
+        }
+
+        const parent = getParentVersion(normalized);
+        const cache = versionsCacheRef.current;
+        if (!cache || cache.projectUuid !== projectUuid) {
+          return {
+            valid: false,
+            error: "当前项目版本缓存失效，请先重新加载版本列表",
+          };
+        }
+
+        const parentExists = cache.versions.some(
+          (v) => v.semantic_version === parent,
+        );
+
+        if (!parentExists) {
+          return {
+            valid: false,
+            error: `父版本 ${parent} 不存在，请先创建主版本`,
+          };
+        }
       }
 
       return { valid: true };
@@ -595,6 +712,11 @@ export function useStorageXMLVersions() {
       try {
         const storage = await getStorage();
         const versions = await storage.getXMLVersionsByProject(projectUuid);
+        versionsCacheRef.current = {
+          projectUuid,
+          versions,
+          updatedAt: Date.now(),
+        };
         const exists = versions.some((v) => v.semantic_version === version);
         setLoading(false);
         return exists;
@@ -614,6 +736,7 @@ export function useStorageXMLVersions() {
     saveXML,
     getCurrentXML,
     getAllXMLVersions,
+    getSubVersions,
     getXMLVersion,
     getXMLVersionSVGData,
     loadVersionSVGFields,

@@ -230,6 +230,7 @@ const {
   saveXML, // 保存或更新 WIP (0.0.0)
   getCurrentXML,
   getAllXMLVersions,
+  getSubVersions,
   getXMLVersion,
   createHistoricalVersion,
   rollbackToVersion,
@@ -245,8 +246,9 @@ const {
   - `options.onExportProgress(progress)`: 回调 `index/total/name`，便于 UI 显示“第 X/Y 页”进度。
   - 返回 `Promise<CreateHistoricalVersionResult>`，包含 `versionId`、`pageCount`、`svgAttached`。
 - `rollbackToVersion(projectUuid, versionId)`: 将指定历史版本回写为 WIP。
-- `getRecommendedVersion(projectUuid)`: 按语义化版本自动 +1（缺少历史版本时返回 `1.0.0`）。
-- `validateVersion(version)`: 仅允许 `x.y.z` 或 `x.y.z.h`，排除 `0.0.0`。
+- `getSubVersions(projectUuid, parentVersion)`: 基于最近一次加载的版本列表过滤对应父版本（`x.y.z`）下的所有子版本；若缓存与项目不匹配则返回空数组，避免串号。
+- `getRecommendedVersion(projectUuid, parentVersion?)`: 不传父版本时保持旧策略（主版本 minor +1），传入父版本时调用 `getNextSubVersion` 返回 `x.y.z.h` 建议。
+- `validateVersion(projectUuid, version)`: 允许 `x.y.z` / `x.y.z.h`，排除 `0.0.0`，输入子版本时会校验父版本在当前项目缓存中是否存在；缓存失效时会提示刷新版本列表。
 - `isVersionExists(projectUuid, version)`: 防止重复版本号。
 
 #### 使用示例

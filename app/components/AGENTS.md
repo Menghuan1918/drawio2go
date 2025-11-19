@@ -30,6 +30,7 @@ interface VersionSidebarProps {
 - **WIP 集成**: 同时监听 `wip-updated` 事件，时间轴首位渲染实时草稿（WIP）
 - **错误处理**: 加载失败时显示错误状态和重试按钮
 - **版本反馈**: 成功创建版本后显示 HeroUI `Alert`，提示页数与 SVG 导出结果（4 秒自动消失）
+- **视图模式同步**: 在侧边栏层面保存 `viewMode`（主视图/子版本视图），时间线以受控模式渲染，创建版本对话框会根据当前子版本视图自动锁定 `parentVersion`
 
 #### version/VersionCard.tsx - 版本卡片（折叠式）
 
@@ -75,6 +76,9 @@ interface VersionTimelineProps {
   versions: XMLVersion[]; // 完整版本列表（含 WIP 草稿）
   onVersionRestore?: (versionId: string) => void;
   onVersionCreated?: () => void;
+  viewMode?: VersionTimelineViewMode; // 可选受控视图状态
+  onViewModeChange?: (mode: VersionTimelineViewMode) => void; // 通知父组件视图切换
+  onNavigateToSubVersions?: (parentVersion: string) => void; // 卡片点击「查看子版本」时上抛
 }
 ```
 
@@ -84,6 +88,7 @@ interface VersionTimelineProps {
 - **WIP 集成**: 时间轴首位展示 WIP 草稿（0.0.0），并维持按时间倒序
 - **空状态**: 无历史版本时显示引导信息
 - **降序排列**: 最新版本在顶部
+- **受控视图**: 默认内部管理视图状态，也可透传 `viewMode` 保持与侧边栏/对话框同步，向上回调 `onNavigateToSubVersions`
 
 #### version/VersionCompare.tsx - 版本对比弹层（里程碑6）
 
@@ -139,14 +144,18 @@ interface CreateVersionDialogProps {
   onClose: () => void;
   onVersionCreated?: (result: CreateHistoricalVersionResult) => void; // 返回版本 ID、页数、SVG 状态
   editorRef: React.RefObject<DrawioEditorRef | null>; // 必填，提供导出 XML/SVG 能力
+  parentVersion?: string; // 可选：传入则强制进入子版本创建模式并锁定父版本
 }
 ```
 
 ##### 特性
 
 - **模态对话框**: HeroUI v3 Modal 组件，导出期间禁止关闭
-- **表单验证**: 版本号实时校验 + 节流重名检查
-- **自动版本号**: 基于现有版本自动建议下一个版本号
+- **版本类型切换**: RadioGroup 控制主版本（x.y.z）与子版本（x.y.z.h）模式，传入 `parentVersion` 时自动锁定子版本
+- **父版本选择器**: 子版本模式下展示 Select，下拉列表自动过滤 WIP 和子版本，仅保留主版本条目（格式 `v1.2.0 - 描述`），被锁定的父版本不可修改
+- **子版本输入**: 展示 `父版本.` 只读前缀，输入框仅填写末段数字并支持智能推荐（调用 `getRecommendedVersion(projectUuid, parent)`）
+- **表单验证**: 版本号实时校验 + 节流重名检查，子版本额外校验父版本必选且末段为纯数字
+- **自动版本号**: 基于现有版本自动建议下一个版本号（主版本/子版本均支持）
 - **SVG 进度**: 通过 `editorRef` + `exportAllPagesSVG` 显示“第 X/Y 页”进度，禁用提交直到完成
 - **异步保存**: 调用存储层 API 创建版本快照并写入 `preview_svg/pages_svg`
 - **成功提示**: 展示页数 + SVG 状态的成功文案，1.4 秒后自动关闭对话框

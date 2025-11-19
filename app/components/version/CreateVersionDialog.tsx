@@ -10,6 +10,10 @@ import {
   Description,
   Spinner,
   FieldError,
+  RadioGroup,
+  Radio,
+  Select,
+  ListBox,
 } from "@heroui/react";
 import {
   useStorageXMLVersions,
@@ -17,6 +21,11 @@ import {
 } from "@/app/hooks/useStorageXMLVersions";
 import { X, Sparkles } from "lucide-react";
 import type { DrawioEditorRef } from "@/app/components/DrawioEditorNative";
+import type { XMLVersion } from "@/app/lib/storage/types";
+import { WIP_VERSION } from "@/app/lib/storage/constants";
+import { isSubVersion } from "@/app/lib/version-utils";
+
+type VersionType = "main" | "sub";
 
 interface CreateVersionDialogProps {
   projectUuid: string;
@@ -24,6 +33,7 @@ interface CreateVersionDialogProps {
   onClose: () => void;
   onVersionCreated?: (result: CreateHistoricalVersionResult) => void;
   editorRef: React.RefObject<DrawioEditorRef | null>;
+  parentVersion?: string;
 }
 
 /**
@@ -36,13 +46,26 @@ export function CreateVersionDialog({
   onClose,
   onVersionCreated,
   editorRef,
+  parentVersion,
 }: CreateVersionDialogProps) {
-  const [versionNumber, setVersionNumber] = React.useState("");
+  const [mainVersionInput, setMainVersionInput] = React.useState("");
+  const [subVersionInput, setSubVersionInput] = React.useState("");
+  const [versionType, setVersionType] = React.useState<VersionType>(
+    parentVersion ? "sub" : "main",
+  );
+  const [selectedParentVersion, setSelectedParentVersion] = React.useState(
+    parentVersion ?? "",
+  );
   const [description, setDescription] = React.useState("");
   const [error, setError] = React.useState("");
   const [isCreating, setIsCreating] = React.useState(false);
   const [validationError, setValidationError] = React.useState("");
   const [checkingExists, setCheckingExists] = React.useState(false);
+  const [parentOptions, setParentOptions] = React.useState<XMLVersion[]>([]);
+  const [isLoadingParents, setIsLoadingParents] = React.useState(false);
+  const [parentOptionsError, setParentOptionsError] = React.useState<
+    string | null
+  >(null);
   const [exportProgress, setExportProgress] = React.useState<{
     current: number;
     total: number;
@@ -56,7 +79,43 @@ export function CreateVersionDialog({
     getRecommendedVersion,
     validateVersion,
     isVersionExists,
+    getAllXMLVersions,
   } = useStorageXMLVersions();
+
+  const effectiveVersionNumber = React.useMemo(() => {
+    if (versionType === "sub") {
+      const parent = selectedParentVersion.trim();
+      const suffix = subVersionInput.trim();
+      if (!parent || !suffix) {
+        return "";
+      }
+      return `${parent}.${suffix}`;
+    }
+    return mainVersionInput.trim();
+  }, [versionType, selectedParentVersion, subVersionInput, mainVersionInput]);
+
+  const resetVersionInputs = React.useCallback(() => {
+    setMainVersionInput("");
+    setSubVersionInput("");
+    setSelectedParentVersion(parentVersion ?? "");
+    setVersionType(parentVersion ? "sub" : "main");
+  }, [parentVersion]);
+
+  const noParentOptions =
+    !parentVersion && parentOptions.length === 0 && !isLoadingParents;
+
+  const handleVersionTypeChange = React.useCallback(
+    (value: string) => {
+      const next = value as VersionType;
+      if (parentVersion && next === "main") {
+        return;
+      }
+      setVersionType(next);
+      setValidationError("");
+      setError("");
+    },
+    [parentVersion],
+  );
 
   const handleDialogClose = React.useCallback(() => {
     if (isCreating) return;
@@ -66,8 +125,12 @@ export function CreateVersionDialog({
     }
     setSuccessMessage("");
     setExportProgress(null);
+    setError("");
+    setValidationError("");
+    setCheckingExists(false);
+    resetVersionInputs();
     onClose();
-  }, [isCreating, onClose]);
+  }, [isCreating, onClose, resetVersionInputs]);
 
   const handleCreate = React.useCallback(async () => {
     setError("");
@@ -75,12 +138,29 @@ export function CreateVersionDialog({
     setExportProgress(null);
 
     if (validationError) {
-      setError(validationError);
       return;
     }
 
-    if (!versionNumber.trim()) {
+    if (!effectiveVersionNumber) {
       setError("请输入版本号");
+      return;
+    }
+
+    const validation = validateVersion(projectUuid, effectiveVersionNumber);
+    if (!validation.valid) {
+      setValidationError(validation.error || "版本号格式错误");
+      return;
+    }
+
+    try {
+      const exists = await isVersionExists(projectUuid, effectiveVersionNumber);
+      if (exists) {
+        setValidationError("版本号已存在");
+        return;
+      }
+    } catch (err) {
+      console.error("同步版本号唯一性校验失败:", err);
+      setError("验证版本号失败,请重试");
       return;
     }
 
@@ -88,7 +168,7 @@ export function CreateVersionDialog({
     try {
       const result = await createHistoricalVersion(
         projectUuid,
-        versionNumber.trim(),
+        effectiveVersionNumber,
         description.trim() || undefined,
         editorRef,
         {
@@ -110,7 +190,11 @@ export function CreateVersionDialog({
         : `版本创建成功！共 ${result.pageCount} 页，SVG 导出失败已自动降级。`;
       setSuccessMessage(successText);
 
-      setVersionNumber("");
+      if (versionType === "sub") {
+        setSubVersionInput("");
+      } else {
+        setMainVersionInput("");
+      }
       setDescription("");
       setValidationError("");
       setExportProgress(null);
@@ -130,68 +214,164 @@ export function CreateVersionDialog({
     }
   }, [
     validationError,
-    versionNumber,
+    effectiveVersionNumber,
     description,
-    createHistoricalVersion,
+    validateVersion,
     projectUuid,
+    isVersionExists,
+    createHistoricalVersion,
     editorRef,
     onVersionCreated,
     handleDialogClose,
+    versionType,
   ]);
 
   const handleRecommend = React.useCallback(async () => {
     try {
-      const recommended = await getRecommendedVersion(projectUuid);
-      setVersionNumber(recommended);
+      if (versionType === "sub") {
+        const parent = selectedParentVersion?.trim();
+        if (!parent) {
+          setError("请选择父版本后再获取推荐子版本");
+          return;
+        }
+        const recommended = await getRecommendedVersion(projectUuid, parent);
+        const prefix = `${parent}.`;
+        const suffix = recommended.startsWith(prefix)
+          ? recommended.slice(prefix.length)
+          : "";
+        setSubVersionInput(suffix);
+      } else {
+        const recommended = await getRecommendedVersion(projectUuid);
+        setMainVersionInput(recommended);
+      }
       setError("");
     } catch (err) {
       console.error("获取推荐版本号失败:", err);
       setError("获取推荐版本号失败");
     }
-  }, [projectUuid, getRecommendedVersion]);
+  }, [versionType, selectedParentVersion, projectUuid, getRecommendedVersion]);
 
   React.useEffect(() => {
     if (isOpen && projectUuid) {
       setSuccessMessage("");
       setExportProgress(null);
-      getRecommendedVersion(projectUuid)
-        .then(setVersionNumber)
-        .catch((err) => {
-          console.error("获取推荐版本号失败:", err);
-        });
     }
-  }, [isOpen, projectUuid, getRecommendedVersion]);
+  }, [isOpen, projectUuid]);
 
   React.useEffect(() => {
-    if (!versionNumber || !versionNumber.trim()) {
-      setValidationError("");
+    if (!isOpen || !projectUuid) {
       return;
     }
 
-    const validation = validateVersion(versionNumber);
+    const shouldPrefillMain =
+      versionType === "main" && !mainVersionInput.trim();
+    const shouldPrefillSub =
+      versionType === "sub" &&
+      !subVersionInput.trim() &&
+      !!selectedParentVersion;
+
+    if (!shouldPrefillMain && !shouldPrefillSub) {
+      return;
+    }
+
+    let isMounted = true;
+    getRecommendedVersion(
+      projectUuid,
+      versionType === "sub" ? selectedParentVersion : undefined,
+    )
+      .then((recommended) => {
+        if (!isMounted) return;
+        if (versionType === "sub") {
+          const prefix = `${selectedParentVersion}.`;
+          const suffix = recommended.startsWith(prefix)
+            ? recommended.slice(prefix.length)
+            : "";
+          setSubVersionInput(suffix);
+        } else {
+          setMainVersionInput(recommended);
+        }
+      })
+      .catch((err) => {
+        console.error("获取推荐版本号失败:", err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    isOpen,
+    projectUuid,
+    versionType,
+    selectedParentVersion,
+    subVersionInput,
+    mainVersionInput,
+    getRecommendedVersion,
+  ]);
+
+  React.useEffect(() => {
+    if (versionType === "sub") {
+      if (!selectedParentVersion) {
+        setValidationError("请选择父版本");
+        setCheckingExists(false);
+        return;
+      }
+
+      const suffix = subVersionInput.trim();
+      if (!suffix) {
+        setValidationError("请输入子版本号");
+        setCheckingExists(false);
+        return;
+      }
+
+      if (!/^\d+$/.test(suffix)) {
+        setValidationError("子版本号必须为纯数字");
+        setCheckingExists(false);
+        return;
+      }
+    }
+
+    if (!effectiveVersionNumber) {
+      setValidationError("");
+      setCheckingExists(false);
+      return;
+    }
+
+    const validation = validateVersion(projectUuid, effectiveVersionNumber);
     if (!validation.valid) {
       setValidationError(validation.error || "版本号格式错误");
+      setCheckingExists(false);
       return;
     }
 
+    const currentVersion = effectiveVersionNumber;
     const timer = setTimeout(async () => {
       setCheckingExists(true);
       try {
-        const exists = await isVersionExists(projectUuid, versionNumber);
-        if (exists) {
-          setValidationError("版本号已存在");
-        } else {
-          setValidationError("");
+        const exists = await isVersionExists(projectUuid, currentVersion);
+        if (currentVersion === effectiveVersionNumber) {
+          if (exists) {
+            setValidationError("版本号已存在");
+          } else {
+            setValidationError("");
+          }
         }
       } catch (err) {
-        console.error("检查版本号失败:", err);
+        console.error("版本号唯一性检查失败:", err);
       } finally {
         setCheckingExists(false);
       }
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [versionNumber, projectUuid, validateVersion, isVersionExists]);
+  }, [
+    effectiveVersionNumber,
+    versionType,
+    selectedParentVersion,
+    subVersionInput,
+    projectUuid,
+    validateVersion,
+    isVersionExists,
+  ]);
 
   React.useEffect(() => {
     if (!isOpen) {
@@ -202,7 +382,7 @@ export function CreateVersionDialog({
       if (
         e.key === "Enter" &&
         !isCreating &&
-        versionNumber.trim() &&
+        effectiveVersionNumber &&
         !validationError &&
         !checkingExists
       ) {
@@ -219,7 +399,7 @@ export function CreateVersionDialog({
   }, [
     isOpen,
     isCreating,
-    versionNumber,
+    effectiveVersionNumber,
     validationError,
     checkingExists,
     handleCreate,
@@ -232,8 +412,11 @@ export function CreateVersionDialog({
       setValidationError("");
       setSuccessMessage("");
       setExportProgress(null);
+      setDescription("");
+      setCheckingExists(false);
+      resetVersionInputs();
     }
-  }, [isOpen]);
+  }, [isOpen, resetVersionInputs]);
 
   React.useEffect(() => {
     return () => {
@@ -242,6 +425,59 @@ export function CreateVersionDialog({
       }
     };
   }, []);
+
+  React.useEffect(() => {
+    if (parentVersion) {
+      setVersionType("sub");
+      setSelectedParentVersion(parentVersion);
+    }
+  }, [parentVersion]);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    if (versionType !== "sub") return;
+    if (selectedParentVersion) return;
+
+    if (parentOptions.length > 0) {
+      setSelectedParentVersion(parentOptions[0].semantic_version);
+    }
+  }, [isOpen, versionType, parentOptions, selectedParentVersion]);
+
+  React.useEffect(() => {
+    if (!isOpen || !projectUuid) {
+      return;
+    }
+
+    let isMounted = true;
+    setIsLoadingParents(true);
+    setParentOptionsError(null);
+
+    getAllXMLVersions(projectUuid)
+      .then((versions) => {
+        if (!isMounted) return;
+        const filtered = versions.filter(
+          (version) =>
+            version.semantic_version !== WIP_VERSION &&
+            !isSubVersion(version.semantic_version),
+        );
+        setParentOptions(filtered);
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        console.error("加载主版本列表失败:", err);
+        setParentOptions([]);
+        setParentOptionsError("无法加载主版本列表，请稍后重试");
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoadingParents(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, projectUuid, getAllXMLVersions]);
 
   if (!isOpen) return null;
 
@@ -263,25 +499,139 @@ export function CreateVersionDialog({
         </div>
 
         <div className="dialog-content">
-          <TextField
+          <RadioGroup
             className="w-full"
+            value={versionType}
+            orientation="horizontal"
+            onChange={handleVersionTypeChange}
+            isDisabled={isCreating}
+          >
+            <Label>版本类型</Label>
+            <Description className="mt-2">
+              选择要创建的版本类型，子版本会继承父版本号
+            </Description>
+            <Radio value="main" isDisabled={!!parentVersion}>
+              <Radio.Content>
+                <Label>主版本</Label>
+                <Description className="text-xs text-default-500">
+                  标准 x.y.z 格式（如 1.2.0）
+                </Description>
+              </Radio.Content>
+            </Radio>
+            <Radio value="sub">
+              <Radio.Content>
+                <Label>子版本</Label>
+                <Description className="text-xs text-default-500">
+                  为主版本追加 .h（如 1.2.0.1）
+                </Description>
+              </Radio.Content>
+            </Radio>
+          </RadioGroup>
+
+          {versionType === "sub" && (
+            <Select
+              className="w-full mt-4"
+              value={selectedParentVersion || null}
+              onChange={(value) => {
+                if (typeof value === "string") {
+                  setSelectedParentVersion(value);
+                }
+              }}
+              isDisabled={isCreating || !!parentVersion}
+            >
+              <Label>父版本 *</Label>
+              <Select.Trigger className="mt-2 flex w-full items-center justify-between rounded-md border border-default-200 bg-content1 px-3 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">
+                <Select.Value className="text-sm leading-6 text-foreground" />
+                <Select.Indicator />
+              </Select.Trigger>
+              <Select.Content className="rounded-2xl border border-default-200 bg-content1 p-2 shadow-2xl">
+                <ListBox className="flex flex-col gap-1">
+                  {parentOptions.map((version) => (
+                    <ListBox.Item
+                      key={version.id}
+                      id={version.semantic_version}
+                      textValue={`v${version.semantic_version} - ${
+                        version.description?.trim() || "暂无描述"
+                      }`}
+                      className="select-item flex items-center justify-between rounded-xl px-3 py-2 text-sm text-foreground hover:bg-primary-50"
+                    >
+                      <span className="font-medium text-foreground">
+                        v{version.semantic_version} -{" "}
+                        {version.description?.trim()
+                          ? version.description
+                          : "暂无描述"}
+                      </span>
+                      <ListBox.ItemIndicator />
+                    </ListBox.Item>
+                  ))}
+                </ListBox>
+              </Select.Content>
+              {parentOptionsError ? (
+                <FieldError className="mt-2">{parentOptionsError}</FieldError>
+              ) : isLoadingParents ? (
+                <Description className="mt-2 flex items-center gap-2 text-default-500">
+                  <Spinner size="sm" />
+                  正在加载可用主版本...
+                </Description>
+              ) : noParentOptions ? (
+                <FieldError className="mt-2">
+                  暂无可用主版本，请先创建一个主版本后再添加子版本
+                </FieldError>
+              ) : (
+                <Description className="mt-2 text-default-500">
+                  {parentVersion
+                    ? `父版本已锁定为 v${parentVersion}`
+                    : "仅显示三段式主版本（排除 WIP 与子版本）"}
+                </Description>
+              )}
+            </Select>
+          )}
+
+          <TextField
+            className="w-full mt-4"
             isRequired
             isInvalid={!!validationError}
           >
-            <Label>版本号 *</Label>
-            <div className="flex gap-2 mt-2">
-              <Input
-                value={versionNumber}
-                onChange={(e) => setVersionNumber(e.target.value)}
-                placeholder="1.0.0"
-                className="flex-1"
-                disabled={isCreating}
-              />
+            <Label>{versionType === "sub" ? "子版本号 *" : "版本号 *"}</Label>
+            <div
+              className={`mt-2 flex gap-2 ${versionType === "sub" ? "items-center" : ""}`}
+            >
+              {versionType === "sub" ? (
+                <>
+                  <span className="min-w-[120px] rounded-md border border-dashed border-default-200 bg-default-100 px-3 py-2 text-sm text-default-600">
+                    {selectedParentVersion
+                      ? `${selectedParentVersion}.`
+                      : "未选择父版本"}
+                  </span>
+                  <Input
+                    value={subVersionInput}
+                    onChange={(e) =>
+                      setSubVersionInput(e.target.value.replace(/\D/g, ""))
+                    }
+                    placeholder="1"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    className="flex-1"
+                    disabled={isCreating || !selectedParentVersion}
+                  />
+                </>
+              ) : (
+                <Input
+                  value={mainVersionInput}
+                  onChange={(e) => setMainVersionInput(e.target.value)}
+                  placeholder="1.0.0"
+                  className="flex-1"
+                  disabled={isCreating}
+                />
+              )}
               <Button
                 size="sm"
                 variant="secondary"
                 onPress={handleRecommend}
-                isDisabled={isCreating}
+                isDisabled={
+                  isCreating ||
+                  (versionType === "sub" && !selectedParentVersion)
+                }
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 智能推荐
@@ -294,13 +644,20 @@ export function CreateVersionDialog({
               </Description>
             ) : validationError ? (
               <FieldError className="mt-2">{validationError}</FieldError>
-            ) : versionNumber.trim() ? (
+            ) : effectiveVersionNumber ? (
               <Description className="mt-2 text-green-600">
-                ✓ 版本号可用
+                ✓ 版本号 {effectiveVersionNumber} 可用
+              </Description>
+            ) : versionType === "sub" ? (
+              <Description className="mt-2">
+                请输入子版本号（纯数字），最终版本将保存为
+                {selectedParentVersion
+                  ? ` ${selectedParentVersion}.子版本号`
+                  : " 父版本.子版本号"}
               </Description>
             ) : (
               <Description className="mt-2">
-                格式：x.y.z（如 1.0.0）或 x.y.z.h（如 1.0.0.1）
+                格式：x.y.z（如 1.0.0），或升级后生成 x.y.z.h 子版本
               </Description>
             )}
           </TextField>
@@ -358,7 +715,7 @@ export function CreateVersionDialog({
             variant="primary"
             onPress={handleCreate}
             isDisabled={
-              !versionNumber ||
+              !effectiveVersionNumber ||
               isCreating ||
               !!validationError ||
               checkingExists
