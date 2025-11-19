@@ -284,6 +284,29 @@ interface SettingsSidebarProps {
 }
 ```
 
+#### VersionSettingsPanel.tsx - 版本管理设置面板
+
+**AI 自动版本配置** - 为设置侧栏提供自动版本快照开关
+
+##### Props
+
+```typescript
+interface VersionSettingsPanelProps {
+  settings: {
+    autoVersionOnAIEdit: boolean;
+  };
+  onChange: (settings: { autoVersionOnAIEdit: boolean }) => void;
+}
+```
+
+##### 特性
+
+- **HeroUI Switch**: 复合结构 `Switch.Control` + `Switch.Thumb` + `Label`，保持一致的交互可达性
+- **受控模式**: `isSelected` 绑定 `settings.autoVersionOnAIEdit`，`onValueChange` 直接透传更新
+- **描述信息**: `Description` 展示“AI 批量编辑或覆写 XML 前自动创建子版本快照”提示
+- **布局规范**: 容器 `settings-panel flex flex-col gap-6`，单项 `flex flex-col gap-2`，延续 File/LLM 面板的间距体系
+- **父级集成**: 不直接访问 `useStorageSettings`，由 `SettingsSidebar` 将存储值与回调传入
+
 ### 5. ChatSidebar.tsx
 
 **聊天侧边栏主组件** - AI 助手界面的主入口组件（已重构为模块化架构）

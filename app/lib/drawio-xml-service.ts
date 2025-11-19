@@ -114,8 +114,8 @@ export async function executeDrawioEditBatch(
 
   const replaceResult = (await executeToolOnClient(
     "replace_drawio_xml",
-    { drawio_xml: updatedXml },
-    30000,
+    { drawio_xml: updatedXml, _originalTool: "drawio_edit_batch" },
+    60000,
   )) as ReplaceXMLResult;
 
   if (!replaceResult?.success) {

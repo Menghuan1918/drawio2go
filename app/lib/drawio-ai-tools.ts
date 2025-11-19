@@ -151,8 +151,8 @@ export const drawioOverwriteTool = tool({
     // 调用前端工具覆写 XML
     return (await executeToolOnClient(
       "replace_drawio_xml",
-      { drawio_xml },
-      30000,
+      { drawio_xml, _originalTool: "drawio_overwrite" },
+      60000, // 60 秒超时，支持自动版本创建
     )) as ReplaceXMLResult;
   },
 });

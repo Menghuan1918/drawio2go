@@ -409,6 +409,7 @@ function EditorPage({ projectId }: { projectId: string }) {
 - **自动执行**: 收到请求后自动调用 `drawio-tools.ts` 执行操作
 - **结果回传**: 通过 Socket.IO 返回执行结果给后端
 - **错误处理**: 捕获并返回详细错误信息
+- **AI 自动版本**: 当 AI 触发 `drawio_overwrite`（内部映射为 `replace_drawio_xml`）时，会在设置项 `autoVersionOnAIEdit` 未关闭的情况下，阻塞式创建子版本快照，再写入新的 XML
 
 #### 实现原理
 
@@ -421,14 +422,23 @@ function EditorPage({ projectId }: { projectId: string }) {
 #### 使用示例
 
 ```typescript
-import { useDrawioSocket } from "@/hooks";
+import { useDrawioSocket, useDrawioEditor, useCurrentProject } from "@/hooks";
 
 function EditorPage() {
-  // Hook 会自动监听 Socket.IO 请求并处理
-  useDrawioSocket();
+  // 需要把原生编辑器 ref 传给 Hook，便于在 AI 覆写前生成快照
+  const { currentProject } = useCurrentProject();
+  const { editorRef } = useDrawioEditor(currentProject?.uuid);
+  useDrawioSocket(editorRef);
 
   return <div>{/* DrawIO 编辑器 */}</div>;
 }
+
+/**
+ * 设置：autoVersionOnAIEdit
+ * - 保存在 useStorageSettings 中
+ * - 默认 true
+ * - 为 "false" 时停止 AI 自动版本快照（AI 直接覆写 XML）
+ */
 ```
 
 ## 统一导出

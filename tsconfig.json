@@ -20,6 +20,7 @@
     ],
     "paths": {
       "@/*": ["./*"],
+      "@/lib/*": ["./app/lib/*"],
       "@/lib/storage/*": ["./app/lib/storage/*"]
     }
   },

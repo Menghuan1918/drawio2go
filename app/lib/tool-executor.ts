@@ -22,8 +22,9 @@ import type { ToolCallRequest } from "@/app/types/socket-protocol";
 export async function executeToolOnClient(
   toolName: string,
   input: Record<string, unknown>,
-  timeout: number = 30000,
+  timeout: number = 60000,
 ): Promise<unknown> {
+  // 默认超时增加到 60 秒，以支持版本创建等耗时操作
   // 获取全局 Socket.IO 实例
   const io = global.io;
   const pendingRequests = global.pendingRequests;

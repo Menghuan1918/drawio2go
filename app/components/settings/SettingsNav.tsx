@@ -1,12 +1,12 @@
 "use client";
 
 import { Button } from "@heroui/react";
-import { Folder, Bot } from "lucide-react";
+import { Folder, Bot, GitBranch } from "lucide-react";
 
 /**
  * 设置标签类型
  */
-export type SettingsTab = "file" | "llm";
+export type SettingsTab = "file" | "llm" | "version";
 
 interface SettingsNavProps {
   activeTab: SettingsTab;
@@ -40,6 +40,15 @@ export default function SettingsNav({
         aria-label="LLM 配置"
       >
         <Bot size={24} />
+      </Button>
+      <Button
+        variant="tertiary"
+        isIconOnly
+        className={`settings-nav-item ${activeTab === "version" ? "active" : ""}`}
+        onPress={() => onTabChange("version")}
+        aria-label="版本"
+      >
+        <GitBranch size={24} />
       </Button>
     </div>
   );

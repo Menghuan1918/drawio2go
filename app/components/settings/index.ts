@@ -6,6 +6,7 @@
 export { default as SettingsNav } from "./SettingsNav";
 export { default as FileSettingsPanel } from "./FileSettingsPanel";
 export { default as LLMSettingsPanel } from "./LLMSettingsPanel";
+export { VersionSettingsPanel } from "./VersionSettingsPanel";
 export { default as SystemPromptEditor } from "./SystemPromptEditor";
 export { default as ConnectionTester } from "./ConnectionTester";
 

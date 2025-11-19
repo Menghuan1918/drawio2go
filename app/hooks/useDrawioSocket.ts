@@ -7,6 +7,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type React from "react";
+import type { DrawioEditorRef } from "@/app/components/DrawioEditorNative";
 import { io, Socket } from "socket.io-client";
 import type {
   ToolCallRequest,
@@ -15,20 +17,78 @@ import type {
   ClientToServerEvents,
 } from "@/app/types/socket-protocol";
 import { getDrawioXML, replaceDrawioXML } from "@/app/lib/drawio-tools";
+import { useStorageXMLVersions } from "./useStorageXMLVersions";
+import { useCurrentProject } from "./useCurrentProject";
+import { useStorageSettings } from "./useStorageSettings";
+import { getNextSubVersion, isSubVersion } from "@/lib/version-utils";
+import { WIP_VERSION } from "@/app/lib/storage";
 
 /**
  * DrawIO Socket.IO Hook
  *
+ * @param editorRef 可选 DrawIO 编辑器引用，供自动版本快照导出 XML/SVG
  * @returns { isConnected: boolean } - Socket.IO 连接状态
  */
-export function useDrawioSocket() {
+export function useDrawioSocket(
+  editorRef?: React.RefObject<DrawioEditorRef | null>,
+) {
   const [isConnected, setIsConnected] = useState(false);
   const socketRef = useRef<Socket<
     ServerToClientEvents,
     ClientToServerEvents
   > | null>(null);
+  const { createHistoricalVersion, getAllXMLVersions } =
+    useStorageXMLVersions();
+  const { currentProject } = useCurrentProject();
+  const { getSetting } = useStorageSettings();
+  const currentProjectRef = useRef(currentProject);
 
   useEffect(() => {
+    currentProjectRef.current = currentProject;
+  }, [currentProject]);
+
+  useEffect(() => {
+    const handleAutoVersionSnapshot = async (
+      request: ToolCallRequest,
+      originalToolName?: string,
+    ) => {
+      try {
+        const autoVersionEnabled =
+          (await getSetting("autoVersionOnAIEdit")) !== "false";
+        const project = currentProjectRef.current;
+
+        if (!autoVersionEnabled || !project?.uuid) {
+          return;
+        }
+
+        const versions = await getAllXMLVersions(project.uuid);
+        const mainVersions = versions.filter(
+          (version) =>
+            !isSubVersion(version.semantic_version) &&
+            version.semantic_version !== WIP_VERSION,
+        );
+        const latestMainVersion = mainVersions[0]?.semantic_version || "1.0.0";
+        const nextSubVersion = getNextSubVersion(versions, latestMainVersion);
+
+        const timestamp = new Date().toLocaleString("zh-CN");
+        const aiDescription = request.description || "AI 自动编辑";
+        const sourceDescription = originalToolName ?? request.toolName;
+        const versionDescription = `${sourceDescription} - ${aiDescription} (${timestamp})`;
+
+        await createHistoricalVersion(
+          project.uuid,
+          nextSubVersion,
+          versionDescription,
+          editorRef,
+          { onExportProgress: undefined },
+        );
+
+        console.log(`[自动版本] 已创建版本快照: ${nextSubVersion}`);
+      } catch (error) {
+        console.error("[自动版本] 创建失败:", error);
+      }
+    };
+
     // 创建 Socket.IO 客户端
     const socket = io({
       reconnection: true,
@@ -62,6 +122,20 @@ export function useDrawioSocket() {
       );
 
       try {
+        const originalTool =
+          ((request.input as { _originalTool?: string } | undefined)
+            ?._originalTool ??
+            request._originalTool) ||
+          undefined;
+
+        if (
+          request.toolName === "replace_drawio_xml" &&
+          (originalTool === "drawio_overwrite" ||
+            originalTool === "drawio_edit_batch")
+        ) {
+          await handleAutoVersionSnapshot(request, originalTool);
+        }
+
         let result: {
           success: boolean;
           error?: string;
@@ -138,7 +212,7 @@ export function useDrawioSocket() {
       console.log("[Socket.IO Client] 断开连接");
       socket.disconnect();
     };
-  }, []);
+  }, [createHistoricalVersion, getAllXMLVersions, getSetting, editorRef]);
 
   return { isConnected };
 }

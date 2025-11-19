@@ -8,6 +8,7 @@ import { useStorageSettings } from "@/app/hooks/useStorageSettings";
 import SettingsNav, { type SettingsTab } from "./settings/SettingsNav";
 import FileSettingsPanel from "./settings/FileSettingsPanel";
 import LLMSettingsPanel from "./settings/LLMSettingsPanel";
+import { VersionSettingsPanel } from "./settings/VersionSettingsPanel";
 
 interface SettingsSidebarProps {
   isOpen: boolean;
@@ -20,8 +21,14 @@ export default function SettingsSidebar({
 }: SettingsSidebarProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>("file");
 
-  const { getLLMConfig, saveLLMConfig, getDefaultPath, saveDefaultPath } =
-    useStorageSettings();
+  const {
+    getLLMConfig,
+    saveLLMConfig,
+    getDefaultPath,
+    saveDefaultPath,
+    getSetting,
+    setSetting,
+  } = useStorageSettings();
 
   const [defaultPath, setDefaultPath] = useState("");
   const [savedPath, setSavedPath] = useState("");
@@ -29,6 +36,13 @@ export default function SettingsSidebar({
   const [llmConfig, setLlmConfig] = useState<LLMConfig>(DEFAULT_LLM_CONFIG);
   const [savedLlmConfig, setSavedLlmConfig] =
     useState<LLMConfig>(DEFAULT_LLM_CONFIG);
+
+  const [versionSettings, setVersionSettings] = useState({
+    autoVersionOnAIEdit: true,
+  });
+  const [savedVersionSettings, setSavedVersionSettings] = useState({
+    autoVersionOnAIEdit: true,
+  });
 
   const [hasChanges, setHasChanges] = useState(false);
 
@@ -50,23 +64,40 @@ export default function SettingsSidebar({
           setLlmConfig(DEFAULT_LLM_CONFIG);
           setSavedLlmConfig(DEFAULT_LLM_CONFIG);
         }
+
+        const autoVersionSetting = await getSetting("autoVersionOnAIEdit");
+        const autoVersionOnAIEdit = autoVersionSetting !== "false";
+        setVersionSettings({ autoVersionOnAIEdit });
+        setSavedVersionSettings({ autoVersionOnAIEdit });
       } catch (e) {
         console.error("加载设置失败:", e);
         setLlmConfig(DEFAULT_LLM_CONFIG);
         setSavedLlmConfig(DEFAULT_LLM_CONFIG);
+        setVersionSettings({ autoVersionOnAIEdit: true });
+        setSavedVersionSettings({ autoVersionOnAIEdit: true });
       }
     };
 
     loadSettings();
-  }, [getDefaultPath, getLLMConfig]);
+  }, [getDefaultPath, getLLMConfig, getSetting]);
 
   // 监听变化，检测是否有修改
   useEffect(() => {
     const pathChanged = defaultPath !== savedPath;
     const llmConfigChanged =
       JSON.stringify(llmConfig) !== JSON.stringify(savedLlmConfig);
-    setHasChanges(pathChanged || llmConfigChanged);
-  }, [defaultPath, savedPath, llmConfig, savedLlmConfig]);
+    const versionSettingsChanged =
+      versionSettings.autoVersionOnAIEdit !==
+      savedVersionSettings.autoVersionOnAIEdit;
+    setHasChanges(pathChanged || llmConfigChanged || versionSettingsChanged);
+  }, [
+    defaultPath,
+    savedPath,
+    llmConfig,
+    savedLlmConfig,
+    versionSettings,
+    savedVersionSettings,
+  ]);
 
   // 选择文件夹
   const handleSelectFolder = async () => {
@@ -91,6 +122,12 @@ export default function SettingsSidebar({
       setLlmConfig(normalizedLlmConfig);
       setSavedLlmConfig(normalizedLlmConfig);
 
+      await setSetting(
+        "autoVersionOnAIEdit",
+        versionSettings.autoVersionOnAIEdit.toString(),
+      );
+      setSavedVersionSettings({ ...versionSettings });
+
       if (onSettingsChange) {
         onSettingsChange({ defaultPath });
       }
@@ -103,6 +140,7 @@ export default function SettingsSidebar({
   const handleCancel = () => {
     setDefaultPath(savedPath);
     setLlmConfig({ ...savedLlmConfig });
+    setVersionSettings({ ...savedVersionSettings });
   };
 
   // LLM 配置变更处理
@@ -128,6 +166,13 @@ export default function SettingsSidebar({
             <LLMSettingsPanel
               config={llmConfig}
               onChange={handleLLMConfigChange}
+            />
+          )}
+
+          {activeTab === "version" && (
+            <VersionSettingsPanel
+              settings={versionSettings}
+              onChange={setVersionSettings}
             />
           )}
         </div>

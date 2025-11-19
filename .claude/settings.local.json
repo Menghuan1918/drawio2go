@@ -68,7 +68,8 @@
       "Bash(git -C /home/aaa/Code/drawio2go ls-files:*)",
       "Bash(git -C /home/aaa/Code/drawio2go add:*)",
       "Bash(git diff:*)",
-      "mcp__codex__codex"
+      "mcp__codex__codex",
+      "mcp__codex__codex-reply"
     ],
     "deny": [],
     "ask": []

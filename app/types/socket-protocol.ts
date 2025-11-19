@@ -12,6 +12,14 @@ export interface ToolCallRequest {
   toolName: "get_drawio_xml" | "replace_drawio_xml";
   input: Record<string, unknown>;
   timeout: number;
+  /**
+   * AI 侧传入的操作描述，供自动版本创建时生成版本描述使用
+   */
+  description?: string;
+  /**
+   * 记录触发该请求的原始工具名称（用于区分 drawio_edit_batch / drawio_overwrite）
+   */
+  _originalTool?: string;
 }
 
 /**

@@ -54,7 +54,7 @@ export default function Home() {
     useState<boolean>(false);
 
   // 初始化 Socket.IO 连接
-  const { isConnected } = useDrawioSocket();
+  const { isConnected } = useDrawioSocket(editorRef);
 
   // 确保项目有 WIP 版本
   const ensureWIPVersion = useCallback(
