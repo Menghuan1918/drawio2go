@@ -33,8 +33,11 @@ if (isElectron) {
 
 ```
 electron/
-├── main.js      # Electron 主进程入口
-└── preload.js   # 预加载脚本，安全暴露 IPC API
+├── main.js                    # Electron 主进程入口
+├── preload.js                 # 预加载脚本，安全暴露 IPC API
+└── storage/
+    ├── sqlite-manager.js      # SQLite 数据库管理器（使用 better-sqlite3）
+    └── migrations/            # 数据库迁移脚本
 ```
 
 ## 核心功能
@@ -51,10 +54,26 @@ electron/
 
 #### IPC API (通过 preload.js 暴露)
 
-- `window.electron.selectFolder()`: 选择文件夹
-- `window.electron.saveDiagram(xml, path)`: 保存文件
-- `window.electron.loadDiagram()`: 加载文件
-- `window.electron.openExternal(url)`: 打开外部链接
+**文件操作 API (`window.electron`)**:
+
+- `selectFolder()`: 选择文件夹
+- `saveDiagram(xml, path)`: 保存图表文件
+- `loadDiagram()`: 加载图表文件
+- `openExternal(url)`: 打开外部链接
+- `showSaveDialog(options)`: 显示保存对话框
+- `showOpenDialog(options)`: 显示打开对话框
+- `writeFile(filePath, data)`: 写入文件
+- `readFile(filePath)`: 读取文件
+- `enableSelectionWatcher()`: 启用 DrawIO 选区监听
+
+**存储 API (`window.electronStorage`)**:
+
+- `initialize()`: 初始化存储
+- Settings: `getSetting`, `setSetting`, `deleteSetting`, `getAllSettings`
+- Projects: `getProject`, `createProject`, `updateProject`, `deleteProject`, `getAllProjects`
+- XMLVersions: `getXMLVersion`, `createXMLVersion`, `getXMLVersionsByProject`, `getXMLVersionSVGData`, `updateXMLVersion`, `deleteXMLVersion`
+- Conversations: `getConversation`, `createConversation`, `updateConversation`, `deleteConversation`, `batchDeleteConversations`, `exportConversations`, `getConversationsByProject`
+- Messages: `getMessagesByConversation`, `createMessage`, `deleteMessage`, `createMessages`
 
 #### 安全策略
 
@@ -69,13 +88,35 @@ electron/
 通过 `contextBridge` 安全地暴露主进程 API：
 
 ```javascript
+// 文件操作 API
 contextBridge.exposeInMainWorld("electron", {
   selectFolder: () => ipcRenderer.invoke("select-folder"),
   saveDiagram: (xml, path) => ipcRenderer.invoke("save-diagram", xml, path),
   loadDiagram: () => ipcRenderer.invoke("load-diagram"),
   openExternal: (url) => ipcRenderer.invoke("open-external", url),
+  showSaveDialog: (options) => ipcRenderer.invoke("show-save-dialog", options),
+  showOpenDialog: (options) => ipcRenderer.invoke("show-open-dialog", options),
+  writeFile: (filePath, data) =>
+    ipcRenderer.invoke("write-file", filePath, data),
+  readFile: (filePath) => ipcRenderer.invoke("read-file", filePath),
+  enableSelectionWatcher: () => ipcRenderer.invoke("enable-selection-watcher"),
+});
+
+// 存储 API
+contextBridge.exposeInMainWorld("electronStorage", {
+  initialize: () => ipcRenderer.invoke("storage:initialize"),
+  // Settings, Projects, XMLVersions, Conversations, Messages...
 });
 ```
+
+### 3. SQLite 存储管理器 (storage/sqlite-manager.js)
+
+**功能**: 管理 Electron 环境下的 SQLite 数据库操作
+
+- 使用 `better-sqlite3` 同步 API
+- 数据库文件位于 `userData/drawio2go.db`
+- 支持事务操作保证原子性
+- 自动执行数据库迁移脚本
 
 ## 开发配置
 

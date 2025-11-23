@@ -12,10 +12,12 @@ LLM 供应商与聊天消息相关的核心类型定义。
 
 #### 核心类型
 
-- **ProviderType**: 支持的供应商枚举（`openai`、`openai-response`、`deepseek`、`anthropic`）。
+- **ProviderType**: 支持的供应商枚举（`openai-reasoning`、`openai-compatible`、`deepseek`）。
 - **LLMConfig**: 设置页与后端共用的 LLM 配置（URL、密钥、温度、模型、系统提示、供应商、工具轮次数）。
 - **ToolInvocation/ToolInvocationState**: AI 工具调用的状态结构。
 - **ChatMessage**: 扩展 AI SDK Message 的聊天消息定义。
+- **MessageMetadata**: 消息元数据（模型名称、创建时间）。
+- **ChatUIMessage**: 基于 AI SDK UIMessage 的带元数据消息类型。
 - **ChatSession**: 聊天会话定义（ID、标题、消息列表、时间戳）。
 - **ChatSessionsData**: 会话数据管理结构。
 - **ChatExportData**: 会话导入导出数据格式。
@@ -26,10 +28,10 @@ Socket.IO 通讯协议的类型定义。
 
 #### 核心接口
 
-- **ToolRequest**: 工具执行请求结构
-- **ToolResponse**: 工具执行响应结构
-- **RequestStatus**: 请求状态枚举（pending, completed, error）
-- **SocketEvents**: Socket.IO 事件名称常量
+- **ToolCallRequest**: 工具调用请求结构（含 requestId、toolName、input、timeout、description、\_originalTool）
+- **ToolCallResult**: 工具执行结果结构（含 requestId、success、result、error）
+- **ServerToClientEvents**: Socket.IO 服务器到客户端事件类型
+- **ClientToServerEvents**: Socket.IO 客户端到服务器事件类型
 
 ### global.d.ts
 
@@ -37,10 +39,11 @@ Socket.IO 通讯协议的类型定义。
 
 #### 主要内容
 
-- 全局 Socket.IO 客户端类型
-- 环境变量类型声明
-- 扩展的 Window 对象属性
+- 全局 Socket.IO 服务器实例类型（`io`）
+- 待处理工具调用请求 Map（`pendingRequests`）
+- 扩展的 Window 对象属性（`electron` 和 `electronStorage` API）
 - `declare module 'xpath'`：为第三方库补充最小化声明
+- `declare module 'pako'`：压缩库类型声明
 
 ### drawio-tools.ts
 
@@ -130,9 +133,37 @@ export type DrawioEditOperation =
 **DrawioEditBatchResult** - 批量编辑返回结构
 
 ```typescript
-export type DrawioEditBatchResult =
-  | { success: true; operations_applied: number }
-  | { success: false; operation_index: number; error: string };
+export interface DrawioEditBatchResult {
+  success: true;
+  operations_applied: number;
+}
+```
+
+**DrawioSelectionInfo** - DrawIO 选中元素信息
+
+```typescript
+export interface DrawioSelectionInfo {
+  count: number;
+  cells: DrawioCellInfo[];
+}
+```
+
+**DrawioCellInfo** - DrawIO 单个选中元素信息
+
+```typescript
+export interface DrawioCellInfo {
+  id: string;
+  type: "vertex" | "edge" | "unknown";
+  value: unknown;
+  style: string;
+  label: string;
+  geometry?: {
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+  };
+}
 ```
 
 ## 类型设计原则

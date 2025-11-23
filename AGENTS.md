@@ -58,21 +58,27 @@ app/
 │   ├── SettingsSidebar.tsx       # 设置侧边栏
 │   ├── ChatSidebar.tsx           # 聊天侧边栏主组件（@ai-sdk/react）
 │   ├── VersionSidebar.tsx        # 版本侧边栏主组件
-│   ├── chat/                     # 聊天组件模块化架构（12个子组件）
+│   ├── chat/                     # 聊天组件模块化架构（17个子组件）
 │   ├── settings/                 # 设置相关子组件
 │   └── version/                  # 版本管理子组件
 │       ├── VersionCard.tsx       # 版本卡片（折叠式）
 │       ├── VersionTimeline.tsx   # 版本时间线
+│       ├── VersionCompare.tsx    # 版本对比全屏弹层
 │       ├── CreateVersionDialog.tsx # 创建版本对话框
-│       └── PageSVGViewer.tsx     # 多页 SVG 查看器
+│       ├── PageSVGViewer.tsx     # 多页 SVG 查看器
+│       └── diff-engine/          # 差异计算引擎模块
 ├── lib/                # 工具库 [详细文档 → app/lib/AGENTS.md]
 │   ├── drawio-tools.ts          # DrawIO XML 操作工具集
 │   ├── drawio-ai-tools.ts       # DrawIO AI 工具调用接口
 │   ├── drawio-xml-service.ts    # DrawIO XML 转接层（XPath 查询）
+│   ├── drawio-xml-utils.ts      # DrawIO XML 归一化与解压工具
 │   ├── tool-executor.ts         # 工具执行路由器
 │   ├── svg-export-utils.ts      # 多页面 SVG 导出工具
 │   ├── svg-smart-diff.ts        # SVG 智能差异对比引擎
 │   ├── config-utils.ts          # LLM 配置规范化工具
+│   ├── compression-utils.ts     # 压缩/解压工具（pako）
+│   ├── version-utils.ts         # 版本号解析与排序工具
+│   ├── utils.ts                 # 通用工具函数
 │   └── storage/                 # 统一存储抽象层
 │       ├── adapter.ts           # 存储适配器抽象类
 │       ├── indexeddb-storage.ts # IndexedDB 实现（Web）
@@ -81,7 +87,10 @@ app/
 │       ├── current-project.ts   # 当前工程 ID 持久化工具
 │       ├── xml-version-engine.ts # XML 版本恢复引擎（Diff 重放）
 │       ├── page-metadata.ts     # 页面元数据提取工具
+│       ├── page-metadata-validators.ts # 元数据校验（页面数、SVG 体积等）
 │       ├── constants.ts         # 常量定义（WIP_VERSION 等）
+│       ├── constants-shared.js  # 跨环境共享常量
+│       ├── default-diagram-xml.js # 默认空白图表 XML
 │       ├── types.ts             # 存储层类型定义
 │       └── index.ts             # 统一导出
 ├── types/              # 类型定义 [详细文档 → app/types/AGENTS.md]
@@ -262,6 +271,25 @@ pnpm format               # 使用 Prettier 格式化所有代码
 
 ## 最近更新
 
+### XML 处理与安全增强（2025-11-20 ~ 2025-11-23）
+
+**XML 合并错误处理与自动回滚**
+
+- AI 工具调用失败时自动回滚到操作前状态
+- 新增 `drawio-xml-utils.ts`：XML 归一化与 DrawIO 压缩格式自动解压
+- 支持 deflate-raw 压缩的 mxGraphModel 自动识别与解压
+
+**聊天历史管理优化**
+
+- 聊天历史视图增强：支持会话预览、时间分组
+- 新增 `ChatHistoryView.tsx`、`MessagePreviewPanel.tsx` 组件
+- 会话列表虚拟滚动优化（@tanstack/react-virtual）
+
+**跨项目安全隔离**
+
+- 严格的项目级数据隔离：所有存储操作校验 `project_uuid`
+- 防止跨项目数据泄露的安全边界检查
+
 ### 主题系统增强（2025-11-17 ~ 2025-11-19）
 
 **主题切换功能**
@@ -381,4 +409,4 @@ pnpm format               # 使用 Prettier 格式化所有代码
   - v1 已包含完整表结构（含 sequence_number 字段和 conversation_sequences 表）
   - 禁止删除/重建存储，仅通过迁移脚本更新
 
-_最后更新: 2025-11-22_
+_最后更新: 2025-11-23_
