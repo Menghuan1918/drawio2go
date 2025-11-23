@@ -107,7 +107,7 @@ npm run electron:build
 drawio2go/
 ├── app/                      # Next.js App Router 应用
 │   ├── components/           # React 组件
-│   │   ├── DrawioEditor.tsx  # DrawIO 编辑器组件
+│   │   ├── DrawioEditorNative.tsx  # DrawIO 编辑器组件（iframe + PostMessage）
 │   │   ├── TopBar.tsx        # 顶栏组件
 │   │   └── SettingsPopover.tsx # 设置弹窗组件
 │   ├── layout.tsx            # 根布局

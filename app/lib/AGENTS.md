@@ -482,3 +482,19 @@ const xml = await restoreXMLFromVersion("version-uuid", storage);
 - `drawio_read` 查询结果结构
 - `drawio_edit_batch` 支持的操作及返回值
 - 存储层接口和表结构类型
+
+## 代码腐化清理记录
+
+### 2025-11-23 清理
+
+**执行的操作**：
+
+- 修复 `drawio-xml-service.ts` 双重回滚职责冲突：当前端已通过 `drawio_syntax_error` 完成回滚时，服务端跳过二次回滚
+- 清理重复的类型别名：`ReplaceResult` → 直接使用 `ReplaceXMLResult` 接口
+
+**影响文件**：2 个（`drawio-xml-service.ts`, `../types/drawio-tools.ts`）
+
+**下次关注**：
+
+- `drawio-tools.ts` 与 `useStorageXMLVersions.ts` 的 WIP 写入逻辑差异（当前为合理的功能区分，暂不合并）
+- XML 归一化调用链的性能优化机会（多处调用 `normalizeDiagramXml`）

@@ -121,6 +121,16 @@ export async function executeDrawioEditBatch(
   if (!replaceResult?.success) {
     console.error("[DrawIO XML Service] 批量编辑写回失败:", replaceResult);
 
+    // drawio_syntax_error 表示前端在解析失败时已自行回滚，避免重复回滚
+    const alreadyRolledBack = replaceResult?.error === "drawio_syntax_error";
+
+    if (alreadyRolledBack) {
+      throw new Error(
+        replaceResult?.message ||
+          "批量编辑失败：DrawIO 报告语法错误，已自动回滚到修改前状态",
+      );
+    }
+
     let rollbackSucceeded = false;
     let rollbackErrorMessage: string | undefined;
 

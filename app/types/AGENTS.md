@@ -240,3 +240,17 @@ async function demo() {
 - **类型别名**: PascalCase (如 `DrawioEditOperation`)
 - **枚举**: PascalCase (如 `ThemeMode`)
 - **常量**: camelCase (如 `storageKey`)
+
+## 代码腐化清理记录
+
+### 2025-11-23 清理
+
+**执行的操作**：
+
+- 删除 `drawio-tools.ts` 中冗余的 `ReplaceResult` 接口，改为直接定义 `ReplaceXMLResult` 接口
+
+**影响文件**：1 个（`drawio-tools.ts`）
+
+**下次关注**：
+
+- 无

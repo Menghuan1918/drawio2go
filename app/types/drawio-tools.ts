@@ -14,14 +14,12 @@ export interface GetXMLResult {
 /**
  * 替换 XML 的返回结果（前端存储访问）
  */
-export interface ReplaceResult {
+export interface ReplaceXMLResult {
   success: boolean;
   message: string;
   error?: string;
   xml?: string;
 }
-
-export type ReplaceXMLResult = ReplaceResult;
 
 /**
  * XML 验证结果

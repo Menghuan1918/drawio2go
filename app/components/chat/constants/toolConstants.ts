@@ -14,6 +14,7 @@ import {
 export const TOOL_LABELS: Record<string, string> = {
   "tool-drawio_read": "读取 DrawIO XML",
   "tool-drawio_edit_batch": "批量编辑 DrawIO XML",
+  "tool-drawio_overwrite": "完整覆写 DrawIO XML",
 };
 
 export type ToolStatusMeta = {

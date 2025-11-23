@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-// import DrawioEditor from "./components/DrawioEditor";
 import DrawioEditorNative from "./components/DrawioEditorNative"; // 使用原生 iframe 实现
 import TopBar from "./components/TopBar";
 import UnifiedSidebar, { type SidebarTab } from "./components/UnifiedSidebar";

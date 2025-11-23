@@ -153,3 +153,18 @@ export { useDrawioEditor } from "./useDrawioEditor";
 - **存储层架构**: 详见 `app/lib/AGENTS.md` 中的存储层说明
 - **类型定义**: 详见 `app/types/AGENTS.md`
 - **Socket.IO 协议**: 详见 `app/types/socket-protocol.ts`
+
+## 代码腐化清理记录
+
+### 2025-11-23 清理
+
+**执行的操作**：
+
+- 修复 `index.ts` Hook 导出不一致：补充 `useCurrentProject` 和 `useDrawioEditor` 的统一导出
+
+**影响文件**：1 个（`index.ts`）
+
+**下次关注**：
+
+- `useStorageXMLVersions.ts` 中 6 处重复的版本缓存更新模式可提取为辅助函数
+- `useCurrentProject.ts` 中的 `withTimeout` 工具函数可提取为公共模块
