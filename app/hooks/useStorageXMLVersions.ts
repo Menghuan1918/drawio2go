@@ -1,21 +1,15 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import type { RefObject } from "react";
-import { v4 as uuidv4 } from "uuid";
 import {
   getStorage,
   DEFAULT_PROJECT_UUID,
   WIP_VERSION,
   DEFAULT_FIRST_VERSION,
-  buildPageMetadataFromXml,
 } from "@/app/lib/storage";
 import type { XMLVersion, XMLVersionSVGData } from "@/app/lib/storage";
 import type { DrawioEditorRef } from "@/app/components/DrawioEditorNative";
-import {
-  computeVersionPayload,
-  materializeVersionXml,
-} from "@/app/lib/storage/xml-version-engine";
 import {
   exportAllPagesSVG,
   serializeSVGsToBlob,
@@ -29,6 +23,13 @@ import {
   isSubVersion,
 } from "@/app/lib/version-utils";
 import { normalizeDiagramXml } from "@/app/lib/drawio-xml-utils";
+import { runStorageTask } from "@/app/lib/utils";
+import {
+  persistHistoricalVersion,
+  persistWipVersion,
+  prepareXmlContext,
+} from "@/app/lib/storage/writers";
+import { materializeVersionXml } from "@/app/lib/storage/xml-version-engine";
 
 /**
  * XML 版本管理 Hook
@@ -63,6 +64,108 @@ export function useStorageXMLVersions() {
     versions: XMLVersion[];
     updatedAt: number;
   } | null>(null);
+  const subscribersRef = useRef<
+    Map<string, Set<(versions: XMLVersion[]) => void>>
+  >(new Map());
+
+  const updateVersionsCache = useCallback(
+    (projectUuid: string, versions: XMLVersion[]) => {
+      versionsCacheRef.current = {
+        projectUuid,
+        versions,
+        updatedAt: Date.now(),
+      };
+      const subscribers = subscribersRef.current.get(projectUuid);
+      if (subscribers) {
+        subscribers.forEach((callback) => {
+          try {
+            callback(versions);
+          } catch (error) {
+            console.warn("[useStorageXMLVersions] 订阅回调执行失败", error);
+          }
+        });
+      }
+    },
+    [],
+  );
+
+  const loadVersionsForProject = useCallback(
+    async (
+      projectUuid: string,
+      storage?: Awaited<ReturnType<typeof getStorage>>,
+    ) => {
+      const resolvedStorage = storage ?? (await getStorage());
+      const versions =
+        await resolvedStorage.getXMLVersionsByProject(projectUuid);
+      updateVersionsCache(projectUuid, versions);
+      return { storage: resolvedStorage, versions };
+    },
+    [updateVersionsCache],
+  );
+
+  const subscribeVersions = useCallback(
+    (
+      projectUuid: string,
+      onChange: (versions: XMLVersion[]) => void,
+      onError?: (error: Error) => void,
+    ) => {
+      const existing = subscribersRef.current.get(projectUuid) ?? new Set();
+      existing.add(onChange);
+      subscribersRef.current.set(projectUuid, existing);
+
+      let active = true;
+      const cached = versionsCacheRef.current;
+      if (cached && cached.projectUuid === projectUuid) {
+        onChange(cached.versions);
+      } else {
+        loadVersionsForProject(projectUuid)
+          .then(({ versions }) => {
+            if (active) {
+              onChange(versions);
+            }
+          })
+          .catch((error) => {
+            console.error("[useStorageXMLVersions] 初始化订阅失败", error);
+            if (active && onError) {
+              onError(error);
+            }
+          });
+      }
+
+      return () => {
+        active = false;
+        const current = subscribersRef.current.get(projectUuid);
+        if (!current) return;
+        current.delete(onChange);
+        if (current.size === 0) {
+          subscribersRef.current.delete(projectUuid);
+        }
+      };
+    },
+    [loadVersionsForProject],
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleVersionEvent = (event: Event) => {
+      const detail =
+        (event as CustomEvent<{ projectUuid?: string }>).detail ?? {};
+      const projectUuid =
+        detail.projectUuid ?? versionsCacheRef.current?.projectUuid;
+      if (!projectUuid) return;
+      loadVersionsForProject(projectUuid).catch((error) => {
+        console.error("[useStorageXMLVersions] 刷新版本缓存失败", error);
+      });
+    };
+
+    window.addEventListener("version-updated", handleVersionEvent);
+    window.addEventListener("wip-updated", handleVersionEvent);
+
+    return () => {
+      window.removeEventListener("version-updated", handleVersionEvent);
+      window.removeEventListener("wip-updated", handleVersionEvent);
+    };
+  }, [loadVersionsForProject]);
 
   /**
    * 保存 XML 到 WIP 版本（活跃工作区）
@@ -85,90 +188,20 @@ export function useStorageXMLVersions() {
       name?: string,
       description?: string,
     ): Promise<string> => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const normalizedXml = normalizeDiagramXml(xml);
-        const storage = await getStorage();
-        const pageMetadata = buildPageMetadataFromXml(normalizedXml);
-        const pageNamesJson = JSON.stringify(pageMetadata.pageNames);
-
-        // 始终保存到 WIP 版本
-        const payload = await computeVersionPayload({
-          newXml: normalizedXml,
-          semanticVersion: WIP_VERSION,
-          baseVersion: null, // WIP 不依赖基线版本
-          resolveVersionById: (id) => storage.getXMLVersion(id, projectUuid),
-        });
-
-        if (!payload) {
-          throw new Error("无法计算 WIP 版本数据");
-        }
-
-        // 检查 WIP 版本是否已存在
-        const existingVersions =
-          await storage.getXMLVersionsByProject(projectUuid);
-        versionsCacheRef.current = {
-          projectUuid,
-          versions: existingVersions,
-          updatedAt: Date.now(),
-        };
-        const wipVersion = existingVersions.find(
-          (v) => v.semantic_version === WIP_VERSION,
-        );
-
-        let versionId: string;
-        const timestamp = Date.now();
-
-        if (wipVersion) {
-          // 更新现有 WIP 版本
-          await storage.updateXMLVersion(wipVersion.id, {
-            project_uuid: projectUuid,
-            semantic_version: WIP_VERSION,
-            xml_content: payload.xml_content,
-            preview_image: previewImage,
+      return runStorageTask(
+        async () => {
+          const { versionId } = await persistWipVersion(projectUuid, xml, {
+            previewImage,
             name: name || "WIP",
             description: description || "活跃工作区",
-            metadata: null,
-            is_keyframe: payload.is_keyframe,
-            diff_chain_depth: payload.diff_chain_depth,
-            source_version_id: payload.source_version_id,
-            page_count: pageMetadata.pageCount,
-            page_names: pageNamesJson,
-            created_at: timestamp,
           });
-          versionId = wipVersion.id;
-        } else {
-          // 创建新的 WIP 版本
-          const newVersion = await storage.createXMLVersion({
-            id: uuidv4(),
-            project_uuid: projectUuid,
-            semantic_version: WIP_VERSION,
-            xml_content: payload.xml_content,
-            preview_image: previewImage,
-            name: name || "WIP",
-            description: description || "活跃工作区",
-            metadata: null,
-            is_keyframe: payload.is_keyframe,
-            diff_chain_depth: payload.diff_chain_depth,
-            source_version_id: payload.source_version_id,
-            page_count: pageMetadata.pageCount,
-            page_names: pageNamesJson,
-          });
-          versionId = newVersion.id;
-        }
-
-        setLoading(false);
-        return versionId;
-      } catch (err) {
-        const error = err as Error;
-        setError(error);
-        setLoading(false);
-        throw error;
-      }
+          await loadVersionsForProject(projectUuid);
+          return versionId;
+        },
+        { setLoading, setError },
+      );
     },
-    [],
+    [loadVersionsForProject],
   );
 
   /**
@@ -180,42 +213,28 @@ export function useStorageXMLVersions() {
     async (
       projectUuid: string = DEFAULT_PROJECT_UUID,
     ): Promise<string | null> => {
-      setLoading(true);
-      setError(null);
+      return runStorageTask(
+        async () => {
+          const { storage, versions } =
+            await loadVersionsForProject(projectUuid);
 
-      try {
-        const storage = await getStorage();
-        const versions = await storage.getXMLVersionsByProject(projectUuid);
-        versionsCacheRef.current = {
-          projectUuid,
-          versions,
-          updatedAt: Date.now(),
-        };
+          if (versions.length === 0) {
+            return null;
+          }
 
-        if (versions.length === 0) {
-          setLoading(false);
-          return null;
-        }
-
-        // 优先返回 WIP 版本（用户最新编辑）
-        // 避免在创建历史快照后错误加载快照而非 WIP
-        const wipVersion = versions.find(
-          (v) => v.semantic_version === WIP_VERSION,
-        );
-        const latest = wipVersion || versions[0];
-        setLoading(false);
-        const resolved = await materializeVersionXml(latest, (id) =>
-          storage.getXMLVersion(id, projectUuid),
-        );
-        return normalizeDiagramXml(resolved);
-      } catch (err) {
-        const error = err as Error;
-        setError(error);
-        setLoading(false);
-        throw error;
-      }
+          const wipVersion = versions.find(
+            (v) => v.semantic_version === WIP_VERSION,
+          );
+          const latest = wipVersion || versions[0];
+          const resolved = await materializeVersionXml(latest, (id) =>
+            storage.getXMLVersion(id, projectUuid),
+          );
+          return normalizeDiagramXml(resolved);
+        },
+        { setLoading, setError },
+      );
     },
-    [],
+    [loadVersionsForProject],
   );
 
   /**
@@ -227,27 +246,15 @@ export function useStorageXMLVersions() {
     async (
       projectUuid: string = DEFAULT_PROJECT_UUID,
     ): Promise<XMLVersion[]> => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const storage = await getStorage();
-        const versions = await storage.getXMLVersionsByProject(projectUuid);
-        versionsCacheRef.current = {
-          projectUuid,
-          versions,
-          updatedAt: Date.now(),
-        };
-        setLoading(false);
-        return versions;
-      } catch (err) {
-        const error = err as Error;
-        setError(error);
-        setLoading(false);
-        throw error;
-      }
+      return runStorageTask(
+        async () => {
+          const { versions } = await loadVersionsForProject(projectUuid);
+          return versions;
+        },
+        { setLoading, setError },
+      );
     },
-    [],
+    [loadVersionsForProject],
   );
 
   /**
@@ -275,29 +282,22 @@ export function useStorageXMLVersions() {
    */
   const getXMLVersion = useCallback(
     async (id: string, projectUuid?: string): Promise<XMLVersion | null> => {
-      setLoading(true);
-      setError(null);
+      return runStorageTask(
+        async () => {
+          const storage = await getStorage();
+          const resolvedProjectUuid =
+            projectUuid ?? versionsCacheRef.current?.projectUuid;
 
-      try {
-        const storage = await getStorage();
-        const resolvedProjectUuid =
-          projectUuid ?? versionsCacheRef.current?.projectUuid;
+          if (!resolvedProjectUuid) {
+            throw new Error(
+              "安全错误：未提供项目 ID，无法获取指定版本以避免跨项目数据泄露",
+            );
+          }
 
-        if (!resolvedProjectUuid) {
-          throw new Error(
-            "安全错误：未提供项目 ID，无法获取指定版本以避免跨项目数据泄露",
-          );
-        }
-
-        const version = await storage.getXMLVersion(id, resolvedProjectUuid);
-        setLoading(false);
-        return version;
-      } catch (err) {
-        const error = err as Error;
-        setError(error);
-        setLoading(false);
-        throw error;
-      }
+          return await storage.getXMLVersion(id, resolvedProjectUuid);
+        },
+        { setLoading, setError },
+      );
     },
     [],
   );
@@ -315,34 +315,33 @@ export function useStorageXMLVersions() {
         return cached;
       }
 
-      try {
-        const storage = await getStorage();
-        const resolvedProjectUuid =
-          projectUuid ?? versionsCacheRef.current?.projectUuid;
-        if (!resolvedProjectUuid) {
-          throw new Error(
-            "安全错误：未提供项目 ID，无法获取版本 SVG 数据以避免跨项目数据泄露",
+      return runStorageTask(
+        async () => {
+          const storage = await getStorage();
+          const resolvedProjectUuid =
+            projectUuid ?? versionsCacheRef.current?.projectUuid;
+          if (!resolvedProjectUuid) {
+            throw new Error(
+              "安全错误：未提供项目 ID，无法获取版本 SVG 数据以避免跨项目数据泄露",
+            );
+          }
+          const svgData = await storage.getXMLVersionSVGData(
+            id,
+            resolvedProjectUuid,
           );
-        }
-        const svgData = await storage.getXMLVersionSVGData(
-          id,
-          resolvedProjectUuid,
-        );
-        if (svgData) {
-          svgCacheRef.current.set(id, svgData);
-          if (svgCacheRef.current.size > MAX_SVG_CACHE_SIZE) {
-            const oldestKey = svgCacheRef.current.keys().next().value;
-            if (oldestKey) {
-              svgCacheRef.current.delete(oldestKey);
+          if (svgData) {
+            svgCacheRef.current.set(id, svgData);
+            if (svgCacheRef.current.size > MAX_SVG_CACHE_SIZE) {
+              const oldestKey = svgCacheRef.current.keys().next().value;
+              if (oldestKey) {
+                svgCacheRef.current.delete(oldestKey);
+              }
             }
           }
-        }
-        return svgData;
-      } catch (err) {
-        const error = err as Error;
-        setError(error);
-        throw error;
-      }
+          return svgData;
+        },
+        { setError },
+      );
     },
     [],
   );
@@ -379,168 +378,97 @@ export function useStorageXMLVersions() {
       editorRef?: RefObject<DrawioEditorRef | null>,
       options?: CreateHistoricalVersionOptions,
     ): Promise<CreateHistoricalVersionResult> => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const storage = await getStorage();
-        // 获取当前 WIP 版本的内容
-        const versions = await storage.getXMLVersionsByProject(projectUuid);
-        const wipVersion = versions.find(
-          (v) => v.semantic_version === WIP_VERSION,
-        );
-
-        if (!wipVersion) {
-          throw new Error("WIP 版本不存在，无法创建快照");
-        }
-
-        // 优先从编辑器实时导出最新 XML，若不可用则回退到存储中的 WIP XML
-        let wipXml = wipVersion.xml_content;
-        try {
-          if (editorRef?.current) {
-            const exportedXml = await editorRef.current.exportDiagram();
-            if (exportedXml && exportedXml.trim().length > 0) {
-              wipXml = exportedXml;
-            } else {
-              console.warn("⚠️ 实时导出 XML 为空，改用存储的 WIP XML");
-            }
-          }
-        } catch (exportErr) {
-          console.error(
-            "SVG 导出前导出 XML 失败，使用存储的 WIP XML",
-            exportErr,
-          );
-        }
-
-        // 归一化（含 base64 解码与压缩内容解压），确保版本链使用统一形态
-        const normalizedWipXml = normalizeDiagramXml(wipXml);
-
-        // 获取最后一个历史版本作为 source_version
-        const historicalVersions = versions
-          .filter((v) => v.semantic_version !== WIP_VERSION)
-          .sort((a, b) => b.created_at - a.created_at);
-
-        const isChildVersion = isSubVersion(semanticVersion);
-        let baseVersion: XMLVersion | null = null;
-
-        if (isChildVersion) {
-          const parentVersion = getParentVersion(semanticVersion);
-          const parentVersionEntity = historicalVersions.find(
-            (v) => v.semantic_version === parentVersion,
+      return runStorageTask(
+        async () => {
+          const { storage, versions } =
+            await loadVersionsForProject(projectUuid);
+          const wipVersion = versions.find(
+            (v) => v.semantic_version === WIP_VERSION,
           );
 
-          if (!parentVersionEntity) {
-            throw new Error(
-              `无法创建子版本 ${semanticVersion}：父版本 ${parentVersion} 不存在。请先创建主版本或刷新版本列表。`,
-            );
+          if (!wipVersion) {
+            throw new Error("WIP 版本不存在，无法创建快照");
           }
 
-          baseVersion = parentVersionEntity;
-        } else {
-          baseVersion = historicalVersions[0] ?? null;
-        }
-
-        // 计算新版本的存储策略（关键帧 or Diff）
-        const payload = await computeVersionPayload({
-          newXml: normalizedWipXml,
-          semanticVersion,
-          baseVersion,
-          resolveVersionById: (id) => storage.getXMLVersion(id, projectUuid),
-        });
-
-        if (!payload) {
-          throw new Error("无法计算历史版本数据");
-        }
-
-        // 默认的页面元数据（从 XML 解析）
-        const pageMetadata = buildPageMetadataFromXml(normalizedWipXml);
-
-        // 导出 SVG（可选，失败则降级为仅 XML 存储）
-        let previewSvg: Blob | undefined;
-        let pagesSvgBlob: Blob | undefined;
-        let svgPageNames: string[] | null = null;
-        let exportError: Error | null = null;
-
-        if (editorRef?.current) {
+          let wipXml = wipVersion.xml_content;
           try {
-            const svgPages = await exportAllPagesSVG(
-              editorRef.current,
-              normalizedWipXml,
-              {
-                onProgress: options?.onExportProgress,
-              },
-            );
-
-            if (svgPages.length > 0) {
-              const previewSource = new Blob([svgPages[0].svg], {
-                type: "image/svg+xml",
-              });
-              previewSvg = await compressBlob(previewSource);
-              pagesSvgBlob = await serializeSVGsToBlob(svgPages);
-              svgPageNames = svgPages.map((p) => p.name);
+            if (editorRef?.current) {
+              const exportedXml = await editorRef.current.exportDiagram();
+              if (exportedXml && exportedXml.trim().length > 0) {
+                wipXml = exportedXml;
+              } else {
+                console.warn("⚠️ 实时导出 XML 为空，改用存储的 WIP XML");
+              }
             }
-          } catch (err) {
-            exportError = err as Error;
-            console.warn(
-              "⚠️ 导出 SVG 失败，已降级为仅存储 XML，错误:",
-              exportError,
+          } catch (exportErr) {
+            console.error(
+              "SVG 导出前导出 XML 失败，使用存储的 WIP XML",
+              exportErr,
             );
           }
-        }
 
-        const finalPageNames = svgPageNames ?? pageMetadata.pageNames;
-        const finalPageCount = svgPageNames?.length ?? pageMetadata.pageCount;
+          const context = prepareXmlContext(wipXml);
 
-        if (!finalPageCount || finalPageCount < 1) {
-          throw new Error("未能解析到有效的页面数据，无法创建版本");
-        }
+          let previewSvg: Blob | undefined;
+          let pagesSvgBlob: Blob | undefined;
+          let svgPageNames: string[] | null = null;
+          let exportError: Error | null = null;
 
-        // 保存新历史版本
-        const newVersion = await storage.createXMLVersion({
-          id: uuidv4(),
-          project_uuid: projectUuid,
-          semantic_version: semanticVersion,
-          xml_content: payload.xml_content,
-          preview_image: undefined,
-          preview_svg: previewSvg,
-          pages_svg: pagesSvgBlob,
-          name: semanticVersion, // name 使用版本号
-          description,
-          metadata: null,
-          is_keyframe: payload.is_keyframe,
-          diff_chain_depth: payload.diff_chain_depth,
-          source_version_id: payload.source_version_id,
-          page_count: finalPageCount,
-          page_names: JSON.stringify(finalPageNames),
-        });
+          if (editorRef?.current) {
+            try {
+              const svgPages = await exportAllPagesSVG(
+                editorRef.current,
+                context.normalizedXml,
+                {
+                  onProgress: options?.onExportProgress,
+                },
+              );
 
-        // 刷新缓存以包含最新创建的版本
-        const updatedVersions =
-          await storage.getXMLVersionsByProject(projectUuid);
-        versionsCacheRef.current = {
-          projectUuid,
-          versions: updatedVersions,
-          updatedAt: Date.now(),
-        };
+              if (svgPages.length > 0) {
+                const previewSource = new Blob([svgPages[0].svg], {
+                  type: "image/svg+xml",
+                });
+                previewSvg = await compressBlob(previewSource);
+                pagesSvgBlob = await serializeSVGsToBlob(svgPages);
+                svgPageNames = svgPages.map((p) => p.name);
+              }
+            } catch (err) {
+              exportError = err as Error;
+              console.warn(
+                "⚠️ 导出 SVG 失败，已降级为仅存储 XML，错误:",
+                exportError,
+              );
+            }
+          }
 
-        setLoading(false);
-        if (exportError) {
-          // 将 SVG 导出失败视为软错误，仅记录日志
-          console.info("已完成版本创建，但 SVG 未包含在记录中（导出失败）");
-        }
-        return {
-          versionId: newVersion.id,
-          pageCount: finalPageCount,
-          svgAttached: Boolean(previewSvg && pagesSvgBlob),
-        };
-      } catch (err) {
-        const error = err as Error;
-        setError(error);
-        setLoading(false);
-        throw error;
-      }
+          const persisted = await persistHistoricalVersion(
+            projectUuid,
+            context,
+            semanticVersion,
+            {
+              description,
+              previewSvg,
+              pagesSvg: pagesSvgBlob,
+              pageNamesOverride: svgPageNames,
+            },
+          );
+
+          await loadVersionsForProject(projectUuid, storage);
+
+          if (exportError) {
+            console.info("已完成版本创建，但 SVG 未包含在记录中（导出失败）");
+          }
+
+          return {
+            versionId: persisted.versionId,
+            pageCount: persisted.pageCount,
+            svgAttached: Boolean(previewSvg && pagesSvgBlob),
+          };
+        },
+        { setLoading, setError },
+      );
     },
-    [],
+    [loadVersionsForProject],
   );
 
   /**
@@ -553,55 +481,46 @@ export function useStorageXMLVersions() {
    */
   const rollbackToVersion = useCallback(
     async (projectUuid: string, versionId: string): Promise<string> => {
-      setLoading(true);
-      setError(null);
+      return runStorageTask(
+        async () => {
+          const storage = await getStorage();
 
-      try {
-        const storage = await getStorage();
-
-        // 获取目标版本
-        const targetVersion = await storage.getXMLVersion(
-          versionId,
-          projectUuid,
-        );
-        if (!targetVersion) {
-          throw new Error("目标版本不存在");
-        }
-
-        if (targetVersion.project_uuid !== projectUuid) {
-          const message =
-            `安全错误：版本 ${versionId} 不属于当前项目 ${projectUuid}。` +
-            `该版本属于项目 ${targetVersion.project_uuid}，无法回滚。`;
-          console.error("[rollbackToVersion] 拒绝跨项目回滚", {
+          const targetVersion = await storage.getXMLVersion(
             versionId,
-            requestedProject: projectUuid,
-            versionProject: targetVersion.project_uuid,
-          });
-          throw new Error(message);
-        }
+            projectUuid,
+          );
+          if (!targetVersion) {
+            throw new Error("目标版本不存在");
+          }
 
-        // 恢复目标版本的完整 XML
-        const targetXml = await materializeVersionXml(targetVersion, (id) =>
-          storage.getXMLVersion(id, projectUuid),
-        );
+          if (targetVersion.project_uuid !== projectUuid) {
+            const message =
+              `安全错误：版本 ${versionId} 不属于当前项目 ${projectUuid}。` +
+              `该版本属于项目 ${targetVersion.project_uuid}，无法回滚。`;
+            console.error("[rollbackToVersion] 拒绝跨项目回滚", {
+              versionId,
+              requestedProject: projectUuid,
+              versionProject: targetVersion.project_uuid,
+            });
+            throw new Error(message);
+          }
 
-        // 将目标版本的内容写入 WIP
-        const wipVersionId = await saveXML(
-          targetXml,
-          projectUuid,
-          undefined,
-          "WIP",
-          `回滚自版本 ${targetVersion.semantic_version}`,
-        );
+          const targetXml = await materializeVersionXml(targetVersion, (id) =>
+            storage.getXMLVersion(id, projectUuid),
+          );
 
-        setLoading(false);
-        return wipVersionId;
-      } catch (err) {
-        const error = err as Error;
-        setError(error);
-        setLoading(false);
-        throw error;
-      }
+          const wipVersionId = await saveXML(
+            targetXml,
+            projectUuid,
+            undefined,
+            "WIP",
+            `回滚自版本 ${targetVersion.semantic_version}`,
+          );
+
+          return wipVersionId;
+        },
+        { setLoading, setError },
+      );
     },
     [saveXML],
   );
@@ -615,70 +534,56 @@ export function useStorageXMLVersions() {
    */
   const getRecommendedVersion = useCallback(
     async (projectUuid: string, parentVersion?: string): Promise<string> => {
-      setLoading(true);
-      setError(null);
+      return runStorageTask(
+        async () => {
+          const { versions } = await loadVersionsForProject(projectUuid);
 
-      try {
-        const storage = await getStorage();
-        const versions = await storage.getXMLVersionsByProject(projectUuid);
-        versionsCacheRef.current = {
-          projectUuid,
-          versions,
-          updatedAt: Date.now(),
-        };
+          const normalizedParent = parentVersion?.trim();
+          let recommended: string;
 
-        const normalizedParent = parentVersion?.trim();
-        let recommended: string;
-
-        if (normalizedParent) {
-          recommended = getNextSubVersion(versions, normalizedParent);
-        } else {
-          const historicalVersions = versions
-            .filter((v) => v.semantic_version !== WIP_VERSION)
-            .map((v) => v.semantic_version)
-            .filter((semanticVersion) => !isSubVersion(semanticVersion))
-            .sort((a, b) => {
-              const aParts = a.split(".").map(Number);
-              const bParts = b.split(".").map(Number);
-              for (
-                let i = 0;
-                i < Math.max(aParts.length, bParts.length);
-                i += 1
-              ) {
-                const aNum = aParts[i] || 0;
-                const bNum = bParts[i] || 0;
-                if (aNum !== bNum) return bNum - aNum;
-              }
-              return 0;
-            });
-
-          if (historicalVersions.length === 0) {
-            recommended = DEFAULT_FIRST_VERSION;
+          if (normalizedParent) {
+            recommended = getNextSubVersion(versions, normalizedParent);
           } else {
-            // 推荐策略: 基于最新主版本递增 minor 版本号
-            // 例如: 1.2.0 -> 1.3.0
-            const latestVersion = historicalVersions[0];
-            const parts = latestVersion.split(".").map(Number);
+            const historicalVersions = versions
+              .filter((v) => v.semantic_version !== WIP_VERSION)
+              .map((v) => v.semantic_version)
+              .filter((semanticVersion) => !isSubVersion(semanticVersion))
+              .sort((a, b) => {
+                const aParts = a.split(".").map(Number);
+                const bParts = b.split(".").map(Number);
+                for (
+                  let i = 0;
+                  i < Math.max(aParts.length, bParts.length);
+                  i += 1
+                ) {
+                  const aNum = aParts[i] || 0;
+                  const bNum = bParts[i] || 0;
+                  if (aNum !== bNum) return bNum - aNum;
+                }
+                return 0;
+              });
 
-            if (parts.length === 3) {
-              const [major, minor] = parts;
-              recommended = `${major}.${minor + 1}.0`;
-            } else {
+            if (historicalVersions.length === 0) {
               recommended = DEFAULT_FIRST_VERSION;
+            } else {
+              const latestVersion = historicalVersions[0];
+              const parts = latestVersion.split(".").map(Number);
+
+              if (parts.length === 3) {
+                const [major, minor] = parts;
+                recommended = `${major}.${minor + 1}.0`;
+              } else {
+                recommended = DEFAULT_FIRST_VERSION;
+              }
             }
           }
-        }
 
-        setLoading(false);
-        return recommended;
-      } catch (err) {
-        const error = err as Error;
-        setError(error);
-        setLoading(false);
-        throw error;
-      }
+          return recommended;
+        },
+        { setLoading, setError },
+      );
     },
-    [],
+    [loadVersionsForProject],
   );
 
   /**
@@ -770,28 +675,15 @@ export function useStorageXMLVersions() {
    */
   const isVersionExists = useCallback(
     async (projectUuid: string, version: string): Promise<boolean> => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const storage = await getStorage();
-        const versions = await storage.getXMLVersionsByProject(projectUuid);
-        versionsCacheRef.current = {
-          projectUuid,
-          versions,
-          updatedAt: Date.now(),
-        };
-        const exists = versions.some((v) => v.semantic_version === version);
-        setLoading(false);
-        return exists;
-      } catch (err) {
-        const error = err as Error;
-        setError(error);
-        setLoading(false);
-        throw error;
-      }
+      return runStorageTask(
+        async () => {
+          const { versions } = await loadVersionsForProject(projectUuid);
+          return versions.some((v) => v.semantic_version === version);
+        },
+        { setLoading, setError },
+      );
     },
-    [],
+    [loadVersionsForProject],
   );
 
   return {
@@ -809,5 +701,6 @@ export function useStorageXMLVersions() {
     getRecommendedVersion,
     validateVersion,
     isVersionExists,
+    subscribeVersions,
   };
 }

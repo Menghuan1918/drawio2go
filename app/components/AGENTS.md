@@ -252,6 +252,19 @@ import { Button } from '@heroui/react';
 
 ## 代码腐化清理记录
 
+### 2025-11-23 清理（日期与订阅统一）
+
+**执行的操作**：
+- `VersionSidebar.tsx` 删除本地 `loadVersions` 状态，改用 `useStorageXMLVersions` 的订阅机制
+- 所有日期展示改用 `format-utils.ts`（formatVersionTimestamp/formatConversationDate）
+- 聊天与版本子组件（MessageItem/ChatSessionMenu/ConversationList/MessagePreviewPanel/VersionCard/VersionCompare/ProjectSelector）统一日期格式
+
+**影响文件**：9 个文件
+
+**下次关注**：
+- 订阅数据与分页/筛选共存时的性能与去抖策略
+- 日期格式工具是否需要支持多语言/时区参数
+
 ### 2025-11-23 清理
 
 **执行的操作**：

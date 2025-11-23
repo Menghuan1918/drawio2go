@@ -182,7 +182,6 @@ export function CreateVersionDialog({
         },
       );
 
-      window.dispatchEvent(new Event("version-updated"));
       onVersionCreated?.(result);
 
       const successText = result.svgAttached

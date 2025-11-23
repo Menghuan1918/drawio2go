@@ -72,6 +72,11 @@ export {
   persistCurrentProjectId,
   resolveCurrentProjectUuid,
 } from "./current-project";
+export {
+  persistWipVersion,
+  persistHistoricalVersion,
+  prepareXmlContext,
+} from "./writers";
 
 // ==================== 内部实现（仅用于测试） ====================
 

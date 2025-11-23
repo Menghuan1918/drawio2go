@@ -19,6 +19,23 @@ import type {
 } from "@/app/types/drawio-tools";
 import type { GetXMLResult, ReplaceXMLResult } from "@/app/types/drawio-tools";
 
+let cachedParser: DOMParser | null = null;
+let cachedSerializer: XMLSerializer | null = null;
+
+function ensureParser(): DOMParser {
+  if (!cachedParser) {
+    cachedParser = new DOMParser();
+  }
+  return cachedParser;
+}
+
+function ensureSerializer(): XMLSerializer {
+  if (!cachedSerializer) {
+    cachedSerializer = new XMLSerializer();
+  }
+  return cachedSerializer;
+}
+
 export async function executeDrawioRead(
   xpathExpression?: string,
 ): Promise<DrawioReadResult> {
@@ -109,7 +126,7 @@ export async function executeDrawioEditBatch(
     }
   }
 
-  const serializer = new XMLSerializer();
+  const serializer = ensureSerializer();
   const updatedXml = serializer.serializeToString(document);
 
   const replaceResult = (await executeToolOnClient(
@@ -197,7 +214,7 @@ async function fetchDiagramXml(): Promise<string> {
 }
 
 function parseXml(xml: string): Document {
-  const parser = new DOMParser();
+  const parser = ensureParser();
   const document = parser.parseFromString(xml, "text/xml");
   const parseErrors = document.getElementsByTagName("parsererror");
   if (parseErrors.length > 0) {

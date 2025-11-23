@@ -13,10 +13,12 @@
 - **svg-export-utils.ts**: DrawIO 多页面 SVG 导出工具（页面拆分、单页 XML 重建、结果序列化）
 - **compression-utils.ts**: Web/Node 共享的 `CompressionStream` / `DecompressionStream` deflate-raw 压缩工具
 - **drawio-xml-utils.ts**: XML 归一化工具，支持裸 XML / data URI / Base64，并自动解压 `<diagram>` 内的 DrawIO 压缩内容（deflate + base64 + encodeURIComponent）
+- **storage/writers.ts**: 统一的 WIP/历史版本写入管线（归一化 + 页面元数据 + 关键帧/Diff 计算 + 事件派发）
 - **svg-smart-diff.ts**: SVG 智能差异对比引擎（基于 data-cell-id + 几何语义匹配的元素级高亮）
 - **config-utils.ts**: LLM 配置规范化工具（默认值、类型校验、URL 规范化）
 - **version-utils.ts**: 语义化版本号工具（解析、过滤子版本、子版本计数与递增推荐）
-- **utils.ts**: 通用工具函数（debounce 防抖函数，支持 flush/cancel 方法）
+- **format-utils.ts**: 统一的日期格式化工具（版本时间戳、会话日期）
+- **utils.ts**: 通用工具函数（debounce 防抖函数，支持 flush/cancel 方法；runStorageTask、withTimeout）
 
 ### svg-export-utils.ts
 
@@ -484,6 +486,22 @@ const xml = await restoreXMLFromVersion("version-uuid", storage);
 - 存储层接口和表结构类型
 
 ## 代码腐化清理记录
+
+### 2025-11-23 清理（统一写入管线）
+
+**执行的操作**：
+- 新增 `storage/writers.ts` 统一 WIP/历史版本写入管线（归一化、元数据、事件派发）
+- 新增 `format-utils.ts` 统一日期格式化（formatVersionTimestamp, formatConversationDate）
+- 在 `drawio-xml-utils.ts` 中新增 `validateXMLFormat()` 统一 XML 验证逻辑
+- 在 `drawio-xml-service.ts` 引入 DOMParser/XMLSerializer 缓存机制
+- 在 `utils.ts` 新增 `runStorageTask()` 和 `withTimeout()` 工具函数
+- `drawio-tools.ts`、`drawio-ai-tools.ts` 改用统一写入管线，删除重复逻辑
+
+**影响文件**：7 个文件
+
+**下次关注**：
+- writers 管线事件顺序与前端订阅的兼容性
+- 日期格式化的时区一致性（UTC→本地）验证
 
 ### 2025-11-23 清理
 

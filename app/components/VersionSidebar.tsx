@@ -46,7 +46,7 @@ export function VersionSidebar({
   const [timelineViewMode, setTimelineViewMode] =
     React.useState<VersionTimelineViewMode>({ type: "main" });
 
-  const { getAllXMLVersions } = useStorageXMLVersions();
+  const { subscribeVersions, getAllXMLVersions } = useStorageXMLVersions();
   const compare = useVersionCompare();
   const {
     isCompareMode,
@@ -108,41 +108,32 @@ export function VersionSidebar({
     [setTimelineViewMode],
   );
 
-  // 加载版本列表
-  const loadVersions = React.useCallback(async () => {
-    if (!projectUuid) return;
+  React.useEffect(() => {
+    if (!projectUuid) {
+      setVersions([]);
+      setIsLoading(false);
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
-    try {
-      const allVersions = await getAllXMLVersions(projectUuid);
-      setVersions(allVersions);
-    } catch (err) {
-      console.error("加载版本列表失败:", err);
-      setError("加载版本列表失败");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [projectUuid, getAllXMLVersions]);
 
-  // 项目变化时重新加载版本列表
-  React.useEffect(() => {
-    loadVersions();
-  }, [loadVersions]);
+    const unsubscribe = subscribeVersions(
+      projectUuid,
+      (nextVersions) => {
+        setVersions(nextVersions);
+        setIsLoading(false);
+      },
+      () => {
+        setError("加载版本列表失败");
+        setIsLoading(false);
+      },
+    );
 
-  // 监听版本更新事件（创建/回滚后自动刷新）
-  React.useEffect(() => {
-    const handleVersionUpdate = () => {
-      loadVersions();
-    };
-
-    window.addEventListener("version-updated", handleVersionUpdate);
-    window.addEventListener("wip-updated", handleVersionUpdate);
     return () => {
-      window.removeEventListener("version-updated", handleVersionUpdate);
-      window.removeEventListener("wip-updated", handleVersionUpdate);
+      unsubscribe?.();
     };
-  }, [loadVersions]);
+  }, [projectUuid, subscribeVersions]);
 
   React.useEffect(() => {
     return () => {
@@ -156,11 +147,23 @@ export function VersionSidebar({
     setTimelineViewMode({ type: "main" });
   }, [projectUuid, setTimelineViewMode]);
 
-  // 版本创建后重新加载列表
+  const handleReload = React.useCallback(async () => {
+    if (!projectUuid) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      await getAllXMLVersions(projectUuid);
+    } catch (err) {
+      console.error("加载版本列表失败:", err);
+      setError("加载版本列表失败");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [getAllXMLVersions, projectUuid]);
+
+  // 版本创建后反馈提示
   const handleVersionCreated = React.useCallback(
     (result?: CreateHistoricalVersionResult) => {
-      loadVersions();
-
       if (result) {
         const tone = result.svgAttached ? "success" : "warning";
         const message = result.svgAttached
@@ -175,7 +178,7 @@ export function VersionSidebar({
         }, 4000);
       }
     },
-    [loadVersions],
+    [],
   );
 
   // 如果没有选择项目，显示空状态
@@ -212,7 +215,7 @@ export function VersionSidebar({
           <Button
             size="sm"
             variant="secondary"
-            onPress={loadVersions}
+            onPress={handleReload}
             className="version-sidebar__retry"
           >
             重试

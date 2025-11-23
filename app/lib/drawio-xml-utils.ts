@@ -1,9 +1,60 @@
 import { inflateRaw } from "pako";
+import type { XMLValidationResult } from "@/app/types/drawio-tools";
+import { DOMParser as XmldomParser } from "@xmldom/xmldom";
 
 const DATA_URI_PREFIX = "data:image/svg+xml;base64,";
 const DIAGRAM_TAG_REGEX = /<diagram\b([^>]*)>([\s\S]*?)<\/diagram>/gi;
 const COMPRESSED_ATTR_REGEX =
   /\scompressed\s*=\s*"(?:true|false)"|\scompressed\s*=\s*'(?:true|false)'/gi;
+
+let cachedDomParser: DOMParser | null = null;
+
+function ensureDomParser(): DOMParser | null {
+  if (cachedDomParser) return cachedDomParser;
+  if (typeof window !== "undefined" && typeof window.DOMParser !== "undefined") {
+    cachedDomParser = new window.DOMParser();
+    return cachedDomParser;
+  }
+  try {
+    cachedDomParser = new XmldomParser();
+    return cachedDomParser;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 验证 XML 格式是否合法
+ */
+export function validateXMLFormat(xml: string): XMLValidationResult {
+  const parser = ensureDomParser();
+  if (!parser) {
+    return {
+      valid: false,
+      error: "当前环境不支持 DOMParser，无法验证 XML",
+    };
+  }
+
+  try {
+    const doc = parser.parseFromString(xml, "text/xml");
+    const parseErrors =
+      doc.getElementsByTagName?.("parsererror") ??
+      (doc as unknown as Document).querySelectorAll?.("parsererror");
+
+    if (parseErrors && parseErrors.length > 0) {
+      const message =
+        parseErrors[0]?.textContent?.trim() || "XML 格式错误，解析失败";
+      return { valid: false, error: message };
+    }
+
+    return { valid: true };
+  } catch (error) {
+    return {
+      valid: false,
+      error: error instanceof Error ? error.message : "XML 解析异常",
+    };
+  }
+}
 
 /**
  * 统一的 DrawIO XML 归一化工具

@@ -7,54 +7,20 @@
  * 并在更新后通过自定义事件通知编辑器重新加载。
  */
 
-import type {
-  GetXMLResult,
-  ReplaceXMLResult,
-  XMLValidationResult,
-} from "../types/drawio-tools";
+import type { GetXMLResult, ReplaceXMLResult } from "../types/drawio-tools";
 import { getStorage } from "./storage/storage-factory";
+import { materializeVersionXml } from "./storage/xml-version-engine";
 import { WIP_VERSION } from "./storage/constants";
-import { buildPageMetadataFromXml } from "./storage";
-import {
-  computeVersionPayload,
-  materializeVersionXml,
-} from "./storage/xml-version-engine";
-import { v4 as uuidv4 } from "uuid";
 import { resolveCurrentProjectUuid } from "./storage/current-project";
 import { createDefaultDiagramXml } from "./storage/default-diagram-xml";
-import { normalizeDiagramXml } from "./drawio-xml-utils";
+import {
+  normalizeDiagramXml,
+  validateXMLFormat,
+} from "./drawio-xml-utils";
+import { persistWipVersion } from "./storage/writers";
 
 // 内存快照：记录替换前的 XML，用于合并失败时回滚
 let _drawioXmlSnapshot: string | null = null;
-
-/**
- * 验证 XML 格式是否合法
- * 使用浏览器内置的 DOMParser 进行验证
- *
- * @param xml - 待验证的 XML 字符串
- * @returns 验证结果，包含是否合法和错误信息
- */
-function validateXML(xml: string): XMLValidationResult {
-  try {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(xml, "text/xml");
-    const parseError = doc.querySelector("parsererror");
-
-    if (parseError) {
-      return {
-        valid: false,
-        error: parseError.textContent || "XML 格式错误",
-      };
-    }
-
-    return { valid: true };
-  } catch (error) {
-    return {
-      valid: false,
-      error: error instanceof Error ? error.message : "XML 解析异常",
-    };
-  }
-}
 
 /**
  * 保存 XML 到存储的内部实现（不触发事件）
@@ -65,59 +31,9 @@ function validateXML(xml: string): XMLValidationResult {
 async function saveDrawioXMLInternal(decodedXml: string): Promise<void> {
   const storage = await getStorage();
   const projectUuid = await resolveCurrentProjectUuid(storage);
-  const pageMetadata = buildPageMetadataFromXml(decodedXml);
-  const pageNamesJson = JSON.stringify(pageMetadata.pageNames);
-
-  // 检查项目是否存在
-  const project = await storage.getProject(projectUuid);
-  if (!project) {
-    throw new Error(
-      `当前项目不存在 (UUID: ${projectUuid})，请检查项目设置或重新选择项目`,
-    );
-  }
-
-  const existingVersions = await storage.getXMLVersionsByProject(projectUuid);
-  const wipVersion = existingVersions.find(
-    (version) => version.semantic_version === WIP_VERSION,
-  );
-  const payload = await computeVersionPayload({
-    newXml: decodedXml,
-    semanticVersion: WIP_VERSION,
-    baseVersion: null,
-    resolveVersionById: (id) => storage.getXMLVersion(id, projectUuid),
-  });
-
-  if (!payload) {
-    return;
-  }
-
-  if (wipVersion) {
-    await storage.updateXMLVersion(wipVersion.id, {
-      project_uuid: projectUuid,
-      semantic_version: WIP_VERSION,
-      xml_content: payload.xml_content,
-      source_version_id: payload.source_version_id,
-      is_keyframe: payload.is_keyframe,
-      diff_chain_depth: payload.diff_chain_depth,
-      metadata: null,
-      page_count: pageMetadata.pageCount,
-      page_names: pageNamesJson,
-      created_at: Date.now(),
-    });
-    return;
-  }
-
-  await storage.createXMLVersion({
-    id: uuidv4(),
-    project_uuid: projectUuid,
-    semantic_version: WIP_VERSION,
-    xml_content: payload.xml_content,
-    source_version_id: payload.source_version_id,
-    is_keyframe: payload.is_keyframe,
-    diff_chain_depth: payload.diff_chain_depth,
-    metadata: null,
-    page_count: pageMetadata.pageCount,
-    page_names: pageNamesJson,
+  await persistWipVersion(projectUuid, decodedXml, {
+    name: "WIP",
+    description: "活跃工作区",
   });
 }
 
@@ -135,7 +51,7 @@ export async function saveDrawioXML(xml: string): Promise<void> {
 
   try {
     const decodedXml = normalizeDiagramXml(xml);
-    const validation = validateXML(decodedXml);
+    const validation = validateXMLFormat(decodedXml);
     if (!validation.valid) {
       throw new Error(validation.error || "XML 格式验证失败");
     }
@@ -305,7 +221,7 @@ export async function replaceDrawioXML(
 
     // 2) 现有验证逻辑
     const decodedXml = normalizeDiagramXml(drawio_xml);
-    const validation = validateXML(decodedXml);
+    const validation = validateXMLFormat(decodedXml);
     if (!validation.valid) {
       return {
         success: false,

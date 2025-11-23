@@ -156,15 +156,31 @@ export { useDrawioEditor } from "./useDrawioEditor";
 
 ## 代码腐化清理记录
 
-### 2025-11-23 清理
+### 2025-11-23 清理（存储订阅落地）
+
+**执行的操作**：
+- `useStorageXMLVersions.ts` 新增 `subscribeVersions()`，统一版本缓存与事件监听
+- 所有 useStorage* Hooks 改用 `runStorageTask()` 处理加载/错误状态
+- `withTimeout` 提取到 `lib/utils.ts`，Hooks 引用统一
+- 抽取重复的版本缓存更新逻辑为 `updateVersionsCache()` 辅助函数
+
+**影响文件**：5 个文件
+
+**下次关注**：
+- 订阅回调的节流与取消机制
+- `runStorageTask` 的错误上报是否需要分级（警告/致命）
+
+### 2025-11-23 清理（第二批）
 
 **执行的操作**：
 
-- 修复 `index.ts` Hook 导出不一致：补充 `useCurrentProject` 和 `useDrawioEditor` 的统一导出
+- 统一 WIP/历史版本写入：新增 `storage/writers.ts`，`saveXML`/`createHistoricalVersion`/`saveDrawioXMLInternal` 均走同一管线（归一化 + 元数据 + 事件派发）
+- 版本缓存集中化：`useStorageXMLVersions` 提供 `subscribeVersions`，内部监听 version/wip 事件刷新缓存，`VersionSidebar` 取消本地重复加载
+- 提取公共工具：`runStorageTask`/`withTimeout`/`formatVersionTimestamp`/`formatConversationDate`，所有 useStorage* Hooks 统一错误与加载处理
+- XML 验证与 DOMParser 缓存统一：`validateXMLFormat`、drawio-xml-service 缓存解析器
 
-**影响文件**：1 个（`index.ts`）
+**影响文件**：`app/hooks/useStorageXMLVersions.ts`、`app/components/VersionSidebar.tsx`、`app/lib/storage/writers.ts`、`app/lib/drawio-tools.ts`、`app/lib/drawio-ai-tools.ts`、`app/lib/drawio-xml-service.ts`、`app/lib/drawio-xml-utils.ts`、`app/lib/utils.ts`、`app/lib/format-utils.ts`、`app/hooks/useStorageSettings.ts`、`app/hooks/useStorageProjects.ts`、`app/hooks/useStorageConversations.ts`、`app/components/version/*`、`app/components/chat/*`
 
 **下次关注**：
 
-- `useStorageXMLVersions.ts` 中 6 处重复的版本缓存更新模式可提取为辅助函数
-- `useCurrentProject.ts` 中的 `withTimeout` 工具函数可提取为公共模块
+- 版本订阅机制已上线，后续组件（如版本时间线的派生视图）可逐步迁移到订阅数据源，避免并行状态

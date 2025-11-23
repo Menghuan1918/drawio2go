@@ -1,6 +1,5 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { DOMParser } from "@xmldom/xmldom";
 
 import {
   executeDrawioEditBatch,
@@ -11,6 +10,7 @@ import type {
   DrawioEditOperation,
   ReplaceXMLResult,
 } from "@/app/types/drawio-tools";
+import { validateXMLFormat } from "./drawio-xml-utils";
 
 const operationSchema = z
   .object({
@@ -133,19 +133,9 @@ export const drawioOverwriteTool = tool({
     drawio_xml: z.string().min(1, "drawio_xml 不能为空"),
   }),
   execute: async ({ drawio_xml }) => {
-    // 强制验证 XML 格式
-    try {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(drawio_xml, "text/xml");
-      const parseErrors = doc.getElementsByTagName("parsererror");
-
-      if (parseErrors.length > 0) {
-        throw new Error("XML 格式无效: 解析失败");
-      }
-    } catch (error) {
-      throw new Error(
-        `XML 验证失败: ${error instanceof Error ? error.message : String(error)}`,
-      );
+    const validation = validateXMLFormat(drawio_xml);
+    if (!validation.valid) {
+      throw new Error(validation.error || "XML 验证失败");
     }
 
     // 调用前端工具覆写 XML
