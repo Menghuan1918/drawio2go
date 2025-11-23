@@ -337,7 +337,12 @@ export async function replaceDrawioXML(
     // 5) 错误回滚
     if (mergeError?.error) {
       console.error("[DrawIO Tools] DrawIO merge 错误:", mergeError);
-      if (_drawioXmlSnapshot) {
+
+      let rollbackMessage: string;
+      if (!_drawioXmlSnapshot) {
+        rollbackMessage =
+          "DrawIO 报告 XML 语法错误，但回滚失败（未能捕获快照），数据可能已损坏，请检查项目状态";
+      } else {
         try {
           await saveDrawioXMLInternal(_drawioXmlSnapshot);
           window.dispatchEvent(
@@ -350,15 +355,18 @@ export async function replaceDrawioXML(
             }),
           );
           console.warn("[DrawIO Tools] 已回滚到替换前的 XML");
+          rollbackMessage = "DrawIO 报告 XML 语法错误，已自动回滚到修改前状态";
         } catch (rollbackError) {
           console.error("[DrawIO Tools] 回滚失败:", rollbackError);
+          rollbackMessage =
+            "DrawIO 报告 XML 语法错误，但回滚失败（存储不可用），数据可能已损坏，请检查项目状态";
         }
       }
 
       return {
         success: false,
         error: "drawio_syntax_error",
-        message: "DrawIO 报告 XML 语法错误，已自动回滚到修改前状态",
+        message: rollbackMessage,
       };
     }
 

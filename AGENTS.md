@@ -227,7 +227,7 @@ Accordion, Alert, Avatar, Button, Card, Checkbox, CheckboxGroup, Chip, CloseButt
 
 ### 6. 检查测试
 
-- 主动调用`pnpm lint`获得语法错误检查信息，避免在编译时才处理语法错误
+- 务必主动调用`pnpm run lint`获得语法错误检查信息，避免在编译时才处理语法错误
 
 ## 开发命令
 
@@ -239,7 +239,7 @@ pnpm run electron:dev     # Electron + Socket.IO + Next.js 开发模式
 pnpm run build            # 构建 Next.js 应用
 pnpm run start            # 生产环境启动 (Socket.IO + Next.js)
 pnpm run electron:build   # 构建 Electron 应用 (输出到 dist/)
-pnpm lint                 # ESLint 检查 + TypeScript 类型检查
+pnpm run lint             # ESLint 检查 + TypeScript 类型检查
 pnpm format               # 使用 Prettier 格式化所有代码
 ```
 

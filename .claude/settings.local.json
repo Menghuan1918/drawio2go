@@ -71,7 +71,8 @@
       "mcp__codex__codex",
       "mcp__codex__codex-reply",
       "Bash(pnpm vitest:*)",
-      "Bash(pnpm run lint)"
+      "Bash(pnpm run lint)",
+      "Bash(pnpm test:*)"
     ],
     "deny": [],
     "ask": []
