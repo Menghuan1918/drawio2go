@@ -2,6 +2,7 @@
 
 import { Button } from "@heroui/react";
 import { FolderOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
+import { useAppTranslation } from "@/app/i18n/hooks";
 import { ThemeToggle } from "./ThemeToggle";
 
 interface TopBarProps {
@@ -23,10 +24,12 @@ export default function TopBar({
   isSidebarOpen,
   onToggleSidebar,
 }: TopBarProps) {
+  const { t } = useAppTranslation("topbar");
+
   return (
     <div className="top-bar">
       <div className="top-bar-selection" title={selectionLabel}>
-        {selectionLabel || "暂无选区信息"}
+        {selectionLabel || t("selectionLabel.noSelection")}
       </div>
 
       <div className="top-bar-center">
@@ -65,7 +68,7 @@ export default function TopBar({
                 d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
               />
             </svg>
-            加载
+            {t("buttons.load")}
           </Button>
         )}
 
@@ -90,7 +93,7 @@ export default function TopBar({
                 d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
               />
             </svg>
-            保存
+            {t("buttons.save")}
           </Button>
         )}
 
@@ -101,7 +104,9 @@ export default function TopBar({
           variant="tertiary"
           size="sm"
           className="top-bar-button"
-          aria-label={isSidebarOpen ? "收起侧栏" : "展开侧栏"}
+          aria-label={
+            isSidebarOpen ? t("aria.collapseSidebar") : t("aria.expandSidebar")
+          }
           onPress={onToggleSidebar}
         >
           {isSidebarOpen ? (

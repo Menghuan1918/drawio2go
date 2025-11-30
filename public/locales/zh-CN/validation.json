@@ -1,1 +1,5 @@
-{}
+{
+  "project": {
+    "nameRequired": "项目名称不能为空"
+  }
+}

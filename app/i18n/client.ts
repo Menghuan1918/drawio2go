@@ -7,7 +7,7 @@ import { initReactI18next } from "react-i18next";
 import { defaultLocale, locales, namespaces } from "./config";
 
 // 语言偏好缓存键（需兼容 Electron，所有 localStorage 访问均包裹 try/catch）
-const LANGUAGE_STORAGE_KEY = "drawio2go-language";
+export const LANGUAGE_STORAGE_KEY = "drawio2go-language";
 
 const isBrowser = typeof window !== "undefined";
 type ElectronBridge = { electron?: unknown };

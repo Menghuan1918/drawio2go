@@ -4,6 +4,28 @@ import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@heroui/react";
 
+const THEME_STORAGE_KEY = "theme";
+
+const readStoredTheme = (): "light" | "dark" | undefined => {
+  if (typeof window === "undefined") return undefined;
+  try {
+    const value = window.localStorage.getItem(THEME_STORAGE_KEY);
+    if (value === "light" || value === "dark") return value;
+    return undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+const writeStoredTheme = (value: "light" | "dark") => {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(THEME_STORAGE_KEY, value);
+  } catch {
+    // 忽略无痕模式等环境的写入失败
+  }
+};
+
 /**
  * 主题切换组件
  * 支持浅色/深色模式切换，并持久化到 localStorage
@@ -17,7 +39,7 @@ export function ThemeToggle() {
     setMounted(true);
 
     // 从 localStorage 读取保存的主题
-    const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
+    const savedTheme = readStoredTheme();
 
     if (savedTheme) {
       setTheme(savedTheme);
@@ -40,7 +62,7 @@ export function ThemeToggle() {
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     const handleChange = (e: MediaQueryListEvent) => {
       // 只在没有手动设置主题时才跟随系统
-      if (!localStorage.getItem("theme")) {
+      if (!readStoredTheme()) {
         const newTheme = e.matches ? "dark" : "light";
         setTheme(newTheme);
         applyTheme(newTheme);
@@ -74,7 +96,7 @@ export function ThemeToggle() {
   const toggleTheme = () => {
     const newTheme = theme === "light" ? "dark" : "light";
     setTheme(newTheme);
-    localStorage.setItem("theme", newTheme);
+    writeStoredTheme(newTheme);
     applyTheme(newTheme);
   };
 

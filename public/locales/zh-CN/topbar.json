@@ -1,1 +1,13 @@
-{}
+{
+  "selectionLabel": {
+    "noSelection": "暂无选区信息"
+  },
+  "buttons": {
+    "load": "加载",
+    "save": "保存"
+  },
+  "aria": {
+    "collapseSidebar": "收起侧栏",
+    "expandSidebar": "展开侧栏"
+  }
+}

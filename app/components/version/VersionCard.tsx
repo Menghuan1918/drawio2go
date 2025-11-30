@@ -40,6 +40,7 @@ import {
 import { decompressBlob } from "@/app/lib/compression-utils";
 import { countSubVersions, isSubVersion } from "@/app/lib/version-utils";
 import { formatVersionTimestamp } from "@/app/lib/format-utils";
+import { useAppTranslation } from "@/app/i18n/hooks";
 
 interface VersionCardProps {
   version: XMLVersion;
@@ -91,6 +92,7 @@ export function VersionCard({
   const [viewerInitialPage, setViewerInitialPage] = React.useState(0);
   const pageObjectUrlsRef = React.useRef<string[]>([]);
   const { getXMLVersion, loadVersionSVGFields } = useStorageXMLVersions();
+  const { i18n } = useAppTranslation("version");
   const [resolvedVersion, setResolvedVersion] =
     React.useState<XMLVersion>(version);
   const isSubVersionEntry = React.useMemo(
@@ -208,11 +210,13 @@ export function VersionCard({
   const createdAtFull = formatVersionTimestamp(
     resolvedVersion.created_at,
     "full",
+    i18n.language,
   );
 
   const createdAtCompact = formatVersionTimestamp(
     resolvedVersion.created_at,
     "compact",
+    i18n.language,
   );
 
   // 管理 preview_svg 的 Object URL（需要先解压）

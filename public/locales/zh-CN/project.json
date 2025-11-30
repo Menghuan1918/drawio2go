@@ -1,1 +1,28 @@
-{}
+{
+  "selector": {
+    "title": "选择项目",
+    "empty": {
+      "title": "暂无项目",
+      "description": "点击下方按钮新建第一个项目"
+    },
+    "createTitle": "新建项目",
+    "createdAt": "创建于: {{date}}"
+  },
+  "form": {
+    "name": {
+      "label": "项目名称",
+      "placeholder": "输入项目名称",
+      "help": "创建项目时必填"
+    },
+    "description": {
+      "label": "项目描述",
+      "placeholder": "输入项目描述（可选）",
+      "help": "可选，用于标注项目背景"
+    }
+  },
+  "buttons": {
+    "cancel": "取消",
+    "create": "创建",
+    "new": "新建项目"
+  }
+}

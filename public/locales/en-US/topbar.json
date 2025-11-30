@@ -1,1 +1,13 @@
-{}
+{
+  "selectionLabel": {
+    "noSelection": "No selection"
+  },
+  "buttons": {
+    "load": "Load",
+    "save": "Save"
+  },
+  "aria": {
+    "collapseSidebar": "Collapse sidebar",
+    "expandSidebar": "Expand sidebar"
+  }
+}

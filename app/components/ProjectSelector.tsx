@@ -12,6 +12,8 @@ import {
 } from "@heroui/react";
 import { FolderOpen, Plus, Check } from "lucide-react";
 import type { Project } from "../lib/storage/types";
+import { useAppTranslation } from "@/app/i18n/hooks";
+import { formatVersionTimestamp } from "@/app/lib/format-utils";
 
 interface ProjectSelectorProps {
   isOpen: boolean;
@@ -32,6 +34,7 @@ export default function ProjectSelector({
   isLoading,
   onCreateProject,
 }: ProjectSelectorProps) {
+  const { t, i18n } = useAppTranslation("project");
   const [showNewProjectForm, setShowNewProjectForm] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectDescription, setNewProjectDescription] = useState("");
@@ -84,11 +87,11 @@ export default function ProjectSelector({
         <div className="flex items-center justify-between mb-4">
           <h2 className="modal-title flex items-center gap-2">
             <FolderOpen size={24} />
-            选择工程
+            {t("selector.title")}
           </h2>
         </div>
 
-        {/* 工程列表 */}
+        {/* 项目列表 */}
         <div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-2">
           {isLoading &&
             skeletonItems.map((_, index) => (
@@ -100,9 +103,11 @@ export default function ProjectSelector({
 
           {!isLoading && projects.length === 0 && (
             <div className="empty-state-card text-center">
-              <p className="empty-state-card__title">暂无工程</p>
+              <p className="empty-state-card__title">
+                {t("selector.empty.title")}
+              </p>
               <p className="empty-state-card__description">
-                点击下方按钮新建第一个工程
+                {t("selector.empty.description")}
               </p>
             </div>
           )}
@@ -137,10 +142,13 @@ export default function ProjectSelector({
                           </p>
                         )}
                         <p className="text-xs text-gray-400 mt-2">
-                          创建于:{" "}
-                          {new Date(project.created_at).toLocaleDateString(
-                            "zh-CN",
-                          )}
+                          {t("selector.createdAt", {
+                            date: formatVersionTimestamp(
+                              project.created_at,
+                              "full",
+                              i18n.language,
+                            ),
+                          })}
                         </p>
                       </div>
                     </div>
@@ -150,45 +158,47 @@ export default function ProjectSelector({
             })}
         </div>
 
-        {/* 新建工程表单 */}
+        {/* 新建项目表单 */}
         {showNewProjectForm && (
           <div className="mt-4 p-4 border-2 border-accent/30 rounded-lg bg-accent/5">
-            <h3 className="text-md font-semibold text-accent mb-3">新建工程</h3>
+            <h3 className="text-md font-semibold text-accent mb-3">
+              {t("selector.createTitle")}
+            </h3>
             <div className="flex flex-col gap-4">
               <TextField className="w-full" isRequired>
-                <Label>工程名称</Label>
+                <Label>{t("form.name.label")}</Label>
                 <Input
                   value={newProjectName}
                   onChange={(event) => setNewProjectName(event.target.value)}
-                  placeholder="输入工程名称"
+                  placeholder={t("form.name.placeholder")}
                   autoFocus
                 />
-                <Description>创建工程时必填</Description>
+                <Description>{t("form.name.help")}</Description>
               </TextField>
               <TextField className="w-full">
-                <Label>工程描述</Label>
+                <Label>{t("form.description.label")}</Label>
                 <Input
                   value={newProjectDescription}
                   onChange={(event) =>
                     setNewProjectDescription(event.target.value)
                   }
-                  placeholder="输入工程描述（可选）"
+                  placeholder={t("form.description.placeholder")}
                 />
-                <Description>可选，用于标注工程背景</Description>
+                <Description>{t("form.description.help")}</Description>
               </TextField>
               <div className="flex gap-2 justify-end">
                 <Button
                   variant="ghost"
                   onPress={() => setShowNewProjectForm(false)}
                 >
-                  取消
+                  {t("buttons.cancel")}
                 </Button>
                 <Button
                   variant="primary"
                   onPress={handleCreateProject}
                   isDisabled={!newProjectName.trim()}
                 >
-                  创建
+                  {t("buttons.create")}
                 </Button>
               </div>
             </div>
@@ -204,7 +214,7 @@ export default function ProjectSelector({
               className="flex items-center gap-2"
             >
               <Plus size={16} />
-              新建工程
+              {t("buttons.new")}
             </Button>
           )}
         </div>

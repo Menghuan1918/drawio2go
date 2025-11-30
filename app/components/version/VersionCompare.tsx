@@ -36,6 +36,7 @@ import {
 } from "@/app/lib/svg-smart-diff";
 import { useStorageXMLVersions } from "@/app/hooks/useStorageXMLVersions";
 import { formatVersionTimestamp } from "@/app/lib/format-utils";
+import { useAppTranslation } from "@/app/i18n/hooks";
 
 interface VersionCompareProps {
   versionA: XMLVersion;
@@ -66,17 +67,19 @@ const MIN_SCALE = 0.3;
 const MAX_SCALE = 4;
 const SCALE_STEP = 0.2;
 
-function formatVersionMeta(version: XMLVersion) {
+function formatVersionMeta(version: XMLVersion, locale: string) {
   return `${version.semantic_version} · ${formatVersionTimestamp(
     version.created_at,
     "full",
+    locale,
   )}`;
 }
 
-function formatVersionLabel(version: XMLVersion) {
+function formatVersionLabel(version: XMLVersion, locale: string) {
   return `${version.semantic_version} (${formatVersionTimestamp(
     version.created_at,
     "compact",
+    locale,
   )})`;
 }
 
@@ -92,6 +95,7 @@ export function VersionCompare({
   isOpen,
   onClose,
 }: VersionCompareProps) {
+  const { i18n } = useAppTranslation("version");
   const [isPortalReady, setIsPortalReady] = React.useState(false);
   const [currentVersionA, setCurrentVersionA] =
     React.useState<XMLVersion>(initialVersionA);
@@ -435,7 +439,7 @@ export function VersionCompare({
       className="version-compare__overlay"
       role="dialog"
       aria-modal="true"
-      aria-label={`版本对比：${formatVersionMeta(currentVersionA)} 对比 ${formatVersionMeta(currentVersionB)}`}
+      aria-label={`版本对比：${formatVersionMeta(currentVersionA, i18n.language)} 对比 ${formatVersionMeta(currentVersionB, i18n.language)}`}
       onClick={onClose}
     >
       <Card.Root
@@ -471,9 +475,9 @@ export function VersionCompare({
                   <ListBox.Item
                     key={v.id}
                     id={v.id}
-                    textValue={formatVersionLabel(v)}
+                    textValue={formatVersionLabel(v, i18n.language)}
                   >
-                    {formatVersionLabel(v)}
+                    {formatVersionLabel(v, i18n.language)}
                   </ListBox.Item>
                 ))}
               </ListBox>
@@ -508,9 +512,9 @@ export function VersionCompare({
                   <ListBox.Item
                     key={v.id}
                     id={v.id}
-                    textValue={formatVersionLabel(v)}
+                    textValue={formatVersionLabel(v, i18n.language)}
                   >
-                    {formatVersionLabel(v)}
+                    {formatVersionLabel(v, i18n.language)}
                   </ListBox.Item>
                 ))}
               </ListBox>

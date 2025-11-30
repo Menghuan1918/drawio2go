@@ -101,9 +101,13 @@ const DrawioEditorNative = forwardRef<DrawioEditorRef, DrawioEditorNativeProps>(
     // 优先读取 localStorage 中的用户偏好，回退到系统主题
     const [initialTheme] = useState<"light" | "dark">(() => {
       if (typeof window === "undefined") return "light";
-      const savedTheme = localStorage.getItem("theme");
-      if (savedTheme === "dark" || savedTheme === "light") {
-        return savedTheme;
+      try {
+        const savedTheme = window.localStorage.getItem("theme");
+        if (savedTheme === "dark" || savedTheme === "light") {
+          return savedTheme;
+        }
+      } catch {
+        // 无痕模式等环境下读取失败时回退系统主题
       }
       // 回退到系统主题
       return window.matchMedia("(prefers-color-scheme: dark)").matches

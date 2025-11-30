@@ -3,9 +3,17 @@
 import { Card, Checkbox, Button } from "@heroui/react";
 import { Eye, MessagesSquare } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { zhCN } from "date-fns/locale";
+import type { Locale as DateFnsLocale } from "date-fns";
+import { enUS, zhCN } from "date-fns/locale";
 import type { Conversation } from "@/app/lib/storage";
 import { formatConversationDate } from "@/app/lib/format-utils";
+import { defaultLocale } from "@/app/i18n/config";
+import { useAppTranslation } from "@/app/i18n/hooks";
+
+const DATE_FNS_LOCALE_MAP: Record<string, DateFnsLocale> = {
+  "en-US": enUS,
+  "zh-CN": zhCN,
+};
 
 interface ConversationListProps {
   conversations: Conversation[];
@@ -24,6 +32,12 @@ export default function ConversationList({
   onPreview,
   onOpenConversation,
 }: ConversationListProps) {
+  const { i18n } = useAppTranslation("chat");
+  const dateFnsLocale =
+    DATE_FNS_LOCALE_MAP[i18n.language] ??
+    DATE_FNS_LOCALE_MAP[defaultLocale] ??
+    enUS;
+
   if (!conversations || conversations.length === 0) {
     return (
       <div className="history-empty">
@@ -42,7 +56,7 @@ export default function ConversationList({
           conv.updated_at ?? conv.created_at,
           {
             addSuffix: true,
-            locale: zhCN,
+            locale: dateFnsLocale,
           },
         );
 
@@ -90,7 +104,12 @@ export default function ConversationList({
                     •
                   </span>
                   <span>
-                    创建 {formatConversationDate(conv.created_at, "date")}
+                    创建{" "}
+                    {formatConversationDate(
+                      conv.created_at,
+                      "date",
+                      i18n.language,
+                    )}
                   </span>
                 </div>
               </div>

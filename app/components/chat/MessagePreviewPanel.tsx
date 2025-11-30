@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { X, MessageSquare, User, Bot } from "lucide-react";
 import type { Conversation, Message } from "@/app/lib/storage";
 import { formatConversationDate } from "@/app/lib/format-utils";
+import { useAppTranslation } from "@/app/i18n/hooks";
 
 interface MessagePreviewPanelProps {
   isOpen: boolean;
@@ -35,11 +36,14 @@ export default function MessagePreviewPanel({
   onClose,
   onOpenConversation,
 }: MessagePreviewPanelProps) {
+  const { i18n } = useAppTranslation("chat");
+
   if (!isOpen || !conversation) return null;
 
   const updatedLabel = formatConversationDate(
     conversation.updated_at ?? conversation.created_at,
     "datetime",
+    i18n.language,
   );
 
   return (
