@@ -17,5 +17,115 @@
       "selectButton": "选择目录",
       "description": "新建项目时默认保存的目录"
     }
+  },
+  "llm": {
+    "title": "LLM 配置",
+    "description": "配置 API 端点、模型与调用参数",
+    "apiUrl": {
+      "label": "API 地址",
+      "placeholder": "https://api.example.com/v1",
+      "description": "OpenAI 兼容 / DeepSeek 兼容接口地址"
+    },
+    "provider": {
+      "label": "供应商",
+      "description": "选择后自动填充默认参数"
+    },
+    "apiKey": {
+      "label": "API Key",
+      "placeholder": "sk-...",
+      "description": "仅保存在本地，不会上传"
+    },
+    "modelName": {
+      "label": "模型名称",
+      "placeholder": "gpt-4o",
+      "description": "可填写自定义模型 ID"
+    },
+    "temperature": {
+      "label": "Temperature",
+      "description": "0 = 最保守，1 = 更具创造性"
+    },
+    "maxToolRounds": {
+      "label": "最大工具调用轮次",
+      "description": "限制单次对话可连续调用工具的次数"
+    },
+    "providers": {
+      "openai-compatible": {
+        "label": "OpenAI 兼容",
+        "description": "适用于大多数兼容 OpenAI API 的服务"
+      },
+      "deepseek": {
+        "label": "DeepSeek",
+        "description": "官方 DeepSeek API，支持聊天与推理模型"
+      },
+      "openai-reasoning": {
+        "label": "OpenAI Reasoning",
+        "description": "针对 o3 等推理模型的专用入口"
+      }
+    }
+  },
+  "systemPrompt": {
+    "label": "系统提示词",
+    "button": "编辑系统提示词",
+    "title": "系统提示词",
+    "contentLabel": "系统提示词内容",
+    "placeholder": "输入系统提示词...",
+    "description": "定义 AI 助手的行为和角色",
+    "cancel": "取消",
+    "save": "保存",
+    "reset": "恢复默认",
+    "charsLeft": "剩余 {{count}} 字符",
+    "updatedAt": "已保存于 {{time}}"
+  },
+  "connectionTest": {
+    "title": "测试结果",
+    "description": "测试当前配置是否正确，发送一个简单的测试请求",
+    "button": "测试连接",
+    "testing": "测试中...",
+    "loading": "正在测试连接...",
+    "success": "测试成功！模型响应：{{response}}",
+    "error": "测试失败：{{error}}",
+    "close": "关闭"
+  },
+  "version": {
+    "title": "版本管理设置",
+    "description": "配置 AI 编辑相关的自动版本策略",
+    "autoVersionOnAIEdit": {
+      "label": "AI 编辑自动版本",
+      "description": "AI 批量编辑或覆写 XML 前自动创建子版本快照"
+    }
+  },
+  "actionBar": {
+    "unsavedChanges": "有未保存的更改",
+    "cancel": "取消",
+    "save": "保存"
+  },
+  "toasts": {
+    "saveSuccess": "设置已保存",
+    "saveFailed": "保存失败：{{error}}",
+    "testSuccess": "连接正常，延迟 {{latency}} ms",
+    "testFailed": "连接失败：{{error}}",
+    "resetSuccess": "已恢复默认系统提示词",
+    "resetFailed": "无法恢复默认提示词：{{error}}",
+    "loadFailed": "加载设置失败：{{error}}"
+  },
+  "errors": {
+    "required": "必填项",
+    "invalidUrl": "请输入有效的 URL",
+    "missingApiKey": "需要 API Key",
+    "outOfRange": "数值超出允许范围",
+    "requestFailed": "请求失败：{{message}}",
+    "selectFolderFailed": "选择目录失败",
+    "loadFailed": "加载设置失败",
+    "saveFailed": "保存设置失败"
+  },
+  "file": {
+    "title": "文件路径配置",
+    "description": "设置 DrawIO 文件的默认保存位置",
+    "defaultPath": {
+      "label": "默认启动路径",
+      "placeholder": "/path/to/folder",
+      "browse": "浏览",
+      "note": "保存文件时将优先使用此路径，仅在 Electron 环境下生效"
+    }
   }
 }

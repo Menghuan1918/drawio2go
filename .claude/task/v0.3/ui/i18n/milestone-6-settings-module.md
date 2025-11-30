@@ -2,439 +2,234 @@
 
 ## 目标
 
-完成设置模块所有组件的国际化改造，包括 GeneralSettingsPanel（M2 已完成）、LLMSettingsPanel、VersionSettingsPanel 和其他设置子组件。
+完成设置模块所有组件的国际化改造,包括 SettingsSidebar、LLMSettingsPanel、VersionSettingsPanel、FileSettingsPanel、SystemPromptEditor 和 ConnectionTester。
 
-## 预估时间
+## 完成状态
 
-2-3 小时
+✅ **已完成** - 所有设置相关组件已完成国际化
 
-## 前置依赖
+## 已完成的工作
 
-- M1: 基础设施搭建完成
-- M2: 语言切换器（GeneralSettingsPanel）已完成
-- M3-M5: TopBar、ProjectSelector、UnifiedSidebar 完成
+### 1. 核心组件国际化
 
-## 任务清单
+#### SettingsSidebar.tsx
+- ✅ 导入并使用 `useAppTranslation("settings")` hook
+- ✅ 国际化操作栏文本（未保存的更改、取消、保存）
+- ✅ 国际化错误消息和成功提示
+- ✅ 新增 Toast 提示功能,支持成功/错误消息显示
+- ✅ Toast 消息完全国际化
 
-### 6.1 提取中文文本
+#### LLMSettingsPanel.tsx
+- ✅ 国际化面板标题和描述
+- ✅ 国际化所有表单字段:
+  - API URL (标签、占位符、描述)
+  - Provider (标签、描述、选项列表)
+  - API Key (标签、占位符、描述)
+  - Model Name (标签、占位符、描述)
+  - Temperature (标签、描述)
+  - Max Tool Rounds (标签、描述)
+- ✅ 使用 `getProviderOptions(t)` 动态生成供应商选项
+- ✅ 集成 SystemPromptEditor 和 ConnectionTester 子组件
 
-**涉及文件**:
+#### VersionSettingsPanel.tsx
+- ✅ 国际化面板标题和描述
+- ✅ 国际化 "AI 编辑自动版本" 开关
+  - 标签文本
+  - 描述文本
 
-- `app/components/SettingsSidebar.tsx`
-- `app/components/settings/SettingsNav.tsx`
-- `app/components/settings/LLMSettingsPanel.tsx`
-- `app/components/settings/VersionSettingsPanel.tsx`
-- `app/components/settings/SystemPromptEditor.tsx`（如有）
-- 其他设置子组件
+#### FileSettingsPanel.tsx
+- ✅ 国际化文件路径配置面板
+- ✅ 国际化字段:
+  - 面板标题和描述
+  - 默认路径标签、占位符、浏览按钮
+  - 注意事项说明
 
-**需要提取的文本** (~60 条):
+#### SystemPromptEditor.tsx
+- ✅ 国际化系统提示词编辑器
+- ✅ 国际化所有文本:
+  - 标签、按钮、描述
+  - 弹窗标题和内容标签
+  - 占位符文本
+  - 取消、保存、恢复默认按钮
 
-- LLM 配置：模型名称、API Key、Base URL、温度参数等标签
-- 版本设置：自动快照、快照间隔、保留策略等
-- 系统提示词：编辑器标签、占位符、帮助文本
-- 导航标签：通用、LLM、版本
-- 按钮和操作文本
+#### ConnectionTester.tsx
+- ✅ 国际化连接测试组件
+- ✅ 国际化所有文本:
+  - 测试按钮和描述
+  - 测试结果弹窗标题
+  - 成功/错误消息 (支持插值)
+  - 加载状态文本
+  - 关闭按钮
 
-### 6.2 创建翻译资源
+#### GeneralSettingsPanel.tsx
+- ✅ 更新错误处理国际化 (`errors.selectFolderFailed`)
 
-**更新文件**:
+### 2. 配置重构
 
-- `locales/zh-CN/settings.json`（M2 已创建部分内容）
-- `locales/en-US/settings.json`
+#### constants.ts
+- ✅ 重构供应商选项结构
+- ✅ 创建 `getProviderOptions(t: TFunction)` 函数
+- ✅ 将供应商列表改为基础值数组
+- ✅ 通过翻译函数动态生成 label 和 description
 
-**翻译结构示例**:
+### 3. 翻译资源
+
+#### public/locales/zh-CN/settings.json
+新增以下命名空间:
 
 ```json
 {
-  "nav": {
-    "general": "通用",
-    "llm": "LLM 配置",
-    "version": "版本设置"
-  },
-  "general": {
-    "title": "通用设置",
-    "description": "语言、文件路径等基础配置",
-    "language": {
-      "label": "语言",
-      "description": "切换界面显示语言"
-    },
-    "defaultPath": {
-      "label": "默认文件路径",
-      "placeholder": "/home/user/drawio",
-      "selectButton": "选择目录",
-      "description": "新建项目时默认保存的目录"
-    }
-  },
   "llm": {
     "title": "LLM 配置",
-    "description": "配置大语言模型相关参数",
-    "provider": {
-      "label": "提供商",
-      "description": "选择 LLM 服务提供商"
-    },
-    "apiKey": {
-      "label": "API Key",
-      "placeholder": "输入 API Key",
-      "description": "用于验证的 API 密钥",
-      "show": "显示",
-      "hide": "隐藏"
-    },
-    "baseUrl": {
-      "label": "Base URL",
-      "placeholder": "https://api.openai.com/v1",
-      "description": "API 服务地址"
-    },
-    "model": {
-      "label": "模型名称",
-      "placeholder": "gpt-4",
-      "description": "使用的模型标识符"
-    },
-    "temperature": {
-      "label": "温度 (Temperature)",
-      "description": "控制输出的随机性 (0-2)",
-      "value": "当前值: {{value}}"
-    },
-    "maxTokens": {
-      "label": "最大 Token 数",
-      "description": "单次请求的最大 Token 数"
-    }
-  },
-  "version": {
-    "title": "版本设置",
-    "description": "自动快照和版本管理配置",
-    "autoSnapshot": {
-      "label": "自动快照",
-      "description": "保存时自动创建版本快照",
-      "enabled": "已启用",
-      "disabled": "已禁用"
-    },
-    "snapshotInterval": {
-      "label": "快照间隔",
-      "description": "自动创建快照的时间间隔（分钟）"
-    },
-    "retention": {
-      "label": "保留策略",
-      "description": "旧版本的保留规则",
-      "keepAll": "保留所有",
-      "keepLast": "仅保留最近 {{count}} 个",
-      "keepDays": "保留 {{days}} 天内"
+    "description": "配置 API 端点、模型与调用参数",
+    "apiUrl": { "label", "placeholder", "description" },
+    "provider": { "label", "description" },
+    "apiKey": { "label", "placeholder", "description" },
+    "modelName": { "label", "placeholder", "description" },
+    "temperature": { "label", "description" },
+    "maxToolRounds": { "label", "description" },
+    "providers": {
+      "openai-compatible": { "label", "description" },
+      "deepseek": { "label", "description" },
+      "openai-reasoning": { "label", "description" }
     }
   },
   "systemPrompt": {
-    "title": "系统提示词",
-    "description": "自定义 AI 助手的系统提示词",
-    "label": "提示词内容",
-    "placeholder": "输入系统提示词...",
-    "reset": "重置为默认",
-    "save": "保存"
+    "label", "button", "title", "contentLabel",
+    "placeholder", "description", "cancel", "save", "reset"
   },
-  "buttons": {
-    "save": "保存",
-    "cancel": "取消",
-    "reset": "重置",
-    "test": "测试连接"
+  "connectionTest": {
+    "title", "description", "button", "testing",
+    "loading", "success", "error", "close"
   },
-  "messages": {
-    "saved": "设置已保存",
-    "resetConfirm": "确定要重置所有设置吗？",
-    "testSuccess": "连接测试成功",
-    "testFailed": "连接测试失败: {{error}}"
+  "version": {
+    "title", "description",
+    "autoVersionOnAIEdit": { "label", "description" }
+  },
+  "actionBar": {
+    "unsavedChanges", "cancel", "save"
+  },
+  "toasts": {
+    "saveSuccess", "saveFailed", "testSuccess",
+    "testFailed", "resetSuccess", "resetFailed", "loadFailed"
+  },
+  "errors": {
+    "required", "invalidUrl", "missingApiKey",
+    "outOfRange", "requestFailed", "selectFolderFailed",
+    "loadFailed", "saveFailed"
+  },
+  "file": {
+    "title", "description",
+    "defaultPath": { "label", "placeholder", "browse", "note" }
   }
 }
 ```
 
-### 6.3 改造 LLMSettingsPanel
+#### public/locales/en-US/settings.json
+- ✅ 对应完整的英文翻译
 
-**文件**: `app/components/settings/LLMSettingsPanel.tsx`
+### 4. 代码质量改进
 
-**改造要点**:
+- ✅ 所有组件使用 `useAppTranslation` hook
+- ✅ 移除所有硬编码中文文本
+- ✅ 使用插值变量处理动态内容 (如 `{{error}}`, `{{response}}`)
+- ✅ Toast 提示使用 `useCallback` 和定时器自动清理
+- ✅ 正确处理组件卸载时的定时器清理
 
-1. 导入 Hook:
+## 技术细节
 
-```tsx
-import { useTranslation } from "@/app/i18n/hooks";
+### 供应商选项动态生成
 
-export default function LLMSettingsPanel() {
-  const { t } = useTranslation("settings");
+**原方案** (硬编码):
+```typescript
+export const PROVIDER_OPTIONS = [
+  { value: "openai-compatible", label: "OpenAI Compatible", description: "..." },
   // ...
-}
+];
 ```
 
-2. 替换表单标签:
-
-```tsx
-<TextField>
-  <Label>{t("llm.apiKey.label")}</Label>
-  <Input
-    type={showKey ? "text" : "password"}
-    placeholder={t("llm.apiKey.placeholder")}
-  />
-  <Description>{t("llm.apiKey.description")}</Description>
-</TextField>
+**新方案** (国际化):
+```typescript
+export const getProviderOptions = (t: TFunction): ProviderOption[] =>
+  PROVIDER_OPTIONS.map((value) => ({
+    value,
+    label: t(`llm.providers.${value}.label`),
+    description: t(`llm.providers.${value}.description`),
+  }));
 ```
 
-3. 处理滑块组件（温度参数）:
+### Toast 提示实现
 
-```tsx
-<Slider
-  label={t("llm.temperature.label")}
-  description={t("llm.temperature.value", { value: temperature })}
-  minValue={0}
-  maxValue={2}
-  step={0.1}
-  value={temperature}
-  onChange={setTemperature}
-/>
+```typescript
+const [toast, setToast] = useState<{
+  message: string;
+  variant: "success" | "error";
+} | null>(null);
+
+const showToast = useCallback((message: string, variant: "success" | "error" = "success") => {
+  if (toastTimer.current) clearTimeout(toastTimer.current);
+  setToast({ message, variant });
+  toastTimer.current = setTimeout(() => setToast(null), 3200);
+}, []);
 ```
 
-4. 处理按钮:
+## 验收清单
 
-```tsx
-<Button onPress={handleSave}>{t('buttons.save')}</Button>
-<Button onPress={handleTest}>{t('buttons.test')}</Button>
-```
+- ✅ SettingsSidebar 完全国际化
+- ✅ LLMSettingsPanel 完全国际化
+- ✅ VersionSettingsPanel 完全国际化
+- ✅ FileSettingsPanel 完全国际化
+- ✅ SystemPromptEditor 完全国际化
+- ✅ ConnectionTester 完全国际化
+- ✅ GeneralSettingsPanel 错误处理国际化
+- ✅ constants.ts 供应商选项国际化
+- ✅ zh-CN 翻译文件完整
+- ✅ en-US 翻译文件完整
+- ✅ 所有硬编码中文已移除
+- ✅ Toast 提示国际化
+- ✅ 错误消息国际化
+- ✅ 动态内容使用插值变量
 
-### 6.4 改造 VersionSettingsPanel
+## 测试场景
 
-**文件**: `app/components/settings/VersionSettingsPanel.tsx`
-
-**改造要点**:
-
-1. Switch 组件:
-
-```tsx
-<Switch isSelected={autoSnapshot} onChange={setAutoSnapshot}>
-  {t('version.autoSnapshot.label')}
-</Switch>
-<Description>
-  {t('version.autoSnapshot.description')} -
-  {autoSnapshot ? t('version.autoSnapshot.enabled') : t('version.autoSnapshot.disabled')}
-</Description>
-```
-
-2. NumberField 组件:
-
-```tsx
-<NumberField
-  label={t("version.snapshotInterval.label")}
-  description={t("version.snapshotInterval.description")}
-  value={interval}
-  onChange={setInterval}
-  minValue={1}
-  maxValue={60}
-/>
-```
-
-3. Select 组件（保留策略）:
-
-```tsx
-<Select
-  label={t("version.retention.label")}
-  description={t("version.retention.description")}
-  selectedKey={retentionPolicy}
-  onSelectionChange={setRetentionPolicy}
->
-  <SelectItem key="all">{t("version.retention.keepAll")}</SelectItem>
-  <SelectItem key="last-10">
-    {t("version.retention.keepLast", { count: 10 })}
-  </SelectItem>
-  <SelectItem key="days-30">
-    {t("version.retention.keepDays", { days: 30 })}
-  </SelectItem>
-</Select>
-```
-
-### 6.5 改造 SystemPromptEditor
-
-**文件**: `app/components/settings/SystemPromptEditor.tsx`（如存在）
-
-**改造要点**:
-
-1. 文本编辑器:
-
-```tsx
-<TextArea
-  label={t("systemPrompt.label")}
-  placeholder={t("systemPrompt.placeholder")}
-  description={t("systemPrompt.description")}
-  value={prompt}
-  onChange={setPrompt}
-  rows={10}
-/>
-```
-
-2. 重置确认:
-
-```tsx
-const handleReset = () => {
-  if (confirm(t("messages.resetConfirm"))) {
-    resetToDefault();
-  }
-};
-```
-
-### 6.6 更新 SettingsNav
-
-**文件**: `app/components/settings/SettingsNav.tsx`
-
-确保导航标签国际化：
-
-```tsx
-const { t } = useTranslation("settings");
-
-<Button aria-label={t("nav.general")}>
-  <Settings size={20} />
-  <span>{t("nav.general")}</span>
-</Button>;
-```
-
-### 6.7 验证功能
-
-**测试场景**:
-
+### 基础国际化测试
 1. 打开设置侧边栏
 2. 切换到英语
-3. 验证：
-   - [ ] 导航标签（通用、LLM、版本）显示为英文
-   - [ ] LLM 配置面板所有标签、描述、占位符为英文
-   - [ ] 版本设置面板所有标签为英文
-4. 填写 LLM 配置
-5. 切换到中文
-6. 验证：
-   - [ ] 所有文本立即更新为中文
-   - [ ] 已填写的输入内容不变
-   - [ ] 滑块显示值正确更新
-7. 测试连接
-8. 验证：
-   - [ ] 成功/失败消息根据语言显示
+3. 验证所有面板标题、标签、描述、按钮显示为英文
+4. 切换回中文,验证所有文本立即更新
 
-## 翻译资源完整示例
+### LLM 配置测试
+1. 在中文模式下配置 LLM 参数
+2. 切换到英语
+3. 验证已填写内容保持不变
+4. 验证所有标签和描述更新为英文
+5. 验证供应商下拉列表选项为英文
 
-详见上述 6.2 节的完整 JSON 示例。
+### 连接测试
+1. 配置 LLM 后点击"测试连接"
+2. 验证加载状态文本国际化
+3. 验证成功/失败消息国际化
+4. 切换语言后重新测试,验证消息语言正确
 
-**`locales/en-US/settings.json`** 对应翻译：
+### Toast 提示测试
+1. 修改设置后保存
+2. 验证成功 Toast 显示且语言正确
+3. 触发保存错误 (如权限问题)
+4. 验证错误 Toast 显示且语言正确
 
-```json
-{
-  "nav": {
-    "general": "General",
-    "llm": "LLM Config",
-    "version": "Version"
-  },
-  "general": {
-    "title": "General Settings",
-    "description": "Language, file paths, and other basic configurations",
-    "language": {
-      "label": "Language",
-      "description": "Switch interface language"
-    },
-    "defaultPath": {
-      "label": "Default File Path",
-      "placeholder": "/home/user/drawio",
-      "selectButton": "Select Directory",
-      "description": "Default directory for new projects"
-    }
-  },
-  "llm": {
-    "title": "LLM Configuration",
-    "description": "Configure large language model parameters",
-    "provider": {
-      "label": "Provider",
-      "description": "Select LLM service provider"
-    },
-    "apiKey": {
-      "label": "API Key",
-      "placeholder": "Enter API Key",
-      "description": "API key for authentication",
-      "show": "Show",
-      "hide": "Hide"
-    },
-    "baseUrl": {
-      "label": "Base URL",
-      "placeholder": "https://api.openai.com/v1",
-      "description": "API service endpoint"
-    },
-    "model": {
-      "label": "Model Name",
-      "placeholder": "gpt-4",
-      "description": "Model identifier to use"
-    },
-    "temperature": {
-      "label": "Temperature",
-      "description": "Controls randomness of output (0-2)",
-      "value": "Current value: {{value}}"
-    },
-    "maxTokens": {
-      "label": "Max Tokens",
-      "description": "Maximum tokens per request"
-    }
-  },
-  "version": {
-    "title": "Version Settings",
-    "description": "Auto snapshot and version management configuration",
-    "autoSnapshot": {
-      "label": "Auto Snapshot",
-      "description": "Automatically create version snapshots on save",
-      "enabled": "Enabled",
-      "disabled": "Disabled"
-    },
-    "snapshotInterval": {
-      "label": "Snapshot Interval",
-      "description": "Time interval for automatic snapshots (minutes)"
-    },
-    "retention": {
-      "label": "Retention Policy",
-      "description": "Rules for keeping old versions",
-      "keepAll": "Keep all",
-      "keepLast": "Keep last {{count}}",
-      "keepDays": "Keep for {{days}} days"
-    }
-  },
-  "systemPrompt": {
-    "title": "System Prompt",
-    "description": "Customize AI assistant system prompt",
-    "label": "Prompt Content",
-    "placeholder": "Enter system prompt...",
-    "reset": "Reset to Default",
-    "save": "Save"
-  },
-  "buttons": {
-    "save": "Save",
-    "cancel": "Cancel",
-    "reset": "Reset",
-    "test": "Test Connection"
-  },
-  "messages": {
-    "saved": "Settings saved",
-    "resetConfirm": "Are you sure you want to reset all settings?",
-    "testSuccess": "Connection test successful",
-    "testFailed": "Connection test failed: {{error}}"
-  }
-}
-```
-
-## 验收标准
-
-- [ ] `LLMSettingsPanel.tsx` 完全国际化
-- [ ] `VersionSettingsPanel.tsx` 完全国际化
-- [ ] `SystemPromptEditor.tsx`（如有）完全国际化
-- [ ] `SettingsNav.tsx` 导航标签国际化
-- [ ] `settings.json` 翻译文件完整（zh-CN + en-US）
-- [ ] 所有表单标签、占位符、描述国际化
-- [ ] 按钮和消息文本国际化
-- [ ] 切换语言后所有文本立即更新
-- [ ] 表单输入内容不受语言切换影响
-- [ ] 滑块、开关等控件显示文本正确更新
-- [ ] 运行 `grep -rn "[\u4e00-\u9fa5]" app/components/settings --include="*.tsx"` 无硬编码中文
-- [ ] 运行 `pnpm run lint` 无错误
+### 系统提示词测试
+1. 打开系统提示词编辑器
+2. 验证弹窗标题、标签、按钮国际化
+3. 点击"恢复默认"
+4. 验证按钮文本国际化
 
 ## 注意事项
 
-1. **敏感信息**: API Key 等敏感信息的显示/隐藏按钮文本也需要国际化
-2. **动态值**: 滑块当前值、保留策略等动态内容使用插值变量
-3. **确认对话框**: 使用原生 `confirm()` 时，消息需要国际化
-4. **Toast 通知**: 如果使用 Toast 提示，确保消息也国际化
+1. **插值变量**: 错误消息和成功提示使用 `{{error}}`, `{{response}}` 等插值变量
+2. **动态选项**: 供应商选项通过 `getProviderOptions(t)` 动态生成,确保语言切换时立即更新
+3. **Toast 清理**: 使用 `useEffect` 清理定时器,防止内存泄漏
+4. **类型安全**: `getProviderOptions` 返回类型明确为 `ProviderOption[]`
 
 ## 下一步
 
-完成后继续 [M7: 版本管理模块国际化](./milestone-7-version-module.md)
+继续 **M7: 画布与工具栏国际化** (如需要)

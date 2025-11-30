@@ -1,6 +1,7 @@
 "use client";
 
 import { Description, Label, Switch } from "@heroui/react";
+import { useAppTranslation } from "@/app/i18n/hooks";
 
 export interface VersionSettingsPanelProps {
   settings: {
@@ -18,12 +19,13 @@ export function VersionSettingsPanel({
   onChange,
 }: VersionSettingsPanelProps) {
   const { autoVersionOnAIEdit } = settings;
+  const { t } = useAppTranslation("settings");
 
   return (
     <div className="settings-panel flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <h3 className="section-title">版本管理设置</h3>
-        <p className="section-description">配置 AI 编辑相关的自动版本策略</p>
+        <h3 className="section-title">{t("version.title")}</h3>
+        <p className="section-description">{t("version.description")}</p>
       </div>
 
       <div className="flex flex-col gap-2">
@@ -37,10 +39,12 @@ export function VersionSettingsPanel({
           <Switch.Control>
             <Switch.Thumb />
           </Switch.Control>
-          <Label className="text-sm text-foreground">AI 编辑自动版本</Label>
+          <Label className="text-sm text-foreground">
+            {t("version.autoVersionOnAIEdit.label")}
+          </Label>
         </Switch>
         <Description className="text-sm text-default-500">
-          AI 批量编辑或覆写 XML 前自动创建子版本快照
+          {t("version.autoVersionOnAIEdit.description")}
         </Description>
       </div>
     </div>

@@ -37,9 +37,9 @@ export default function GeneralSettingsPanel({
         onDefaultPathChange(selectedPath);
       }
     } catch (error) {
-      console.error("选择目录失败", error);
+      console.error(t("errors.selectFolderFailed"), error);
     }
-  }, [canSelectFolder, onDefaultPathChange]);
+  }, [canSelectFolder, onDefaultPathChange, t]);
 
   return (
     <div className="settings-panel">

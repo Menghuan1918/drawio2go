@@ -1,3 +1,4 @@
+import { TFunction } from "i18next";
 import { ProviderType } from "@/app/types/chat";
 
 /**
@@ -11,22 +12,17 @@ export interface ProviderOption {
 }
 
 /**
- * LLM 供应商选项
+ * LLM 供应商基础列表（仅 value，用于组合多语言 label/description）
  */
-export const PROVIDER_OPTIONS: ProviderOption[] = [
-  {
-    value: "openai-compatible",
-    label: "OpenAI Compatible",
-    description: "通用 OpenAI 兼容服务，支持大部分 OpenAI 协议的服务商",
-  },
-  {
-    value: "deepseek",
-    label: "DeepSeek",
-    description: "DeepSeek API，基于 OpenAI Compatible 实现",
-  },
-  {
-    value: "openai-reasoning",
-    label: "OpenAI Reasoning (o1/o3)",
-    description: "OpenAI 官方 Reasoning 模型专用（o1、o3 系列）",
-  },
+export const PROVIDER_OPTIONS: ProviderType[] = [
+  "openai-compatible",
+  "deepseek",
+  "openai-reasoning",
 ];
+
+export const getProviderOptions = (t: TFunction): ProviderOption[] =>
+  PROVIDER_OPTIONS.map((value) => ({
+    value,
+    label: t(`llm.providers.${value}.label`),
+    description: t(`llm.providers.${value}.description`),
+  }));

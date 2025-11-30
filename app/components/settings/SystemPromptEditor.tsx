@@ -10,6 +10,7 @@ import {
   TextField,
 } from "@heroui/react";
 import { DEFAULT_SYSTEM_PROMPT } from "@/app/lib/config-utils";
+import { useAppTranslation } from "@/app/i18n/hooks";
 
 interface SystemPromptEditorProps {
   value: string;
@@ -24,6 +25,7 @@ export default function SystemPromptEditor({
   value,
   onChange,
 }: SystemPromptEditorProps) {
+  const { t } = useAppTranslation("settings");
   const [isOpen, setIsOpen] = useState(false);
   const [tempValue, setTempValue] = useState(value);
 
@@ -48,41 +50,43 @@ export default function SystemPromptEditor({
   return (
     <Popover isOpen={isOpen} onOpenChange={setIsOpen}>
       <div className="w-full mt-6">
-        <Label>系统提示词</Label>
+        <Label>{t("systemPrompt.label")}</Label>
         <Button
           variant="secondary"
           size="sm"
           className="mt-3 w-full"
           onPress={handleOpen}
         >
-          编辑系统提示词
+          {t("systemPrompt.button")}
         </Button>
-        <Description className="mt-3">定义 AI 助手的行为和角色</Description>
+        <Description className="mt-3">
+          {t("systemPrompt.description")}
+        </Description>
       </div>
       <Popover.Content className="modal-overlay-popover" placement="bottom">
         <Popover.Dialog className="modal-content prompt-modal">
           <Popover.Heading className="modal-title">
-            编辑系统提示词
+            {t("systemPrompt.title")}
           </Popover.Heading>
           <TextField className="w-full">
-            <Label>系统提示词内容</Label>
+            <Label>{t("systemPrompt.contentLabel")}</Label>
             <TextArea
               value={tempValue}
               onChange={(e) => setTempValue(e.target.value)}
-              placeholder="输入系统提示词..."
+              placeholder={t("systemPrompt.placeholder")}
               className="prompt-textarea"
               rows={15}
             />
           </TextField>
           <div className="modal-actions">
             <Button variant="ghost" size="sm" onPress={handleClose}>
-              取消
+              {t("systemPrompt.cancel")}
             </Button>
             <Button variant="secondary" size="sm" onPress={handleReset}>
-              恢复默认
+              {t("systemPrompt.reset")}
             </Button>
             <Button variant="primary" size="sm" onPress={handleSave}>
-              保存
+              {t("systemPrompt.save")}
             </Button>
           </div>
         </Popover.Dialog>

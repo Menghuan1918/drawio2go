@@ -75,7 +75,8 @@
       "Bash(pnpm test:*)",
       "Bash(done)",
       "Bash(pnpm build:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(node -e:*)"
     ],
     "deny": [],
     "ask": []

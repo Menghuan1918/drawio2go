@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button, Popover, Description, Spinner } from "@heroui/react";
 import { LLMConfig } from "@/app/types/chat";
 import { normalizeLLMConfig } from "@/app/lib/config-utils";
+import { useAppTranslation } from "@/app/i18n/hooks";
 
 interface ConnectionTesterProps {
   config: LLMConfig;
@@ -20,6 +21,7 @@ export default function ConnectionTester({ config }: ConnectionTesterProps) {
     success: boolean;
     message: string;
   } | null>(null);
+  const { t } = useAppTranslation("settings");
 
   const handleTest = async () => {
     setIsTesting(true);
@@ -46,18 +48,20 @@ export default function ConnectionTester({ config }: ConnectionTesterProps) {
       if (data.success) {
         setResult({
           success: true,
-          message: `测试成功！模型响应：${data.response}`,
+          message: t("connectionTest.success", { response: data.response }),
         });
       } else {
         setResult({
           success: false,
-          message: `测试失败：${data.error}`,
+          message: t("connectionTest.error", { error: data.error }),
         });
       }
     } catch (error: unknown) {
       setResult({
         success: false,
-        message: `测试失败：${(error as Error).message || "网络错误"}`,
+        message: t("connectionTest.error", {
+          error: (error as Error).message || "network error",
+        }),
       });
     } finally {
       setIsTesting(false);
@@ -79,19 +83,21 @@ export default function ConnectionTester({ config }: ConnectionTesterProps) {
           onPress={handleTest}
           isDisabled={isTesting}
         >
-          {isTesting ? "测试中..." : "测试连接"}
+          {isTesting ? t("connectionTest.testing") : t("connectionTest.button")}
         </Button>
         <Description className="mt-3">
-          测试当前配置是否正确，发送一个简单的测试请求
+          {t("connectionTest.description")}
         </Description>
       </div>
       <Popover.Content className="modal-overlay-popover" placement="bottom">
         <Popover.Dialog className="modal-content test-modal">
-          <Popover.Heading className="modal-title">测试结果</Popover.Heading>
+          <Popover.Heading className="modal-title">
+            {t("connectionTest.title")}
+          </Popover.Heading>
           {isTesting ? (
             <div className="test-loading">
               <Spinner />
-              <p>正在测试连接...</p>
+              <p>{t("connectionTest.loading")}</p>
             </div>
           ) : result ? (
             <div
@@ -110,7 +116,7 @@ export default function ConnectionTester({ config }: ConnectionTesterProps) {
               onPress={handleClose}
               isDisabled={isTesting}
             >
-              关闭
+              {t("connectionTest.close")}
             </Button>
           </div>
         </Popover.Dialog>

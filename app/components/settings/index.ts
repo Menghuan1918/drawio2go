@@ -12,6 +12,6 @@ export { default as SystemPromptEditor } from "./SystemPromptEditor";
 export { default as ConnectionTester } from "./ConnectionTester";
 
 // 常量和类型
-export { PROVIDER_OPTIONS } from "./constants";
+export { PROVIDER_OPTIONS, getProviderOptions } from "./constants";
 export type { ProviderOption } from "./constants";
 export type { SettingsTab } from "./SettingsNav";

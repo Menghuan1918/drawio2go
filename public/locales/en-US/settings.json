@@ -17,5 +17,115 @@
       "selectButton": "Select Directory",
       "description": "Default directory for saving new projects"
     }
+  },
+  "llm": {
+    "title": "LLM Configuration",
+    "description": "Set API endpoint, model, and call parameters",
+    "apiUrl": {
+      "label": "API URL",
+      "placeholder": "https://api.example.com/v1",
+      "description": "OpenAI-compatible / DeepSeek-compatible endpoint"
+    },
+    "provider": {
+      "label": "Provider",
+      "description": "Choosing a provider pre-fills sensible defaults"
+    },
+    "apiKey": {
+      "label": "API Key",
+      "placeholder": "sk-...",
+      "description": "Stored locally only and never uploaded"
+    },
+    "modelName": {
+      "label": "Model Name",
+      "placeholder": "gpt-4o",
+      "description": "Supports custom model IDs"
+    },
+    "temperature": {
+      "label": "Temperature",
+      "description": "0 = safest, 1 = more creative"
+    },
+    "maxToolRounds": {
+      "label": "Max Tool Rounds",
+      "description": "Limit consecutive tool calls per conversation"
+    },
+    "providers": {
+      "openai-compatible": {
+        "label": "OpenAI Compatible",
+        "description": "Works with most OpenAI-compatible services"
+      },
+      "deepseek": {
+        "label": "DeepSeek",
+        "description": "Official DeepSeek API with chat and reasoning models"
+      },
+      "openai-reasoning": {
+        "label": "OpenAI Reasoning",
+        "description": "Dedicated entry for reasoning models like o3"
+      }
+    }
+  },
+  "systemPrompt": {
+    "label": "System Prompt",
+    "button": "Edit System Prompt",
+    "title": "System Prompt",
+    "contentLabel": "Prompt Content",
+    "placeholder": "Enter system prompt...",
+    "description": "Define global behavior and guardrails for the AI editor",
+    "cancel": "Cancel",
+    "save": "Save",
+    "reset": "Reset to default prompt",
+    "charsLeft": "{{count}} characters remaining",
+    "updatedAt": "Saved at {{time}}"
+  },
+  "connectionTest": {
+    "title": "Test Result",
+    "description": "Send a health check to verify your API configuration",
+    "button": "Test Connection",
+    "testing": "Testing...",
+    "loading": "Testing connection...",
+    "success": "Connection succeeded: {{response}}",
+    "error": "Connection failed: {{error}}",
+    "close": "Close"
+  },
+  "version": {
+    "title": "Version Management Settings",
+    "description": "Configure automatic version strategies for AI edits",
+    "autoVersionOnAIEdit": {
+      "label": "Auto version for AI edits",
+      "description": "Create a sub-version snapshot before AI bulk edits or XML overwrite"
+    }
+  },
+  "actionBar": {
+    "unsavedChanges": "Unsaved changes",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "toasts": {
+    "saveSuccess": "Settings saved",
+    "saveFailed": "Save failed: {{error}}",
+    "testSuccess": "Connection healthy, latency {{latency}} ms",
+    "testFailed": "Connection failed: {{error}}",
+    "resetSuccess": "System prompt restored to default",
+    "resetFailed": "Unable to restore default prompt: {{error}}",
+    "loadFailed": "Failed to load settings: {{error}}"
+  },
+  "errors": {
+    "required": "Required",
+    "invalidUrl": "Please enter a valid URL",
+    "missingApiKey": "API key is required",
+    "outOfRange": "Value is out of allowed range",
+    "requestFailed": "Request failed: {{message}}",
+    "selectFolderFailed": "Failed to select folder",
+    "loadFailed": "Failed to load settings",
+    "saveFailed": "Failed to save settings"
+  },
+  "file": {
+    "title": "File Path Settings",
+    "description": "Set the default save location for DrawIO files",
+    "defaultPath": {
+      "label": "Default startup path",
+      "placeholder": "/path/to/folder",
+      "browse": "Browse",
+      "note": "This path is preferred when saving files and only works in Electron"
+    }
   }
 }

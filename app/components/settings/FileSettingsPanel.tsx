@@ -1,6 +1,7 @@
 "use client";
 
 import { TextField, Label, Input, Description, Button } from "@heroui/react";
+import { useAppTranslation } from "@/app/i18n/hooks";
 
 interface FileSettingsPanelProps {
   defaultPath: string;
@@ -17,26 +18,28 @@ export default function FileSettingsPanel({
   onChange,
   onBrowse,
 }: FileSettingsPanelProps) {
+  const { t } = useAppTranslation("settings");
+
   return (
     <div className="settings-panel">
-      <h3 className="section-title">文件路径配置</h3>
-      <p className="section-description">设置 DrawIO 文件的默认保存位置</p>
+      <h3 className="section-title">{t("file.title")}</h3>
+      <p className="section-description">{t("file.description")}</p>
 
       <TextField className="w-full mt-6">
-        <Label>默认启动路径</Label>
+        <Label>{t("file.defaultPath.label")}</Label>
         <div className="flex gap-3 mt-3">
           <Input
             value={defaultPath}
             onChange={(e) => onChange(e.target.value)}
-            placeholder="/path/to/folder"
+            placeholder={t("file.defaultPath.placeholder", "/path/to/folder")}
             className="flex-1"
           />
           <Button variant="secondary" size="sm" onPress={onBrowse}>
-            浏览
+            {t("file.defaultPath.browse")}
           </Button>
         </div>
         <Description className="mt-3">
-          保存文件时将优先使用此路径,仅在 Electron 环境下生效
+          {t("file.defaultPath.note")}
         </Description>
       </TextField>
     </div>
