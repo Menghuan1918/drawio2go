@@ -2,6 +2,8 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import type { RefObject } from "react";
+import { ErrorCodes } from "@/app/errors/error-codes";
+import i18n from "@/app/i18n/client";
 import {
   getStorage,
   DEFAULT_PROJECT_UUID,
@@ -31,7 +33,11 @@ import {
 import { materializeVersionXml } from "@/app/lib/storage/xml-version-engine";
 
 const DEFAULT_STORAGE_TIMEOUT = 8000;
-const DEFAULT_TIMEOUT_MESSAGE = "存储请求超时（8秒），请稍后重试";
+const getStorageTimeoutMessage = (
+  seconds: number = DEFAULT_STORAGE_TIMEOUT / 1000,
+) =>
+  `[${ErrorCodes.STORAGE_TIMEOUT}] ${i18n.t("errors:storage.timeout", { seconds })}`;
+const DEFAULT_TIMEOUT_MESSAGE = getStorageTimeoutMessage();
 
 const withStorageTimeout = <T>(
   promise: Promise<T>,
@@ -75,8 +81,7 @@ export function useStorageXMLVersions() {
     Map<string, Set<(versions: XMLVersion[]) => void>>
   >(new Map());
   const resolveStorage = useCallback(
-    () =>
-      withStorageTimeout(getStorage(), "获取存储实例超时（8秒），请稍后重试"),
+    () => withStorageTimeout(getStorage()),
     [],
   );
 
@@ -109,7 +114,6 @@ export function useStorageXMLVersions() {
       const resolvedStorage = storage ?? (await resolveStorage());
       const versions = await withStorageTimeout(
         resolvedStorage.getXMLVersionsByProject(projectUuid),
-        "加载版本列表超时（8秒），请重试",
       );
       updateVersionsCache(projectUuid, versions);
       return { storage: resolvedStorage, versions };
@@ -243,10 +247,7 @@ export function useStorageXMLVersions() {
           );
           const latest = wipVersion || versions[0];
           const resolved = await materializeVersionXml(latest, (id) =>
-            withStorageTimeout(
-              storage.getXMLVersion(id, projectUuid),
-              "加载版本内容超时（8秒），请重试",
-            ),
+            withStorageTimeout(storage.getXMLVersion(id, projectUuid)),
           );
           return resolved;
         },
@@ -309,13 +310,12 @@ export function useStorageXMLVersions() {
 
           if (!resolvedProjectUuid) {
             throw new Error(
-              "安全错误：未提供项目 ID，无法获取指定版本以避免跨项目数据泄露",
+              `[${ErrorCodes.VERSION_CROSS_PROJECT_ERROR}] ${i18n.t("errors:version.securityProjectIdMissing")}`,
             );
           }
 
           return await withStorageTimeout(
             storage.getXMLVersion(id, resolvedProjectUuid),
-            "获取版本信息超时（8秒），请重试",
           );
         },
         { setLoading, setError },
@@ -344,12 +344,11 @@ export function useStorageXMLVersions() {
             projectUuid ?? versionsCacheRef.current?.projectUuid;
           if (!resolvedProjectUuid) {
             throw new Error(
-              "安全错误：未提供项目 ID，无法获取版本 SVG 数据以避免跨项目数据泄露",
+              `[${ErrorCodes.VERSION_CROSS_PROJECT_ERROR}] ${i18n.t("errors:version.securityProjectIdMissing")}`,
             );
           }
           const svgData = await withStorageTimeout(
             storage.getXMLVersionSVGData(id, resolvedProjectUuid),
-            "加载版本 SVG 数据超时（8秒），请重试",
           );
           if (svgData) {
             svgCacheRef.current.set(id, svgData);
@@ -409,7 +408,9 @@ export function useStorageXMLVersions() {
           );
 
           if (!wipVersion) {
-            throw new Error("WIP 版本不存在，无法创建快照");
+            throw new Error(
+              `[${ErrorCodes.VERSION_WIP_NOT_FOUND}] ${i18n.t("errors:version.wipNotFound")}`,
+            );
           }
 
           let wipXml = wipVersion.xml_content;
@@ -513,29 +514,33 @@ export function useStorageXMLVersions() {
 
           const targetVersion = await withStorageTimeout(
             storage.getXMLVersion(versionId, projectUuid),
-            "获取目标版本超时（8秒），请重试",
           );
           if (!targetVersion) {
-            throw new Error("目标版本不存在");
+            throw new Error(
+              `[${ErrorCodes.VERSION_RESTORE_FAILED}] ${i18n.t("errors:version.targetNotFound")}`,
+            );
           }
 
           if (targetVersion.project_uuid !== projectUuid) {
-            const message =
-              `安全错误：版本 ${versionId} 不属于当前项目 ${projectUuid}。` +
-              `该版本属于项目 ${targetVersion.project_uuid}，无法回滚。`;
             console.error("[rollbackToVersion] 拒绝跨项目回滚", {
               versionId,
               requestedProject: projectUuid,
               versionProject: targetVersion.project_uuid,
             });
-            throw new Error(message);
+            throw new Error(
+              `[${ErrorCodes.VERSION_CROSS_PROJECT_ROLLBACK}] ${i18n.t(
+                "errors:version.crossProjectRollback",
+                {
+                  versionId,
+                  projectUuid,
+                  targetProject: targetVersion.project_uuid,
+                },
+              )}`,
+            );
           }
 
           const targetXml = await materializeVersionXml(targetVersion, (id) =>
-            withStorageTimeout(
-              storage.getXMLVersion(id, projectUuid),
-              "加载版本内容超时（8秒），请重试",
-            ),
+            withStorageTimeout(storage.getXMLVersion(id, projectUuid)),
           );
 
           const wipVersionId = await saveXML(
@@ -630,7 +635,7 @@ export function useStorageXMLVersions() {
       if (!normalized) {
         return {
           valid: false,
-          error: "版本号不能为空",
+          error: `[${ErrorCodes.VERSION_NUMBER_EMPTY}] ${i18n.t("errors:version.numberEmpty")}`,
         };
       }
 
@@ -639,7 +644,7 @@ export function useStorageXMLVersions() {
       if (!versionRegex.test(normalized)) {
         return {
           valid: false,
-          error: "版本号格式错误，应为 x.y.z 或 x.y.z.h 格式",
+          error: `[${ErrorCodes.VERSION_FORMAT_INVALID}] ${i18n.t("errors:version.formatInvalid", { version: normalized })}`,
         };
       }
 
@@ -647,7 +652,7 @@ export function useStorageXMLVersions() {
       if (normalized === WIP_VERSION) {
         return {
           valid: false,
-          error: "0.0.0 是系统保留版本号，请使用其他版本号",
+          error: `[${ErrorCodes.VERSION_RESERVED}] ${i18n.t("errors:version.reserved")}`,
         };
       }
 
@@ -658,14 +663,14 @@ export function useStorageXMLVersions() {
         if (!Number.isSafeInteger(sub)) {
           return {
             valid: false,
-            error: "子版本号必须为有效整数",
+            error: `[${ErrorCodes.VERSION_SUB_INVALID}] ${i18n.t("errors:version.subInvalid")}`,
           };
         }
 
         if (sub < 1 || sub > 999) {
           return {
             valid: false,
-            error: "子版本号范围必须在 1-999 之间",
+            error: `[${ErrorCodes.VERSION_SUB_RANGE}] ${i18n.t("errors:version.subRange", { min: 1, max: 999 })}`,
           };
         }
 
@@ -674,7 +679,7 @@ export function useStorageXMLVersions() {
         if (!cache || cache.projectUuid !== projectUuid) {
           return {
             valid: false,
-            error: "当前项目版本缓存失效，请先重新加载版本列表",
+            error: `[${ErrorCodes.VERSION_CACHE_INVALID}] ${i18n.t("errors:version.cacheInvalid")}`,
           };
         }
 
@@ -685,7 +690,7 @@ export function useStorageXMLVersions() {
         if (!parentExists) {
           return {
             valid: false,
-            error: `父版本 ${parent} 不存在，请先创建主版本`,
+            error: `[${ErrorCodes.VERSION_PARENT_NOT_FOUND}] ${i18n.t("errors:version.parentNotFound", { parent })}`,
           };
         }
       }

@@ -14,7 +14,7 @@ import { useStorageXMLVersions } from "./hooks/useStorageXMLVersions";
 import { useDrawioEditor } from "./hooks/useDrawioEditor";
 import { WIP_VERSION } from "./lib/storage/constants";
 import { useToast } from "./components/toast";
-import { useI18n } from "./i18n/hooks";
+import { useAppTranslation, useI18n } from "./i18n/hooks";
 
 export default function Home() {
   // 存储 Hook
@@ -38,6 +38,7 @@ export default function Home() {
     useStorageXMLVersions();
 
   const { t } = useI18n();
+  const { t: tp } = useAppTranslation("page");
   const { push } = useToast();
 
   // DrawIO 编辑器 Hook
@@ -153,7 +154,7 @@ export default function Home() {
         (typeof message === "string" && message.trim()) ||
         (error instanceof Error && error.message) ||
         (typeof error === "string" && error.trim()) ||
-        "未知错误";
+        tp("main.unknownError");
 
       console.error("[DrawIO] 图表更新失败:", error, message);
       push({
@@ -168,7 +169,7 @@ export default function Home() {
     return () => {
       window.removeEventListener("drawio-merge-error", handleMergeError);
     };
-  }, [push, t]);
+  }, [push, t, tp]);
 
   // 自动保存图表到统一存储层
   const handleAutoSave = async (xml: string) => {
@@ -367,15 +368,24 @@ export default function Home() {
   };
 
   const selectionLabelText = isElectronEnv
-    ? `选中了${selectionInfo.count}个对象${
-        selectionInfo.cells.length > 0
-          ? ` (IDs: ${selectionInfo.cells
-              .map((c) => c.id)
-              .slice(0, 3)
-              .join(", ")}${selectionInfo.cells.length > 3 ? "..." : ""})`
-          : ""
-      }`
-    : "网页无法使用该功能";
+    ? (() => {
+        const selectionIdsPreview = selectionInfo.cells
+          .map((c) => c.id)
+          .slice(0, 3)
+          .join(", ");
+        const selectionHasMore = selectionInfo.cells.length > 3;
+
+        if (selectionIdsPreview) {
+          return tp("selection.summaryWithIds", {
+            count: selectionInfo.count,
+            ids: selectionIdsPreview,
+            ellipsis: selectionHasMore ? "..." : "",
+          });
+        }
+
+        return tp("selection.summary", { count: selectionInfo.count });
+      })()
+    : tp("main.webFeatureUnavailable");
 
   // 如果正在加载项目，显示加载界面
   if (projectLoading && !currentProject) {
@@ -416,10 +426,10 @@ export default function Home() {
             }}
           />
           <h2 style={{ margin: "0 0 10px", fontSize: "20px", color: "#333" }}>
-            正在加载项目...
+            {tp("main.loadingProject")}
           </h2>
           <p style={{ margin: 0, fontSize: "14px", color: "#666" }}>
-            请稍候，正在从存储层加载项目数据
+            {tp("main.loadingProjectDetail")}
           </p>
           <style>{`
             @keyframes spin {
@@ -462,7 +472,7 @@ export default function Home() {
               pointerEvents: "auto",
             }}
           >
-            ⚠️ Socket.IO 未连接，AI 工具功能不可用
+            {tp("main.socketDisconnected")}
           </div>
         </div>
       )}
@@ -499,7 +509,7 @@ export default function Home() {
               color: "#d32f2f",
             }}
           >
-            项目加载失败
+            {tp("main.loadingFailed")}
           </h2>
           <p
             style={{
@@ -509,9 +519,9 @@ export default function Home() {
               lineHeight: "1.6",
             }}
           >
-            无法加载当前项目，这可能是由于存储层初始化失败或网络问题。
+            {tp("main.loadingFailedLine1")}
             <br />
-            请刷新页面重试，或查看浏览器控制台了解详细错误信息。
+            {tp("main.loadingFailedLine2")}
           </p>
           <button
             onClick={() => window.location.reload()}
@@ -526,7 +536,7 @@ export default function Home() {
               boxShadow: "0 2px 8px rgba(76,175,80,0.3)",
             }}
           >
-            刷新页面
+            {tp("main.reloadPage")}
           </button>
         </div>
       )}

@@ -1,17 +1,30 @@
 {
   "project": {
-    "nameRequired": "Project name is required"
+    "nameRequired": "Project name is required",
+    "nameMinLength": "Project name must be at least {{min}} characters",
+    "nameMaxLength": "Project name cannot exceed {{max}} characters",
+    "descriptionMaxLength": "Description cannot exceed {{max}} characters"
   },
   "version": {
     "numberRequired": "Version number is required",
-    "formatInvalid": "Invalid version format. Use x.y.z or x.y.z.h",
-    "reservedVersion": "0.0.0 is reserved",
-    "subVersionRequired": "Sub-version number is required",
-    "subVersionNumeric": "Sub-version must be numeric",
+    "formatInvalid": "Invalid version format, should be x.y.z or x.y.z.h",
+    "reservedVersion": "0.0.0 is a reserved version number",
+    "subVersionInvalid": "Sub-version must be a valid integer",
     "subVersionRange": "Sub-version must be between {{min}} and {{max}}",
-    "descriptionMaxLength": "Description must be at most {{max}} characters",
+    "descriptionMaxLength": "Description cannot exceed {{max}} characters",
+
     "versionExists": "Version {{version}} already exists",
-    "parentRequired": "Parent version is required",
-    "parentNotFound": "Parent version {{parent}} not found; please create the main version first"
+    "parentRequired": "Please select a parent version for sub-version",
+    "parentNotFound": "Parent version {{parent}} does not exist",
+    "subVersionRequired": "Sub-version number is required when creating sub-version",
+    "subVersionNumeric": "Sub-version must be a number",
+    "uniquenessCheckFailed": "Failed to verify version number uniqueness",
+    "recommendedVersionFailed": "Failed to get recommended version number"
+  },
+  "llm": {
+    "apiKeyRequired": "API Key is required",
+    "baseUrlInvalid": "Invalid Base URL format",
+    "modelRequired": "Model name is required",
+    "temperatureRange": "Temperature must be between {{min}} and {{max}}"
   }
 }

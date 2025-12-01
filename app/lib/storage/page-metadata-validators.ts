@@ -1,3 +1,5 @@
+import { ErrorCodes } from "@/app/errors/error-codes";
+import i18n from "@/app/i18n/client";
 import { MAX_SVG_BLOB_BYTES } from "./constants";
 import { buildPageMetadataFromXml } from "./page-metadata";
 
@@ -21,7 +23,9 @@ export interface ResolvedPageMetadata {
 
 export function ensurePageCount(value?: number): number {
   if (typeof value !== "number" || Number.isNaN(value) || value < 1) {
-    throw new Error("page_count 必须是大于等于 1 的数字");
+    throw new Error(
+      `[${ErrorCodes.STORAGE_INVALID_PAGE_COUNT}] ${i18n.t("errors:storage.invalidPageCount")}`,
+    );
   }
   return Math.floor(value);
 }
@@ -37,17 +41,29 @@ export function parsePageNamesJson(
     parsed = JSON.parse(value);
   } catch (error) {
     throw new Error(
-      `page_names 必须是 JSON 数组字符串: ${
-        error instanceof Error ? error.message : String(error)
-      }`,
+      `[${ErrorCodes.STORAGE_INVALID_PAGE_NAMES}] ${i18n.t(
+        "errors:storage.invalidPageNames",
+        {
+          message: error instanceof Error ? error.message : String(error),
+        },
+      )}`,
     );
   }
   if (!Array.isArray(parsed)) {
-    throw new Error("page_names 必须是 JSON 数组字符串");
+    throw new Error(
+      `[${ErrorCodes.STORAGE_INVALID_PAGE_NAMES}] ${i18n.t("errors:storage.invalidPageNames")}`,
+    );
   }
   parsed.forEach((item, index) => {
     if (typeof item !== "string") {
-      throw new Error(`page_names[${index}] 不是字符串`);
+      throw new Error(
+        `[${ErrorCodes.STORAGE_PAGE_NAME_NOT_STRING}] ${i18n.t(
+          "errors:storage.pageNameNotString",
+          {
+            index,
+          },
+        )}`,
+      );
     }
   });
   return parsed as string[];
@@ -89,7 +105,17 @@ export function assertValidSvgBinary(
   }
 
   if (size > MAX_SVG_BLOB_BYTES) {
+    const sizeMB = (size / (1024 * 1024)).toFixed(1);
     const maxMB = (MAX_SVG_BLOB_BYTES / (1024 * 1024)).toFixed(1);
-    throw new Error(`${label}体积超过 ${maxMB}MB 限制`);
+    throw new Error(
+      `[${ErrorCodes.STORAGE_SVG_TOO_LARGE}] ${i18n.t(
+        "errors:storage.svgTooLarge",
+        {
+          label,
+          size: sizeMB,
+          max: maxMB,
+        },
+      )}`,
+    );
   }
 }

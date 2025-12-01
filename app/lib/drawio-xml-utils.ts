@@ -1,4 +1,6 @@
 import { inflateRaw } from "pako";
+import { ErrorCodes } from "@/app/errors/error-codes";
+import i18n from "@/app/i18n/client";
 import type { XMLValidationResult } from "@/app/types/drawio-tools";
 import { getDomParser } from "./dom-parser-cache";
 
@@ -52,7 +54,9 @@ export function validateXMLFormat(xml: string): XMLValidationResult {
  */
 export function normalizeDiagramXml(payload: string): string {
   if (!payload) {
-    throw new Error("XML payload 不能为空");
+    throw new Error(
+      `[${ErrorCodes.XML_PAYLOAD_EMPTY}] ${i18n.t("errors:xml.payloadEmpty")}`,
+    );
   }
 
   const trimmed = payload.trimStart();
@@ -68,24 +72,28 @@ export function normalizeDiagramXml(payload: string): string {
       resolvedXml = decodeBase64(base64Content);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      throw new Error(`无法解码带前缀的 Base64 XML: ${message}`);
+      throw new Error(
+        `[${ErrorCodes.XML_DECODE_FAILED}] ${i18n.t("errors:xml.decodeFailed", { message })}`,
+      );
     }
   } else {
     // 3. 裸 Base64
+    let decoded: string;
     try {
-      const decoded = decodeBase64(trimmed);
-      if (!decoded.trimStart().startsWith("<")) {
-        throw new Error("解码结果不是有效的 XML");
-      }
-      resolvedXml = decoded;
+      decoded = decodeBase64(trimmed);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(
-        "无法识别的 XML 格式：既不是纯 XML，也不是有效的 Base64。" +
-          "请提供 XML 字符串、data URI 格式的 Base64，或裸 Base64。" +
-          `错误：${message}`,
+        `[${ErrorCodes.XML_DECODE_FAILED}] ${i18n.t("errors:xml.decodeFailed", { message })}`,
       );
     }
+
+    if (!decoded.trimStart().startsWith("<")) {
+      throw new Error(
+        `[${ErrorCodes.XML_INVALID_FORMAT}] ${i18n.t("errors:xml.invalidFormat")}`,
+      );
+    }
+    resolvedXml = decoded;
   }
 
   return maybeInflateDrawioDiagrams(resolvedXml);
@@ -105,7 +113,9 @@ export function decodeBase64(base64: string): string {
     return new TextDecoder("utf-8").decode(bytes);
   }
 
-  throw new Error("当前运行环境不支持 Base64 解码");
+  throw new Error(
+    `[${ErrorCodes.XML_ENV_NOT_SUPPORTED}] ${i18n.t("errors:xml.envNotSupported")}`,
+  );
 }
 
 function decodeBase64ToUint8Array(base64: string): Uint8Array {
@@ -122,7 +132,9 @@ function decodeBase64ToUint8Array(base64: string): Uint8Array {
     return bytes;
   }
 
-  throw new Error("当前运行环境不支持 Base64 解码为二进制");
+  throw new Error(
+    `[${ErrorCodes.XML_ENV_NOT_SUPPORTED}] ${i18n.t("errors:xml.envNotSupported")}`,
+  );
 }
 
 /**

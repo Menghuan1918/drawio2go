@@ -8,6 +8,9 @@
   },
   "aria": {
     "collapseSidebar": "Collapse sidebar",
-    "expandSidebar": "Expand sidebar"
+    "expandSidebar": "Expand sidebar",
+    "toggleTheme": "Toggle theme",
+    "toggleToDark": "Switch to dark mode",
+    "toggleToLight": "Switch to light mode"
   }
 }

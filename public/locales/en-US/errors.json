@@ -1,1 +1,74 @@
-{}
+{
+  "common": {
+    "unknownError": "An unknown error occurred",
+    "networkError": "Network connection failed",
+    "permissionDenied": "Permission denied",
+    "timeout": "Operation timeout"
+  },
+  "storage": {
+    "invalidPageCount": "page_count must be a number >= 1",
+    "invalidPageNames": "page_names must be a JSON array string",
+    "pageNameNotString": "page_names[{{index}}] is not a string",
+    "svgTooLarge": "{{label}} exceeds maximum size ({{size}} MB > {{max}} MB)",
+    "invalidSVG": "Invalid SVG data",
+    "projectNotFound": "Project does not exist: {{projectId}}",
+    "timeout": "Storage request timed out ({{seconds}}s). Please retry later."
+  },
+  "conversation": {
+    "createFailed": "Failed to create conversation",
+    "loadFailed": "Failed to load conversations",
+    "updateFailed": "Failed to update conversation",
+    "deleteFailed": "Failed to delete conversation",
+    "exportFailed": "Failed to export conversation",
+    "messageSaveFailed": "Failed to save message"
+  },
+  "project": {
+    "notFound": "Project does not exist: {{projectId}}",
+    "loadFailed": "Failed to load project",
+    "createFailed": "Failed to create project",
+    "updateFailed": "Failed to update project"
+  },
+  "chat": {
+    "missingParams": "Missing required parameters: messages or llmConfig",
+    "invalidConfig": "Invalid LLM configuration",
+    "sendFailed": "Failed to send request",
+    "streamError": "Error during streaming",
+    "timeoutError": "Request timeout",
+    "apiKeyInvalid": "API key is missing or invalid",
+    "modelNotFound": "Model does not exist or is unavailable"
+  },
+  "version": {
+    "restoreFailed": "Failed to restore version: {{message}}",
+    "exportFailed": "Export failed: {{message}}",
+    "parentNotFound": "Parent version {{parent}} not found, please create the main version first",
+    "invalidNumber": "Invalid version number format",
+    "versionExists": "Version {{version}} already exists",
+    "deleteWipFailed": "Cannot delete WIP version",
+    "noDiffData": "No diff data available",
+    "diffIntegrityError": "Version {{version}} is marked as Diff but missing valid source_version_id",
+    "sourceLoadFailed": "Failed to load source version: {{sourceVersion}} (current: {{currentVersion}})",
+    "crossProjectError": "Version chain integrity error: parent version {{parentId}} belongs to project {{parentProject}}, inconsistent with current version {{versionId}} project {{versionProject}}",
+    "wipNotFound": "WIP version does not exist, cannot create snapshot",
+    "calculationFailed": "Failed to calculate version data",
+    "parseFailed": "Failed to parse valid page data, cannot create version",
+    "numberEmpty": "Version number cannot be empty",
+    "formatInvalid": "Invalid version format: {{version}}. Expected x.y.z or x.y.z.h",
+    "reserved": "0.0.0 is a reserved version number",
+    "subInvalid": "Sub-version must be a valid integer",
+    "subRange": "Sub-version must be between {{min}} and {{max}}",
+    "cacheInvalid": "Current project version cache is invalid, please reload version list first",
+    "crossProjectRollback": "Security error: version {{versionId}} does not belong to current project {{projectUuid}}. This version belongs to project {{targetProject}}, cannot rollback.",
+    "securityProjectIdMissing": "Security error: Project ID not provided, cannot access data to prevent cross-project leakage",
+    "targetNotFound": "Target version does not exist"
+  },
+  "xml": {
+    "payloadEmpty": "XML payload cannot be empty",
+    "decodeFailed": "Failed to decode Base64 XML with prefix: {{message}}",
+    "invalidFormat": "Decoded result is not valid XML",
+    "decompressFailed": "Failed to decompress Base64-encoded gzipped XML. This may be due to: 1) Original data not gzipped 2) Corrupted compression data 3) Incorrect encoding format. Error: {{message}}",
+    "envNotSupported": "Current environment does not support Base64 decoding",
+    "xpathValidationFailed": "XPath validation failed",
+    "operationUnknown": "Unknown operation type: {{type}}",
+    "batchEditFailed": "Batch edit operation failed"
+  }
+}

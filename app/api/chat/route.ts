@@ -1,6 +1,7 @@
 import { drawioTools } from "@/app/lib/drawio-ai-tools";
 import { normalizeLLMConfig } from "@/app/lib/config-utils";
 import { LLMConfig } from "@/app/types/chat";
+import { ErrorCodes, type ErrorCode } from "@/app/errors/error-codes";
 import {
   streamText,
   stepCountIs,
@@ -13,6 +14,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 const isDev = process.env.NODE_ENV === "development";
 
+function apiError(code: ErrorCode, message: string, status = 500) {
+  return NextResponse.json({ code, message }, { status });
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -20,9 +25,10 @@ export async function POST(req: NextRequest) {
     const rawConfig = body?.llmConfig;
 
     if (!Array.isArray(messages) || !rawConfig) {
-      return NextResponse.json(
-        { error: "缺少必要参数：messages 或 llmConfig" },
-        { status: 400 },
+      return apiError(
+        ErrorCodes.CHAT_MISSING_PARAMS,
+        "Missing required parameters: messages or llmConfig",
+        400,
       );
     }
 
@@ -34,10 +40,11 @@ export async function POST(req: NextRequest) {
 
     try {
       normalizedConfig = normalizeLLMConfig(rawConfig);
-    } catch (error) {
-      return NextResponse.json(
-        { error: (error as Error)?.message || "LLM 配置无效" },
-        { status: 400 },
+    } catch {
+      return apiError(
+        ErrorCodes.CHAT_INVALID_CONFIG,
+        "Invalid LLM configuration",
+        400,
       );
     }
 
@@ -92,28 +99,32 @@ export async function POST(req: NextRequest) {
 
     return result.toUIMessageStreamResponse({ sendReasoning: true });
   } catch (error: unknown) {
-    console.error("聊天 API 错误:", error);
+    console.error("Chat API error:", error);
 
-    let errorMessage = "服务器内部错误";
     let statusCode = 500;
+    let code: ErrorCode = ErrorCodes.CHAT_SEND_FAILED;
+    let message = "Failed to send request";
 
     const err = error as Error;
     if (err.message?.includes("Anthropic")) {
-      errorMessage = err.message;
+      message = err.message;
       statusCode = 400;
     } else if (err.message?.includes("API key")) {
-      errorMessage = "API 密钥无效或缺失";
+      code = ErrorCodes.CHAT_API_KEY_INVALID;
+      message = "API key is missing or invalid";
       statusCode = 401;
     } else if (err.message?.includes("model")) {
-      errorMessage = "模型不存在或不可用";
+      code = ErrorCodes.CHAT_MODEL_NOT_FOUND;
+      message = "Model does not exist or is unavailable";
       statusCode = 400;
     } else if (err.message?.includes("配置参数")) {
-      errorMessage = err.message;
+      code = ErrorCodes.CHAT_INVALID_CONFIG;
+      message = "Invalid LLM configuration";
       statusCode = 400;
     } else if (err.message) {
-      errorMessage = err.message;
+      message = err.message;
     }
 
-    return NextResponse.json({ error: errorMessage }, { status: statusCode });
+    return apiError(code, message, statusCode);
   }
 }

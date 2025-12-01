@@ -9,9 +9,15 @@ import type {
   CreateMessageInput,
 } from "@/app/lib/storage";
 import { runStorageTask, withTimeout } from "@/app/lib/utils";
+import { ErrorCodes } from "@/app/errors/error-codes";
+import i18n from "@/app/i18n/client";
 
 const DEFAULT_STORAGE_TIMEOUT = 8000;
-const DEFAULT_TIMEOUT_MESSAGE = "存储请求超时（8秒），请稍后重试";
+const getStorageTimeoutMessage = (
+  seconds: number = DEFAULT_STORAGE_TIMEOUT / 1000,
+) =>
+  `[${ErrorCodes.STORAGE_TIMEOUT}] ${i18n.t("errors:storage.timeout", { seconds })}`;
+const DEFAULT_TIMEOUT_MESSAGE = getStorageTimeoutMessage();
 
 const withStorageTimeout = <T>(
   promise: Promise<T>,
@@ -36,7 +42,7 @@ export function useStorageConversations() {
   >(new Map());
   const resolveStorage = useCallback(
     async (): Promise<Awaited<ReturnType<typeof getStorage>>> =>
-      withStorageTimeout(getStorage(), "获取存储实例超时（8秒），请稍后重试"),
+      withStorageTimeout(getStorage(), getStorageTimeoutMessage()),
     [],
   );
 
@@ -49,7 +55,7 @@ export function useStorageConversations() {
           callback(conversations);
         } catch (callbackError) {
           console.warn(
-            "[useStorageConversations] 订阅回调执行失败",
+            "[useStorageConversations] conversation subscriber failed",
             callbackError,
           );
         }
@@ -67,7 +73,7 @@ export function useStorageConversations() {
           callback(messages);
         } catch (callbackError) {
           console.warn(
-            "[useStorageConversations] 消息订阅回调执行失败",
+            "[useStorageConversations] message subscriber failed",
             callbackError,
           );
         }
@@ -84,7 +90,7 @@ export function useStorageConversations() {
       const resolvedStorage = storage ?? (await resolveStorage());
       const conversations = await withStorageTimeout(
         resolvedStorage.getConversationsByProject(projectUuid),
-        "加载会话列表超时（8秒），请重试",
+        getStorageTimeoutMessage(),
       );
       conversationsCacheRef.current.set(projectUuid, conversations);
       notifyConversationSubscribers(projectUuid, conversations);
@@ -101,7 +107,7 @@ export function useStorageConversations() {
       const resolvedStorage = storage ?? (await resolveStorage());
       const messages = await withStorageTimeout(
         resolvedStorage.getMessagesByConversation(conversationId),
-        "加载消息列表超时（8秒），请重试",
+        getStorageTimeoutMessage(),
       );
       messagesCacheRef.current.set(conversationId, messages);
       notifyMessageSubscribers(conversationId, messages);
@@ -148,11 +154,14 @@ export function useStorageConversations() {
           })
           .catch((subscribeError) => {
             console.error(
-              "[useStorageConversations] 初始化对话订阅失败",
+              "[useStorageConversations] initialize conversation subscription failed",
               subscribeError,
             );
-            setError(subscribeError as Error);
-            if (active && onError) onError(subscribeError as Error);
+            const localizedError = new Error(
+              i18n.t("errors:conversation.loadFailed"),
+            );
+            setError(localizedError);
+            if (active && onError) onError(localizedError);
           });
       }
 
@@ -193,11 +202,14 @@ export function useStorageConversations() {
           })
           .catch((subscribeError) => {
             console.error(
-              "[useStorageConversations] 初始化消息订阅失败",
+              "[useStorageConversations] initialize message subscription failed",
               subscribeError,
             );
-            setError(subscribeError as Error);
-            if (active && onError) onError(subscribeError as Error);
+            const localizedError = new Error(
+              i18n.t("errors:conversation.loadFailed"),
+            );
+            setError(localizedError);
+            if (active && onError) onError(localizedError);
           });
       }
 
@@ -235,8 +247,14 @@ export function useStorageConversations() {
 
       if (!targetProject) return;
       loadConversationsForProject(targetProject).catch((eventError) => {
-        console.error("[useStorageConversations] 刷新对话缓存失败", eventError);
-        setError(eventError as Error);
+        console.error(
+          "[useStorageConversations] refresh conversation cache failed",
+          eventError,
+        );
+        const localizedError = new Error(
+          i18n.t("errors:conversation.loadFailed"),
+        );
+        setError(localizedError);
       });
     };
 
@@ -258,10 +276,13 @@ export function useStorageConversations() {
       targetConversationIds.forEach((conversationId) => {
         loadMessagesForConversation(conversationId).catch((eventError) => {
           console.error(
-            "[useStorageConversations] 刷新消息缓存失败",
+            "[useStorageConversations] refresh message cache failed",
             eventError,
           );
-          setError(eventError as Error);
+          const localizedError = new Error(
+            i18n.t("errors:conversation.loadFailed"),
+          );
+          setError(localizedError);
         });
       });
     };
@@ -306,16 +327,24 @@ export function useStorageConversations() {
     ): Promise<Conversation> => {
       return runStorageTask(
         async () => {
-          const storage = await resolveStorage();
-          const conversation = await withStorageTimeout(
-            storage.createConversation({
-              id: uuidv4(),
-              project_uuid: projectUuid,
-              title,
-            }),
-            "创建会话超时（8秒），请重试",
-          );
-          return conversation;
+          try {
+            const storage = await resolveStorage();
+            const conversation = await withStorageTimeout(
+              storage.createConversation({
+                id: uuidv4(),
+                project_uuid: projectUuid,
+                title,
+              }),
+              getStorageTimeoutMessage(),
+            );
+            return conversation;
+          } catch (error) {
+            console.error(
+              "[useStorageConversations] create conversation failed",
+              error,
+            );
+            throw new Error(i18n.t("errors:conversation.createFailed"));
+          }
         },
         { setLoading, setError },
       );
@@ -330,12 +359,20 @@ export function useStorageConversations() {
     async (id: string): Promise<Conversation | null> => {
       return runStorageTask(
         async () => {
-          const storage = await resolveStorage();
-          const conversation = await withStorageTimeout(
-            storage.getConversation(id),
-            "获取会话超时（8秒），请重试",
-          );
-          return conversation;
+          try {
+            const storage = await resolveStorage();
+            const conversation = await withStorageTimeout(
+              storage.getConversation(id),
+              getStorageTimeoutMessage(),
+            );
+            return conversation;
+          } catch (error) {
+            console.error(
+              "[useStorageConversations] get conversation failed",
+              error,
+            );
+            throw new Error(i18n.t("errors:conversation.loadFailed"));
+          }
         },
         { setLoading, setError },
       );
@@ -353,11 +390,19 @@ export function useStorageConversations() {
     ): Promise<void> => {
       await runStorageTask(
         async () => {
-          const storage = await resolveStorage();
-          await withStorageTimeout(
-            storage.updateConversation(id, updates),
-            "更新会话超时（8秒），请重试",
-          );
+          try {
+            const storage = await resolveStorage();
+            await withStorageTimeout(
+              storage.updateConversation(id, updates),
+              getStorageTimeoutMessage(),
+            );
+          } catch (error) {
+            console.error(
+              "[useStorageConversations] update conversation failed",
+              error,
+            );
+            throw new Error(i18n.t("errors:conversation.updateFailed"));
+          }
         },
         { setLoading, setError },
       );
@@ -372,11 +417,19 @@ export function useStorageConversations() {
     async (id: string): Promise<void> => {
       await runStorageTask(
         async () => {
-          const storage = await resolveStorage();
-          await withStorageTimeout(
-            storage.deleteConversation(id),
-            "删除会话超时（8秒），请重试",
-          );
+          try {
+            const storage = await resolveStorage();
+            await withStorageTimeout(
+              storage.deleteConversation(id),
+              getStorageTimeoutMessage(),
+            );
+          } catch (error) {
+            console.error(
+              "[useStorageConversations] delete conversation failed",
+              error,
+            );
+            throw new Error(i18n.t("errors:conversation.deleteFailed"));
+          }
         },
         { setLoading, setError },
       );
@@ -392,11 +445,19 @@ export function useStorageConversations() {
       if (!ids || ids.length === 0) return;
       await runStorageTask(
         async () => {
-          const storage = await resolveStorage();
-          await withStorageTimeout(
-            storage.batchDeleteConversations(ids),
-            "批量删除会话超时（8秒），请重试",
-          );
+          try {
+            const storage = await resolveStorage();
+            await withStorageTimeout(
+              storage.batchDeleteConversations(ids),
+              getStorageTimeoutMessage(),
+            );
+          } catch (error) {
+            console.error(
+              "[useStorageConversations] batch delete conversations failed",
+              error,
+            );
+            throw new Error(i18n.t("errors:conversation.deleteFailed"));
+          }
         },
         { setLoading, setError },
       );
@@ -415,12 +476,20 @@ export function useStorageConversations() {
     ): Promise<Conversation[]> => {
       return runStorageTask(
         async () => {
-          const storage = await resolveStorage();
-          const conversations = await withStorageTimeout(
-            storage.getConversationsByProject(projectUuid),
-            "加载会话列表超时（8秒），请重试",
-          );
-          return conversations;
+          try {
+            const storage = await resolveStorage();
+            const conversations = await withStorageTimeout(
+              storage.getConversationsByProject(projectUuid),
+              getStorageTimeoutMessage(),
+            );
+            return conversations;
+          } catch (error) {
+            console.error(
+              "[useStorageConversations] load conversations failed",
+              error,
+            );
+            throw new Error(i18n.t("errors:conversation.loadFailed"));
+          }
         },
         { setLoading, setError },
       );
@@ -435,12 +504,20 @@ export function useStorageConversations() {
     async (conversationId: string): Promise<Message[]> => {
       return runStorageTask(
         async () => {
-          const storage = await resolveStorage();
-          const messages = await withStorageTimeout(
-            storage.getMessagesByConversation(conversationId),
-            "加载消息列表超时（8秒），请重试",
-          );
-          return messages;
+          try {
+            const storage = await resolveStorage();
+            const messages = await withStorageTimeout(
+              storage.getMessagesByConversation(conversationId),
+              getStorageTimeoutMessage(),
+            );
+            return messages;
+          } catch (error) {
+            console.error(
+              "[useStorageConversations] load messages failed",
+              error,
+            );
+            throw new Error(i18n.t("errors:conversation.loadFailed"));
+          }
         },
         { setLoading, setError },
       );
@@ -461,22 +538,30 @@ export function useStorageConversations() {
     ): Promise<Message> => {
       return runStorageTask(
         async () => {
-          const storage = await resolveStorage();
-          const message = await withStorageTimeout(
-            storage.createMessage({
-              id: uuidv4(),
-              conversation_id: conversationId,
-              role,
-              content,
-              tool_invocations: toolInvocations
-                ? JSON.stringify(toolInvocations)
-                : undefined,
-              model_name: modelName ?? null,
-            }),
-            "创建消息超时（8秒），请重试",
-          );
+          try {
+            const storage = await resolveStorage();
+            const message = await withStorageTimeout(
+              storage.createMessage({
+                id: uuidv4(),
+                conversation_id: conversationId,
+                role,
+                content,
+                tool_invocations: toolInvocations
+                  ? JSON.stringify(toolInvocations)
+                  : undefined,
+                model_name: modelName ?? null,
+              }),
+              getStorageTimeoutMessage(),
+            );
 
-          return message;
+            return message;
+          } catch (error) {
+            console.error(
+              "[useStorageConversations] add message failed",
+              error,
+            );
+            throw new Error(i18n.t("errors:conversation.messageSaveFailed"));
+          }
         },
         { setLoading, setError },
       );
@@ -491,12 +576,20 @@ export function useStorageConversations() {
     async (messages: CreateMessageInput[]): Promise<Message[]> => {
       return runStorageTask(
         async () => {
-          const storage = await resolveStorage();
-          const created = await withStorageTimeout(
-            storage.createMessages(messages),
-            "批量创建消息超时（8秒），请重试",
-          );
-          return created;
+          try {
+            const storage = await resolveStorage();
+            const created = await withStorageTimeout(
+              storage.createMessages(messages),
+              getStorageTimeoutMessage(),
+            );
+            return created;
+          } catch (error) {
+            console.error(
+              "[useStorageConversations] add messages failed",
+              error,
+            );
+            throw new Error(i18n.t("errors:conversation.messageSaveFailed"));
+          }
         },
         { setLoading, setError },
       );
@@ -511,12 +604,20 @@ export function useStorageConversations() {
     async (ids: string[]): Promise<Blob> => {
       return runStorageTask(
         async () => {
-          const storage = await resolveStorage();
-          const blob = await withStorageTimeout(
-            storage.exportConversations(ids),
-            "导出会话超时（8秒），请重试",
-          );
-          return blob;
+          try {
+            const storage = await resolveStorage();
+            const blob = await withStorageTimeout(
+              storage.exportConversations(ids),
+              getStorageTimeoutMessage(),
+            );
+            return blob;
+          } catch (error) {
+            console.error(
+              "[useStorageConversations] export conversations failed",
+              error,
+            );
+            throw new Error(i18n.t("errors:conversation.exportFailed"));
+          }
         },
         { setLoading, setError },
       );

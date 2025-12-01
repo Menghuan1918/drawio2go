@@ -9,6 +9,7 @@ import {
   TextField,
   Description,
   Skeleton,
+  FieldError,
 } from "@heroui/react";
 import { FolderOpen, Plus, Check } from "lucide-react";
 import type { Project } from "../lib/storage/types";
@@ -35,9 +36,18 @@ export default function ProjectSelector({
   onCreateProject,
 }: ProjectSelectorProps) {
   const { t, i18n } = useAppTranslation("project");
+  const { t: tValidation } = useAppTranslation("validation");
   const [showNewProjectForm, setShowNewProjectForm] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectDescription, setNewProjectDescription] = useState("");
+  const [formErrors, setFormErrors] = useState<{
+    name?: string;
+    description?: string;
+  }>({});
+
+  const PROJECT_NAME_MIN = 1;
+  const PROJECT_NAME_MAX = 100;
+  const PROJECT_DESCRIPTION_MAX = 500;
 
   // 重置表单状态
   useEffect(() => {
@@ -45,13 +55,43 @@ export default function ProjectSelector({
       setShowNewProjectForm(false);
       setNewProjectName("");
       setNewProjectDescription("");
+      setFormErrors({});
     }
   }, [isOpen]);
 
-  const handleCreateProject = () => {
-    if (!newProjectName.trim()) {
-      return;
+  const validateProjectForm = () => {
+    const nextErrors: typeof formErrors = {};
+    const name = newProjectName.trim();
+    const description = newProjectDescription.trim();
+
+    if (!name) {
+      nextErrors.name = tValidation("project.nameRequired");
+    } else {
+      if (name.length < PROJECT_NAME_MIN) {
+        nextErrors.name = tValidation("project.nameMinLength", {
+          min: PROJECT_NAME_MIN,
+        });
+      }
+      if (name.length > PROJECT_NAME_MAX) {
+        nextErrors.name = tValidation("project.nameMaxLength", {
+          max: PROJECT_NAME_MAX,
+        });
+      }
     }
+
+    if (description && description.length > PROJECT_DESCRIPTION_MAX) {
+      nextErrors.description = tValidation("project.descriptionMaxLength", {
+        max: PROJECT_DESCRIPTION_MAX,
+      });
+    }
+
+    setFormErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const handleCreateProject = () => {
+    if (!validateProjectForm()) return;
+
     onCreateProject(
       newProjectName.trim(),
       newProjectDescription.trim() || undefined,
@@ -59,6 +99,7 @@ export default function ProjectSelector({
     setShowNewProjectForm(false);
     setNewProjectName("");
     setNewProjectDescription("");
+    setFormErrors({});
   };
 
   const handleProjectSelect = (projectId: string) => {
@@ -169,22 +210,41 @@ export default function ProjectSelector({
                 <Label>{t("form.name.label")}</Label>
                 <Input
                   value={newProjectName}
-                  onChange={(event) => setNewProjectName(event.target.value)}
+                  onChange={(event) => {
+                    setNewProjectName(event.target.value);
+                    if (formErrors.name) {
+                      setFormErrors((prev) => ({ ...prev, name: undefined }));
+                    }
+                  }}
                   placeholder={t("form.name.placeholder")}
                   autoFocus
                 />
                 <Description>{t("form.name.help")}</Description>
+                {formErrors.name && (
+                  <FieldError className="mt-1">{formErrors.name}</FieldError>
+                )}
               </TextField>
               <TextField className="w-full">
                 <Label>{t("form.description.label")}</Label>
                 <Input
                   value={newProjectDescription}
-                  onChange={(event) =>
-                    setNewProjectDescription(event.target.value)
-                  }
+                  onChange={(event) => {
+                    setNewProjectDescription(event.target.value);
+                    if (formErrors.description) {
+                      setFormErrors((prev) => ({
+                        ...prev,
+                        description: undefined,
+                      }));
+                    }
+                  }}
                   placeholder={t("form.description.placeholder")}
                 />
                 <Description>{t("form.description.help")}</Description>
+                {formErrors.description && (
+                  <FieldError className="mt-1">
+                    {formErrors.description}
+                  </FieldError>
+                )}
               </TextField>
               <div className="flex gap-2 justify-end">
                 <Button
@@ -196,7 +256,11 @@ export default function ProjectSelector({
                 <Button
                   variant="primary"
                   onPress={handleCreateProject}
-                  isDisabled={!newProjectName.trim()}
+                  isDisabled={
+                    !newProjectName.trim() ||
+                    !!formErrors.name ||
+                    !!formErrors.description
+                  }
                 >
                   {t("buttons.create")}
                 </Button>

@@ -25,8 +25,13 @@ import type { XMLVersion } from "@/app/lib/storage/types";
 import { WIP_VERSION } from "@/app/lib/storage/constants";
 import { isSubVersion } from "@/app/lib/version-utils";
 import { useAppTranslation } from "@/app/i18n/hooks";
+import { ErrorCodes } from "@/app/errors/error-codes";
 
 type VersionType = "main" | "sub";
+
+const VERSION_DESCRIPTION_MAX = 500;
+const SUB_VERSION_MIN = 1;
+const SUB_VERSION_MAX = 999;
 
 interface CreateVersionDialogProps {
   projectUuid: string;
@@ -84,6 +89,38 @@ export function CreateVersionDialog({
     isVersionExists,
     getAllXMLVersions,
   } = useStorageXMLVersions();
+
+  const mapValidationError = React.useCallback(
+    (error?: string) => {
+      const codeMatch = error?.match(/\[(\d+)\]/);
+      const code = codeMatch ? Number(codeMatch[1]) : undefined;
+
+      switch (code) {
+        case ErrorCodes.VERSION_NUMBER_EMPTY:
+          return tValidation("version.numberRequired");
+        case ErrorCodes.VERSION_FORMAT_INVALID:
+          return tValidation("version.formatInvalid");
+        case ErrorCodes.VERSION_RESERVED:
+          return tValidation("version.reservedVersion");
+        case ErrorCodes.VERSION_SUB_INVALID:
+          return tValidation("version.subVersionInvalid");
+        case ErrorCodes.VERSION_SUB_RANGE:
+          return tValidation("version.subVersionRange", {
+            min: SUB_VERSION_MIN,
+            max: SUB_VERSION_MAX,
+          });
+        case ErrorCodes.VERSION_PARENT_NOT_FOUND: {
+          const parentMatch = error?.match(/parent\s+([\d.]+)/i);
+          return tValidation("version.parentNotFound", {
+            parent: parentMatch?.[1] || "",
+          });
+        }
+        default:
+          return error || tValidation("version.formatInvalid");
+      }
+    },
+    [tValidation],
+  );
 
   const effectiveVersionNumber = React.useMemo(() => {
     if (versionType === "sub") {
@@ -144,6 +181,18 @@ export function CreateVersionDialog({
       return;
     }
 
+    if (
+      description.trim() &&
+      description.trim().length > VERSION_DESCRIPTION_MAX
+    ) {
+      setValidationError(
+        tValidation("version.descriptionMaxLength", {
+          max: VERSION_DESCRIPTION_MAX,
+        }),
+      );
+      return;
+    }
+
     if (!effectiveVersionNumber) {
       setValidationError(tValidation("version.numberRequired"));
       return;
@@ -151,9 +200,8 @@ export function CreateVersionDialog({
 
     const validation = validateVersion(projectUuid, effectiveVersionNumber);
     if (!validation.valid) {
-      setValidationError(
-        validation.error || tValidation("version.formatInvalid"),
-      );
+      const matched = mapValidationError(validation.error);
+      setValidationError(matched || tValidation("version.formatInvalid"));
       return;
     }
 
@@ -168,8 +216,11 @@ export function CreateVersionDialog({
         return;
       }
     } catch (err) {
-      console.error("同步版本号唯一性校验失败:", err);
-      setError(tVersion("create.status.validateFailed"));
+      console.error(
+        "[CreateVersionDialog] Failed to check version uniqueness",
+        err,
+      );
+      setValidationError(tValidation("version.uniquenessCheckFailed"));
       return;
     }
 
@@ -227,6 +278,7 @@ export function CreateVersionDialog({
     effectiveVersionNumber,
     description,
     validateVersion,
+    mapValidationError,
     projectUuid,
     isVersionExists,
     createHistoricalVersion,
@@ -258,8 +310,11 @@ export function CreateVersionDialog({
       }
       setError("");
     } catch (err) {
-      console.error("获取推荐版本号失败:", err);
-      setError(tVersion("create.status.recommendFailed"));
+      console.error(
+        "[CreateVersionDialog] Failed to get recommended version",
+        err,
+      );
+      setError(tValidation("version.recommendedVersionFailed"));
     }
   }, [
     versionType,
@@ -267,6 +322,7 @@ export function CreateVersionDialog({
     projectUuid,
     getRecommendedVersion,
     tVersion,
+    tValidation,
   ]);
 
   React.useEffect(() => {
@@ -310,7 +366,10 @@ export function CreateVersionDialog({
         }
       })
       .catch((err) => {
-        console.error("获取推荐版本号失败:", err);
+        console.error(
+          "[CreateVersionDialog] Failed to prefill recommended version",
+          err,
+        );
       });
 
     return () => {
@@ -356,9 +415,8 @@ export function CreateVersionDialog({
 
     const validation = validateVersion(projectUuid, effectiveVersionNumber);
     if (!validation.valid) {
-      setValidationError(
-        validation.error || tValidation("version.formatInvalid"),
-      );
+      const matched = mapValidationError(validation.error);
+      setValidationError(matched || tValidation("version.formatInvalid"));
       setCheckingExists(false);
       return;
     }
@@ -380,7 +438,11 @@ export function CreateVersionDialog({
           }
         }
       } catch (err) {
-        console.error("版本号唯一性检查失败:", err);
+        console.error(
+          "[CreateVersionDialog] Version uniqueness check failed",
+          err,
+        );
+        setValidationError(tValidation("version.uniquenessCheckFailed"));
       } finally {
         setCheckingExists(false);
       }
@@ -395,6 +457,7 @@ export function CreateVersionDialog({
     projectUuid,
     validateVersion,
     isVersionExists,
+    mapValidationError,
     tValidation,
   ]);
 

@@ -3,6 +3,7 @@
 import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@heroui/react";
+import { useAppTranslation } from "@/app/i18n/hooks";
 
 const THEME_STORAGE_KEY = "theme";
 
@@ -33,6 +34,7 @@ const writeStoredTheme = (value: "light" | "dark") => {
 export function ThemeToggle() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [mounted, setMounted] = useState(false);
+  const { t } = useAppTranslation("topbar");
 
   // 初始化主题
   useEffect(() => {
@@ -107,7 +109,7 @@ export function ThemeToggle() {
         variant="ghost"
         size="sm"
         className="w-9 h-9 p-0"
-        aria-label="切换主题"
+        aria-label={t("aria.toggleTheme")}
         isDisabled
       >
         <Sun className="h-4 w-4" />
@@ -121,7 +123,9 @@ export function ThemeToggle() {
       size="sm"
       className="w-9 h-9 p-0 transition-all duration-300 hover:bg-accent/10"
       onPress={toggleTheme}
-      aria-label={theme === "light" ? "切换到深色模式" : "切换到浅色模式"}
+      aria-label={
+        theme === "light" ? t("aria.toggleToDark") : t("aria.toggleToLight")
+      }
     >
       {theme === "light" ? (
         <Sun className="h-4 w-4 transition-transform duration-300 rotate-0 scale-100" />

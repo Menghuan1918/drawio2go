@@ -7,6 +7,8 @@
  * 并在更新后通过自定义事件通知编辑器重新加载。
  */
 
+import { ErrorCodes } from "@/app/errors/error-codes";
+import i18n from "@/app/i18n/client";
 import type { GetXMLResult, ReplaceXMLResult } from "../types/drawio-tools";
 import { getStorage } from "./storage/storage-factory";
 import { materializeVersionXml } from "./storage/xml-version-engine";
@@ -49,14 +51,19 @@ async function saveDrawioXMLInternal(
  */
 export async function saveDrawioXML(xml: string): Promise<void> {
   if (typeof window === "undefined") {
-    throw new Error("saveDrawioXML 只能在浏览器环境中使用");
+    throw new Error(
+      `[${ErrorCodes.XML_ENV_NOT_SUPPORTED}] ${i18n.t("errors:xml.envNotSupported")}`,
+    );
   }
 
   try {
     const context = prepareXmlContext(xml);
     const validation = validateXMLFormat(context.normalizedXml);
     if (!validation.valid) {
-      throw new Error(validation.error || "XML 格式验证失败");
+      throw new Error(
+        validation.error ||
+          `[${ErrorCodes.XML_INVALID_FORMAT}] ${i18n.t("errors:xml.invalidFormat")}`,
+      );
     }
     await saveDrawioXMLInternal(context);
   } catch (error) {
@@ -72,7 +79,7 @@ export async function getDrawioXML(): Promise<GetXMLResult> {
   if (typeof window === "undefined") {
     return {
       success: false,
-      error: "此函数只能在浏览器环境中使用",
+      error: `[${ErrorCodes.XML_ENV_NOT_SUPPORTED}] ${i18n.t("errors:xml.envNotSupported")}`,
     };
   }
 
@@ -85,7 +92,12 @@ export async function getDrawioXML(): Promise<GetXMLResult> {
     if (!project) {
       return {
         success: false,
-        error: `当前项目不存在 (UUID: ${projectUuid})，请检查项目设置或重新选择项目`,
+        error: `[${ErrorCodes.STORAGE_PROJECT_NOT_FOUND}] ${i18n.t(
+          "errors:storage.projectNotFound",
+          {
+            projectId: projectUuid,
+          },
+        )}`,
       };
     }
 
@@ -227,7 +239,7 @@ export async function replaceDrawioXML(
     if (!validation.valid) {
       return {
         success: false,
-        message: "XML 格式验证失败",
+        message: `[${ErrorCodes.XML_INVALID_FORMAT}] ${i18n.t("errors:xml.invalidFormat")}`,
         error: validation.error,
       };
     }

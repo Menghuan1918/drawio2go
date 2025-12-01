@@ -1,3 +1,5 @@
+import { ErrorCodes } from "@/app/errors/error-codes";
+import i18n from "@/app/i18n/client";
 import { XMLVersion } from "@/lib/storage/types";
 
 /**
@@ -27,13 +29,17 @@ export function parseVersion(version: string): ParsedVersion {
   const normalized = version?.trim();
 
   if (!normalized) {
-    throw new Error("版本号不能为空");
+    throw new Error(
+      `[${ErrorCodes.VERSION_NUMBER_EMPTY}] ${i18n.t("errors:version.numberEmpty")}`,
+    );
   }
 
   const match = VERSION_PATTERN.exec(normalized);
 
   if (!match) {
-    throw new Error(`版本号格式不正确: "${version}"`);
+    throw new Error(
+      `[${ErrorCodes.VERSION_FORMAT_INVALID}] ${i18n.t("errors:version.formatInvalid", { version })}`,
+    );
   }
 
   const [, major, minor, patch, sub] = match;
@@ -133,7 +139,9 @@ export function getNextSubVersion(
   const parentKey = getParentVersionKey(parentVersion);
 
   if (!parentKey) {
-    throw new Error(`无法为无效版本号生成子版本: "${parentVersion}"`);
+    throw new Error(
+      `[${ErrorCodes.VERSION_FORMAT_INVALID}] ${i18n.t("errors:version.formatInvalid", { version: parentVersion })}`,
+    );
   }
 
   const subVersions = filterSubVersions(versions, parentVersion);

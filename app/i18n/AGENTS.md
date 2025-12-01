@@ -65,6 +65,7 @@ export const namespaces = [
   "project", // 项目选择器文案
   "errors", // 错误信息
   "validation", // 表单验证文案
+  "page", // 页面级文案（首页加载、连接状态等）
 ] as const;
 export type Namespace = (typeof namespaces)[number];
 

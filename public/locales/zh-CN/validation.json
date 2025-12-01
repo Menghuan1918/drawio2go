@@ -1,17 +1,30 @@
 {
   "project": {
-    "nameRequired": "项目名称不能为空"
+    "nameRequired": "项目名称为必填项",
+    "nameMinLength": "项目名称至少需要 {{min}} 个字符",
+    "nameMaxLength": "项目名称不能超过 {{max}} 个字符",
+    "descriptionMaxLength": "描述不能超过 {{max}} 个字符"
   },
   "version": {
-    "numberRequired": "版本号不能为空",
+    "numberRequired": "版本号为必填项",
     "formatInvalid": "版本号格式无效，应为 x.y.z 或 x.y.z.h",
-    "reservedVersion": "0.0.0 是保留版本号",
-    "subVersionRequired": "子版本号不能为空",
-    "subVersionNumeric": "子版本号必须是数字",
-    "subVersionRange": "子版本号必须在 {{min}} 到 {{max}} 之间",
+    "reservedVersion": "0.0.0 是系统保留版本号",
+    "subVersionInvalid": "子版本号必须为有效整数",
+    "subVersionRange": "子版本号必须在 {{min}}-{{max}} 之间",
     "descriptionMaxLength": "描述不能超过 {{max}} 个字符",
+
     "versionExists": "版本 {{version}} 已存在",
-    "parentRequired": "父版本不能为空",
-    "parentNotFound": "父版本 {{parent}} 不存在，请先创建主版本"
+    "parentRequired": "创建子版本时必须选择父版本",
+    "parentNotFound": "父版本 {{parent}} 不存在",
+    "subVersionRequired": "创建子版本时必须填写子版本号",
+    "subVersionNumeric": "子版本号必须是数字",
+    "uniquenessCheckFailed": "版本号唯一性校验失败",
+    "recommendedVersionFailed": "获取推荐版本号失败"
+  },
+  "llm": {
+    "apiKeyRequired": "API 密钥为必填项",
+    "baseUrlInvalid": "Base URL 格式无效",
+    "modelRequired": "模型名称为必填项",
+    "temperatureRange": "Temperature 必须在 {{min}}-{{max}} 之间"
   }
 }

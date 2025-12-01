@@ -9,6 +9,7 @@ import {
   Select,
   ListBox,
   Slider,
+  FieldError,
 } from "@heroui/react";
 import { LLMConfig, ProviderType } from "@/app/types/chat";
 import { getProviderOptions } from "./constants";
@@ -30,7 +31,39 @@ export default function LLMSettingsPanel({
   onChange,
 }: LLMSettingsPanelProps) {
   const { t } = useAppTranslation("settings");
+  const { t: tValidation } = useAppTranslation("validation");
   const providerOptions = useMemo(() => getProviderOptions(t), [t]);
+
+  const temperatureMin = 0;
+  const temperatureMax = 2;
+
+  const isValidHttpUrl = (value: string) => {
+    if (!value.trim()) return false;
+    try {
+      const url = new URL(value);
+      return url.protocol === "http:" || url.protocol === "https:";
+    } catch {
+      return false;
+    }
+  };
+
+  const apiKeyError = !config.apiKey.trim()
+    ? tValidation("llm.apiKeyRequired")
+    : "";
+  const modelError = !config.modelName.trim()
+    ? tValidation("llm.modelRequired")
+    : "";
+  const baseUrlError =
+    config.apiUrl.trim() && !isValidHttpUrl(config.apiUrl.trim())
+      ? tValidation("llm.baseUrlInvalid")
+      : "";
+  const temperatureError =
+    config.temperature < temperatureMin || config.temperature > temperatureMax
+      ? tValidation("llm.temperatureRange", {
+          min: temperatureMin,
+          max: temperatureMax,
+        })
+      : "";
 
   return (
     <div className="settings-panel">
@@ -38,7 +71,7 @@ export default function LLMSettingsPanel({
       <p className="section-description">{t("llm.description")}</p>
 
       {/* 请求地址 */}
-      <TextField className="w-full mt-6">
+      <TextField className="w-full mt-6" isInvalid={!!baseUrlError}>
         <Label>{t("llm.apiUrl.label")}</Label>
         <Input
           value={config.apiUrl}
@@ -52,6 +85,9 @@ export default function LLMSettingsPanel({
         <Description className="mt-3">
           {t("llm.apiUrl.description")}
         </Description>
+        {baseUrlError && (
+          <FieldError className="mt-2">{baseUrlError}</FieldError>
+        )}
       </TextField>
 
       {/* 供应商选择 */}
@@ -98,7 +134,7 @@ export default function LLMSettingsPanel({
       </Select>
 
       {/* 请求密钥 */}
-      <TextField className="w-full mt-6">
+      <TextField className="w-full mt-6" isInvalid={!!apiKeyError}>
         <Label>{t("llm.apiKey.label")}</Label>
         <Input
           type="password"
@@ -110,10 +146,11 @@ export default function LLMSettingsPanel({
         <Description className="mt-3">
           {t("llm.apiKey.description")}
         </Description>
+        {apiKeyError && <FieldError className="mt-2">{apiKeyError}</FieldError>}
       </TextField>
 
       {/* 请求模型名 */}
-      <TextField className="w-full mt-6">
+      <TextField className="w-full mt-6" isInvalid={!!modelError}>
         <Label>{t("llm.modelName.label")}</Label>
         <Input
           value={config.modelName}
@@ -124,6 +161,7 @@ export default function LLMSettingsPanel({
         <Description className="mt-3">
           {t("llm.modelName.description")}
         </Description>
+        {modelError && <FieldError className="mt-2">{modelError}</FieldError>}
       </TextField>
 
       {/* 请求温度 */}
@@ -148,6 +186,9 @@ export default function LLMSettingsPanel({
         <Description className="mt-3">
           {t("llm.temperature.description")}
         </Description>
+        {temperatureError && (
+          <FieldError className="mt-2">{temperatureError}</FieldError>
+        )}
       </Slider>
 
       {/* 最大工具调用轮次 */}

@@ -20,6 +20,7 @@
 - **format-utils.ts**: 统一的日期格式化工具（版本时间戳、会话日期）
 - **utils.ts**: 通用工具函数（debounce 防抖函数，支持 flush/cancel 方法；runStorageTask、withTimeout）
 - **logger.ts**: 轻量日志工厂（`createLogger(componentName)`），自动加组件前缀并支持 debug/info/warn/error 级别过滤
+- **error-handler.ts**: 通用错误处理工具（AppError + i18n 翻译 + API/Toast 友好消息）
 
 ### svg-export-utils.ts
 

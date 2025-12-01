@@ -1,4 +1,7 @@
 import { diff_match_patch } from "diff-match-patch";
+import { ErrorCodes } from "@/app/errors/error-codes";
+import i18n from "@/app/i18n/client";
+
 import {
   ZERO_SOURCE_VERSION_ID,
   DIFF_KEYFRAME_THRESHOLD,
@@ -142,21 +145,38 @@ async function resolveMaterializedXml(
 
   if (version.source_version_id === ZERO_SOURCE_VERSION_ID) {
     throw new Error(
-      `版本 ${version.id} 标记为 Diff，但缺少有效的 source_version_id`,
+      `[${ErrorCodes.VERSION_DIFF_INTEGRITY_ERROR}] ${i18n.t(
+        "errors:version.diffIntegrityError",
+        {
+          version: version.id,
+        },
+      )}`,
     );
   }
 
   const parent = await resolveVersionById(version.source_version_id);
   if (!parent) {
     throw new Error(
-      `无法加载源版本: ${version.source_version_id}（当前: ${version.id}）`,
+      `[${ErrorCodes.VERSION_SOURCE_LOAD_FAILED}] ${i18n.t(
+        "errors:version.sourceLoadFailed",
+        {
+          sourceVersion: version.source_version_id,
+          currentVersion: version.id,
+        },
+      )}`,
     );
   }
 
   if (parent.project_uuid !== version.project_uuid) {
-    const message =
-      `版本链完整性错误：父版本 ${parent.id} 属于项目 ${parent.project_uuid}，` +
-      `与当前版本 ${version.id} 的项目 ${version.project_uuid} 不一致。`;
+    const message = `[${ErrorCodes.VERSION_CROSS_PROJECT_ERROR}] ${i18n.t(
+      "errors:version.crossProjectError",
+      {
+        parentId: parent.id,
+        parentProject: parent.project_uuid,
+        versionId: version.id,
+        versionProject: version.project_uuid,
+      },
+    )}`;
     console.error("[XMLVersion] 拒绝跨项目版本链", {
       currentVersionId: version.id,
       currentProject: version.project_uuid,

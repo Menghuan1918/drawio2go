@@ -1,0 +1,23 @@
+{
+  "main": {
+    "loadingProject": "Loading project...",
+    "loadingProjectDetail": "Please wait while we load project data from storage.",
+    "loadingFailed": "Failed to load project",
+    "loadingFailedLine1": "We couldn't load the current project, possibly due to storage initialization or network issues.",
+    "loadingFailedLine2": "Please refresh the page or check the browser console for details.",
+    "reloadPage": "Refresh page",
+    "noProjectSelected": "No project selected",
+    "socketDisconnected": "⚠️ Socket.IO disconnected, AI tools are unavailable.",
+    "socketConnected": "Connected successfully",
+    "savingChanges": "Saving changes...",
+    "saveSuccess": "Changes saved successfully",
+    "saveFailed": "Failed to save changes",
+    "loadingError": "An error occurred while loading the project",
+    "unknownError": "Unknown error",
+    "webFeatureUnavailable": "This feature is unavailable on the web."
+  },
+  "selection": {
+    "summary": "Selected {{count}} objects",
+    "summaryWithIds": "Selected {{count}} objects (IDs: {{ids}}{{ellipsis}})"
+  }
+}

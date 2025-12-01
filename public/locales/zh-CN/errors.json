@@ -1,1 +1,74 @@
-{}
+{
+  "common": {
+    "unknownError": "发生未知错误",
+    "networkError": "网络连接失败",
+    "permissionDenied": "权限不足",
+    "timeout": "操作超时"
+  },
+  "storage": {
+    "invalidPageCount": "page_count 必须是大于等于 1 的数字",
+    "invalidPageNames": "page_names 必须是 JSON 数组字符串",
+    "pageNameNotString": "page_names[{{index}}] 不是字符串",
+    "svgTooLarge": "{{label}} 超出最大限制 ({{size}} MB > {{max}} MB)",
+    "invalidSVG": "无效的 SVG 数据",
+    "projectNotFound": "工程不存在: {{projectId}}",
+    "timeout": "存储请求超时（{{seconds}}秒），请稍后重试"
+  },
+  "conversation": {
+    "createFailed": "创建会话失败",
+    "loadFailed": "加载会话失败",
+    "updateFailed": "更新会话失败",
+    "deleteFailed": "删除会话失败",
+    "exportFailed": "导出会话失败",
+    "messageSaveFailed": "保存消息失败"
+  },
+  "project": {
+    "notFound": "工程不存在: {{projectId}}",
+    "loadFailed": "加载项目失败",
+    "createFailed": "创建项目失败",
+    "updateFailed": "更新项目失败"
+  },
+  "chat": {
+    "missingParams": "缺少必要参数：messages 或 llmConfig",
+    "invalidConfig": "LLM 配置无效",
+    "sendFailed": "无法发送请求",
+    "streamError": "流式传输错误",
+    "timeoutError": "请求超时",
+    "apiKeyInvalid": "API 密钥无效或缺失",
+    "modelNotFound": "模型不存在或不可用"
+  },
+  "version": {
+    "restoreFailed": "恢复版本失败: {{message}}",
+    "exportFailed": "导出失败: {{message}}",
+    "parentNotFound": "父版本 {{parent}} 不存在，请先创建主版本",
+    "invalidNumber": "版本号格式无效",
+    "versionExists": "版本 {{version}} 已存在",
+    "deleteWipFailed": "无法删除 WIP 版本",
+    "noDiffData": "无可用的差异数据",
+    "diffIntegrityError": "版本 {{version}} 标记为 Diff，但缺少有效的 source_version_id",
+    "sourceLoadFailed": "无法加载源版本: {{sourceVersion}}（当前: {{currentVersion}}）",
+    "crossProjectError": "版本链完整性错误：父版本 {{parentId}} 属于项目 {{parentProject}}，与当前版本 {{versionId}} 的项目 {{versionProject}} 不一致",
+    "wipNotFound": "WIP 版本不存在，无法创建快照",
+    "calculationFailed": "无法计算版本数据",
+    "parseFailed": "未能解析到有效的页面数据，无法创建版本",
+    "numberEmpty": "版本号不能为空",
+    "formatInvalid": "版本号格式错误：{{version}}，应为 x.y.z 或 x.y.z.h 格式",
+    "reserved": "0.0.0 是系统保留版本号，请使用其他版本号",
+    "subInvalid": "子版本号必须为有效整数",
+    "subRange": "子版本号范围必须在 {{min}}-{{max}} 之间",
+    "cacheInvalid": "当前项目版本缓存失效，请先重新加载版本列表",
+    "crossProjectRollback": "安全错误：版本 {{versionId}} 不属于当前项目 {{projectUuid}}。该版本属于项目 {{targetProject}}，无法回滚。",
+    "securityProjectIdMissing": "安全错误：未提供项目 ID，无法访问数据以避免跨项目数据泄露",
+    "targetNotFound": "目标版本不存在"
+  },
+  "xml": {
+    "payloadEmpty": "XML payload 不能为空",
+    "decodeFailed": "无法解码带前缀的 Base64 XML: {{message}}",
+    "invalidFormat": "解码结果不是有效的 XML",
+    "decompressFailed": "解压缩 Base64 编码的 gzip XML 失败。可能的原因：1) 原始数据未经过 gzip 压缩 2) 压缩数据损坏 3) 编码格式不正确。错误：{{message}}",
+    "envNotSupported": "当前运行环境不支持 Base64 解码",
+    "xpathValidationFailed": "XPath 验证失败",
+    "operationUnknown": "未知操作类型: {{type}}",
+    "batchEditFailed": "批量编辑操作失败"
+  }
+}

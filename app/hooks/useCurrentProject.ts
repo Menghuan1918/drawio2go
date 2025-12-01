@@ -14,8 +14,12 @@ import type { Project } from "@/app/lib/storage";
 import { createDefaultDiagramXml } from "@/app/lib/storage/default-diagram-xml";
 import { generateProjectUUID, withTimeout } from "@/app/lib/utils";
 import { createLogger } from "@/app/lib/logger";
+import { ErrorCodes } from "@/app/errors/error-codes";
+import i18n from "@/app/i18n/client";
 
 const logger = createLogger("useCurrentProject");
+const getStorageTimeoutMessage = (seconds: number) =>
+  `[${ErrorCodes.STORAGE_TIMEOUT}] ${i18n.t("errors:storage.timeout", { seconds })}`;
 
 /**
  * 当前工程管理 Hook
@@ -89,14 +93,14 @@ export function useCurrentProject() {
       const storage = await withTimeout(
         getStorage(),
         5000,
-        "获取存储实例超时（5秒）",
+        getStorageTimeoutMessage(5),
       );
 
       // 1. 检查统一存储层中的当前工程 ID
       let projectId = await withTimeout(
         getStoredCurrentProjectId(storage),
         3000,
-        "获取当前工程 ID 超时（3秒）",
+        getStorageTimeoutMessage(3),
       );
 
       // 2. 如果没有，检查是否有任何工程
@@ -104,7 +108,7 @@ export function useCurrentProject() {
         const allProjects = await withTimeout(
           storage.getAllProjects(),
           5000,
-          "获取所有工程列表超时（5秒）",
+          getStorageTimeoutMessage(5),
         );
 
         if (allProjects.length === 0) {
@@ -112,7 +116,7 @@ export function useCurrentProject() {
           const defaultProject = await withTimeout(
             createDefaultProject(),
             10000,
-            "创建默认工程超时（10秒）",
+            getStorageTimeoutMessage(10),
           );
           projectId = defaultProject.uuid;
           await persistCurrentProjectId(projectId, storage);
@@ -131,7 +135,7 @@ export function useCurrentProject() {
       const project = await withTimeout(
         storage.getProject(projectId),
         5000,
-        "加载工程信息超时（5秒）",
+        getStorageTimeoutMessage(5),
       );
 
       if (!project) {
@@ -140,7 +144,7 @@ export function useCurrentProject() {
         const defaultProject = await withTimeout(
           createDefaultProject(),
           10000,
-          "创建默认工程超时（10秒）",
+          getStorageTimeoutMessage(10),
         );
         await persistCurrentProjectId(defaultProject.uuid, storage);
         setCurrentProject(defaultProject);
@@ -172,7 +176,9 @@ export function useCurrentProject() {
       const storage = await getStorage();
       const project = await storage.getProject(projectId);
       if (!project) {
-        throw new Error(`工程不存在: ${projectId}`);
+        throw new Error(
+          i18n.t("errors:storage.projectNotFound", { projectId }),
+        );
       }
 
       await persistCurrentProjectId(projectId, storage);

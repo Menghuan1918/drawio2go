@@ -1,0 +1,23 @@
+{
+  "main": {
+    "loadingProject": "正在加载项目...",
+    "loadingProjectDetail": "请稍候，正在从存储层加载项目数据。",
+    "loadingFailed": "加载项目失败",
+    "loadingFailedLine1": "无法加载当前项目，可能是存储层初始化失败或网络问题。",
+    "loadingFailedLine2": "请刷新页面重试，或查看浏览器控制台以获取更多信息。",
+    "reloadPage": "刷新页面",
+    "noProjectSelected": "未选择项目",
+    "socketDisconnected": "⚠️ Socket.IO 未连接，AI 工具不可用。",
+    "socketConnected": "连接成功",
+    "savingChanges": "正在保存更改...",
+    "saveSuccess": "更改已保存",
+    "saveFailed": "保存更改失败",
+    "loadingError": "加载项目时发生错误",
+    "unknownError": "未知错误",
+    "webFeatureUnavailable": "网页无法使用该功能。"
+  },
+  "selection": {
+    "summary": "选中了 {{count}} 个对象",
+    "summaryWithIds": "选中了 {{count}} 个对象（IDs: {{ids}}{{ellipsis}}）"
+  }
+}

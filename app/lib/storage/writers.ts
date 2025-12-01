@@ -1,5 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 
+import { ErrorCodes } from "@/app/errors/error-codes";
+import i18n from "@/app/i18n/client";
 import { getStorage } from "./storage-factory";
 import { WIP_VERSION } from "./constants";
 import { buildPageMetadataFromXml } from "./page-metadata";
@@ -58,7 +60,12 @@ export async function persistWipVersion(
 
   if (!project) {
     throw new Error(
-      `当前项目不存在 (UUID: ${projectUuid})，请检查项目设置或重新选择项目`,
+      `[${ErrorCodes.STORAGE_PROJECT_NOT_FOUND}] ${i18n.t(
+        "errors:storage.projectNotFound",
+        {
+          projectId: projectUuid,
+        },
+      )}`,
     );
   }
 
@@ -74,7 +81,9 @@ export async function persistWipVersion(
   });
 
   if (!payload) {
-    throw new Error("无法计算 WIP 版本数据");
+    throw new Error(
+      `[${ErrorCodes.VERSION_CALCULATION_FAILED}] ${i18n.t("errors:version.calculationFailed")}`,
+    );
   }
 
   const existingVersions = await storage.getXMLVersionsByProject(projectUuid);
@@ -140,7 +149,12 @@ async function resolveBaseVersion(
     );
     if (!parent) {
       throw new Error(
-        `无法创建子版本 ${semanticVersion}：父版本 ${parentVersion} 不存在，请先创建主版本或刷新列表`,
+        `[${ErrorCodes.VERSION_PARENT_NOT_FOUND}] ${i18n.t(
+          "errors:version.parentNotFound",
+          {
+            parent: parentVersion,
+          },
+        )}`,
       );
     }
     return parent;
@@ -179,7 +193,9 @@ export async function persistHistoricalVersion(
   });
 
   if (!payload) {
-    throw new Error("无法计算历史版本数据");
+    throw new Error(
+      `[${ErrorCodes.VERSION_CALCULATION_FAILED}] ${i18n.t("errors:version.calculationFailed")}`,
+    );
   }
 
   const finalPageNames =
@@ -188,7 +204,9 @@ export async function persistHistoricalVersion(
     finalPageNames?.length ?? context.pageMetadata.pageCount;
 
   if (!finalPageCount || finalPageCount < 1) {
-    throw new Error("未能解析到有效的页面数据，无法创建版本");
+    throw new Error(
+      `[${ErrorCodes.VERSION_PARSE_FAILED}] ${i18n.t("errors:version.parseFailed")}`,
+    );
   }
 
   const newVersion = await storage.createXMLVersion({
