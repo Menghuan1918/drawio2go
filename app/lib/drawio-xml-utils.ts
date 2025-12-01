@@ -1,6 +1,5 @@
 import { inflateRaw } from "pako";
 import { ErrorCodes } from "@/app/errors/error-codes";
-import i18n from "@/app/i18n/client";
 import type { XMLValidationResult } from "@/app/types/drawio-tools";
 import { getDomParser } from "./dom-parser-cache";
 
@@ -55,7 +54,7 @@ export function validateXMLFormat(xml: string): XMLValidationResult {
 export function normalizeDiagramXml(payload: string): string {
   if (!payload) {
     throw new Error(
-      `[${ErrorCodes.XML_PAYLOAD_EMPTY}] ${i18n.t("errors:xml.payloadEmpty")}`,
+      `[${ErrorCodes.XML_PAYLOAD_EMPTY}] XML payload cannot be empty`,
     );
   }
 
@@ -73,7 +72,7 @@ export function normalizeDiagramXml(payload: string): string {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(
-        `[${ErrorCodes.XML_DECODE_FAILED}] ${i18n.t("errors:xml.decodeFailed", { message })}`,
+        `[${ErrorCodes.XML_DECODE_FAILED}] Failed to decode Base64 XML: ${message}`,
       );
     }
   } else {
@@ -84,13 +83,13 @@ export function normalizeDiagramXml(payload: string): string {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(
-        `[${ErrorCodes.XML_DECODE_FAILED}] ${i18n.t("errors:xml.decodeFailed", { message })}`,
+        `[${ErrorCodes.XML_DECODE_FAILED}] Failed to decode Base64 XML: ${message}`,
       );
     }
 
     if (!decoded.trimStart().startsWith("<")) {
       throw new Error(
-        `[${ErrorCodes.XML_INVALID_FORMAT}] ${i18n.t("errors:xml.invalidFormat")}`,
+        `[${ErrorCodes.XML_INVALID_FORMAT}] Decoded result is not valid XML`,
       );
     }
     resolvedXml = decoded;
@@ -114,7 +113,7 @@ export function decodeBase64(base64: string): string {
   }
 
   throw new Error(
-    `[${ErrorCodes.XML_ENV_NOT_SUPPORTED}] ${i18n.t("errors:xml.envNotSupported")}`,
+    `[${ErrorCodes.XML_ENV_NOT_SUPPORTED}] Base64 decoding is not supported in the current environment`,
   );
 }
 
@@ -133,7 +132,7 @@ function decodeBase64ToUint8Array(base64: string): Uint8Array {
   }
 
   throw new Error(
-    `[${ErrorCodes.XML_ENV_NOT_SUPPORTED}] ${i18n.t("errors:xml.envNotSupported")}`,
+    `[${ErrorCodes.XML_ENV_NOT_SUPPORTED}] Base64 decoding is not supported in the current environment`,
   );
 }
 

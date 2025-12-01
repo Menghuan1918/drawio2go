@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { type Key } from "react";
 import {
   Button,
   TextField,
@@ -15,6 +15,7 @@ import {
   Select,
   ListBox,
 } from "@heroui/react";
+import type { Selection } from "react-aria-components";
 import {
   useStorageXMLVersions,
   type CreateHistoricalVersionResult,
@@ -32,6 +33,30 @@ type VersionType = "main" | "sub";
 const VERSION_DESCRIPTION_MAX = 500;
 const SUB_VERSION_MIN = 1;
 const SUB_VERSION_MAX = 999;
+
+const extractSingleKey = (keys: Selection): string | null => {
+  if (keys === "all") return null;
+  const keyArray = [...keys];
+  if (!keyArray.length) return null;
+  const first = keyArray[0];
+  if (typeof first === "number" || typeof first === "bigint") {
+    return String(first);
+  }
+  return first as string;
+};
+
+const normalizeSelection = (keys: Selection | Key | null): Selection | null => {
+  if (keys === null) return null;
+  if (keys === "all") return "all";
+  if (
+    typeof keys === "string" ||
+    typeof keys === "number" ||
+    typeof keys === "bigint"
+  ) {
+    return new Set([keys]) as Selection;
+  }
+  return keys;
+};
 
 interface CreateVersionDialogProps {
   projectUuid: string;
@@ -619,11 +644,12 @@ export function CreateVersionDialog({
           {versionType === "sub" && (
             <Select
               className="w-full mt-4"
-              value={selectedParentVersion || null}
-              onChange={(value) => {
-                if (typeof value === "string") {
-                  setSelectedParentVersion(value);
-                }
+              selectedKey={selectedParentVersion || undefined}
+              onSelectionChange={(keys) => {
+                const selection = normalizeSelection(keys);
+                if (!selection) return;
+                const key = extractSingleKey(selection);
+                setSelectedParentVersion(key ?? "");
               }}
               isDisabled={isCreating || !!parentVersion}
             >

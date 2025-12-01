@@ -29,6 +29,12 @@ type ToastAction =
 const MAX_VISIBLE = 3;
 const DEFAULT_DURATION = 3200;
 const EXIT_DURATION = 200;
+const MAX_TIMEOUT = 2147483647;
+
+export const normalizeDuration = (value: number): number | null => {
+  if (!Number.isFinite(value) || value <= 0) return null;
+  return Math.min(value, MAX_TIMEOUT);
+};
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
@@ -70,7 +76,7 @@ const toastReducer = (state: ToastState, action: ToastAction): ToastState => {
 
 type TimerMeta = {
   timeoutId?: ReturnType<typeof setTimeout>;
-  remaining: number;
+  remaining: number; // Infinity 表示持久化 toast
   startedAt: number;
 };
 
@@ -152,7 +158,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const startTimer = useCallback(
     (toast: ToastItem) => {
       if (timersRef.current[toast.id]) return;
-      const duration = toast.duration ?? DEFAULT_DURATION;
+      const rawDuration = toast.duration ?? DEFAULT_DURATION;
+      const duration = normalizeDuration(rawDuration);
+
+      if (duration === null) {
+        timersRef.current[toast.id] = {
+          remaining: Infinity,
+          startedAt: Date.now(),
+        };
+        return;
+      }
+
       const timeoutId = setTimeout(() => requestDismiss(toast.id), duration);
       timersRef.current[toast.id] = {
         timeoutId,
@@ -164,29 +180,31 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 
   // 修正 pause 实现，确保真正暂停
-  const handlePause = useCallback(
-    (id: string) => {
-      const meta = timersRef.current[id];
-      if (!meta || !meta.timeoutId) return;
-      const elapsed = Date.now() - meta.startedAt;
-      const remaining = Math.max(meta.remaining - elapsed, 0);
-      clearTimer(id);
-      timersRef.current[id] = {
-        remaining,
-        startedAt: 0,
-      };
-    },
-    [clearTimer],
-  );
+  const handlePause = useCallback((id: string) => {
+    const meta = timersRef.current[id];
+    if (!meta) return;
+    // 持久化 toast 不需要暂停
+    if (!Number.isFinite(meta.remaining)) return;
+    if (!meta.timeoutId) return;
+    const elapsed = Date.now() - meta.startedAt;
+    const remaining = Math.max(meta.remaining - elapsed, 0);
+    clearTimeout(meta.timeoutId);
+    timersRef.current[id] = {
+      remaining,
+      startedAt: 0,
+      // 删除 timeoutId 字段，表示计时器已暂停
+    };
+  }, []);
 
   const handleResume = useCallback(
     (id: string) => {
       const meta = timersRef.current[id];
       if (!meta) return;
-      const timeoutId = setTimeout(
-        () => requestDismiss(id),
-        meta.remaining || 1,
-      );
+      // 持久化 toast 不需要恢复
+      if (!Number.isFinite(meta.remaining)) return;
+      // 已经在运行中的计时器不需要恢复
+      if (meta.timeoutId) return;
+      const timeoutId = setTimeout(() => requestDismiss(id), meta.remaining);
       timersRef.current[id] = {
         timeoutId,
         remaining: meta.remaining,

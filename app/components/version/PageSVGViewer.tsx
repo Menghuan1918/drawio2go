@@ -12,6 +12,7 @@ import {
   Select,
   ListBox,
 } from "@heroui/react";
+import type { Selection } from "react-aria-components";
 import {
   X,
   ChevronLeft,
@@ -47,6 +48,30 @@ interface Point {
   x: number;
   y: number;
 }
+
+const extractSingleKey = (keys: Selection): string | null => {
+  if (keys === "all") return null;
+  const keyArray = [...keys];
+  if (!keyArray.length) return null;
+  const first = keyArray[0];
+  if (typeof first === "number" || typeof first === "bigint") {
+    return String(first);
+  }
+  return first as string;
+};
+
+const normalizeSelection = (keys: Selection | Key | null): Selection | null => {
+  if (keys === null) return null;
+  if (keys === "all") return "all";
+  if (
+    typeof keys === "string" ||
+    typeof keys === "number" ||
+    typeof keys === "bigint"
+  ) {
+    return new Set([keys]) as Selection;
+  }
+  return keys;
+};
 
 export function PageSVGViewer({
   version,
@@ -234,10 +259,11 @@ export function PageSVGViewer({
   }, [currentPage, resetView]);
 
   const handleSelectPage = React.useCallback(
-    (value: Key | null) => {
+    (keys: Selection) => {
       if (!pages || !pages.length) return;
-      if (value === null) return;
-      const target = Number(value);
+      const key = extractSingleKey(keys);
+      if (key === null) return;
+      const target = Number(key);
       if (Number.isNaN(target)) return;
       const clamped = Math.min(Math.max(target, 0), pages.length - 1);
       setCurrentIndex(clamped);
@@ -469,8 +495,12 @@ export function PageSVGViewer({
               {pages && pages.length > 1 && (
                 <Select
                   className="page-svg-viewer__select"
-                  value={String(currentIndex)}
-                  onChange={handleSelectPage}
+                  selectedKey={String(currentIndex)}
+                  onSelectionChange={(keys) => {
+                    const selection = normalizeSelection(keys);
+                    if (!selection) return;
+                    handleSelectPage(selection);
+                  }}
                 >
                   <Select.Trigger className="page-svg-viewer__select-trigger">
                     <Select.Value className="page-svg-viewer__select-value" />

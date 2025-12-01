@@ -289,12 +289,11 @@ export default function ChatSidebar({
       });
       chatService.removeConversationCaches(ids);
 
-      // 清理指纹缓存，防止已删除会话的指纹残留导致内存增长
-      if (lastSyncedFingerprintsRef.current) {
-        ids.forEach((id) => {
-          delete lastSyncedFingerprintsRef.current![id];
-        });
-      }
+      // 清理双向指纹缓存，防止已删除会话的指纹残留导致内存增长
+      ids.forEach((id) => {
+        delete lastSyncedToUIRef.current[id];
+        delete lastSyncedToStoreRef.current[id];
+      });
     },
     [chatService],
   );
@@ -468,10 +467,10 @@ export default function ChatSidebar({
 
   // 使用 ref 缓存 setMessages，避免因为引用变化导致依赖效应重复执行
   const setMessagesRef = useRef(setMessages);
-  // 记录当前 useChat 消息与存储缓存的指纹，阻止相同数据反复触发状态更新
-  const lastSyncedFingerprintsRef = useRef<Record<string, string[]> | null>(
-    null,
-  );
+  // 双向指纹缓存 + 来源标记：阻断存储 ↔ useChat 间的循环同步
+  const lastSyncedToUIRef = useRef<Record<string, string[]>>({});
+  const lastSyncedToStoreRef = useRef<Record<string, string[]>>({});
+  const applyingFromStorageRef = useRef(false);
 
   useEffect(() => {
     setMessagesRef.current = setMessages;
@@ -502,12 +501,15 @@ export default function ChatSidebar({
     if (!cached) return;
 
     const cachedFingerprints = cached.map(fingerprintMessage);
-    const lastSynced = lastSyncedFingerprintsRef.current?.[targetConversationId];
+    const lastSyncedToUI = lastSyncedToUIRef.current[targetConversationId];
 
     // 已同步过且内容未变化时直接跳过，避免无意义的 setState 循环
-    if (areFingerprintsEqual(cachedFingerprints, lastSynced)) {
+    if (areFingerprintsEqual(cachedFingerprints, lastSyncedToUI)) {
       return;
     }
+
+    // 标记当前更新来自存储，避免反向 useEffect 写回
+    applyingFromStorageRef.current = true;
 
     setMessagesRef.current?.((current) => {
       // 再次校验状态与会话，避免切换时覆盖流式消息
@@ -523,19 +525,20 @@ export default function ChatSidebar({
       );
 
       if (isSame) {
-        lastSyncedFingerprintsRef.current = {
-          ...(lastSyncedFingerprintsRef.current ?? {}),
-          [targetConversationId]: cachedFingerprints,
-        };
+        lastSyncedToUIRef.current[targetConversationId] = cachedFingerprints;
+        lastSyncedToStoreRef.current[targetConversationId] = cachedFingerprints;
         return current;
       }
 
-      lastSyncedFingerprintsRef.current = {
-        ...(lastSyncedFingerprintsRef.current ?? {}),
-        [targetConversationId]: cachedFingerprints,
-      };
+      lastSyncedToUIRef.current[targetConversationId] = cachedFingerprints;
+      lastSyncedToStoreRef.current[targetConversationId] = cachedFingerprints;
 
       return cached;
+    });
+
+    // 在微任务中清除来源标记，确保后续写回路径正常运行
+    queueMicrotask(() => {
+      applyingFromStorageRef.current = false;
     });
   }, [
     activeConversationId,
@@ -551,14 +554,25 @@ export default function ChatSidebar({
   useEffect(() => {
     if (!activeConversationId) return;
 
-    const cached = conversationMessages[activeConversationId];
-    const cachedFingerprints = cached?.map(fingerprintMessage);
+    // 存储侧变更已经在上方 useEffect 标记处理中，这里跳过以阻断回环
+    if (applyingFromStorageRef.current) return;
+
+    // 流式阶段阻断写回存储，避免流式消息尚未完成时触发读写循环
+    if (isChatStreaming) return;
+
     const currentFingerprints = displayMessages.map(fingerprintMessage);
 
     // 缓存与当前展示相同则无需再次触发同步，避免写-读循环
-    if (areFingerprintsEqual(cachedFingerprints, currentFingerprints)) {
+    if (
+      areFingerprintsEqual(
+        currentFingerprints,
+        lastSyncedToStoreRef.current[activeConversationId],
+      )
+    ) {
       return;
     }
+
+    lastSyncedToStoreRef.current[activeConversationId] = currentFingerprints;
 
     chatService.syncMessages(activeConversationId, displayMessages, {
       resolveConversationId,
@@ -567,9 +581,10 @@ export default function ChatSidebar({
     activeConversationId,
     chatService,
     displayMessages,
-    conversationMessages,
     areFingerprintsEqual,
+    isChatStreaming,
     resolveConversationId,
+    // applyingFromStorageRef 是 ref，不需要添加到依赖数组
   ]);
 
   useEffect(() => {

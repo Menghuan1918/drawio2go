@@ -3,6 +3,7 @@
 import { Description, Label, ListBox, Select } from "@heroui/react";
 import { Languages } from "lucide-react";
 import type { Key } from "react";
+import type { Selection } from "react-aria-components";
 
 import i18n from "@/app/i18n/client";
 import {
@@ -17,6 +18,30 @@ interface LanguageSwitcherProps {
   className?: string;
 }
 
+const extractSingleKey = (keys: Selection): string | null => {
+  if (keys === "all") return null;
+  const keyArray = [...keys];
+  if (!keyArray.length) return null;
+  const first = keyArray[0];
+  if (typeof first === "number" || typeof first === "bigint") {
+    return String(first);
+  }
+  return first as string;
+};
+
+const normalizeSelection = (keys: Selection | Key | null): Selection | null => {
+  if (keys === null) return null;
+  if (keys === "all") return "all";
+  if (
+    typeof keys === "string" ||
+    typeof keys === "number" ||
+    typeof keys === "bigint"
+  ) {
+    return new Set([keys]) as Selection;
+  }
+  return keys;
+};
+
 /**
  * 语言切换器
  * 使用 HeroUI Select 切换 en-US / zh-CN，并立即调用 i18n.changeLanguage 生效
@@ -29,11 +54,12 @@ export default function LanguageSwitcher({ className }: LanguageSwitcherProps) {
     ? (currentLanguage as Locale)
     : defaultLocale;
 
-  const handleChange = (value: Key | null) => {
-    if (typeof value !== "string") return;
+  const handleChange = (keys: Selection) => {
+    const key = extractSingleKey(keys);
+    if (typeof key !== "string") return;
 
-    const nextLocale = locales.includes(value as Locale)
-      ? (value as Locale)
+    const nextLocale = locales.includes(key as Locale)
+      ? (key as Locale)
       : defaultLocale;
 
     if (nextLocale !== i18n.language) {
@@ -44,8 +70,12 @@ export default function LanguageSwitcher({ className }: LanguageSwitcherProps) {
   return (
     <Select
       className={className}
-      value={selectedLocale}
-      onChange={handleChange}
+      selectedKey={selectedLocale}
+      onSelectionChange={(keys) => {
+        const selection = normalizeSelection(keys);
+        if (!selection) return;
+        handleChange(selection);
+      }}
       aria-label={t("general.language.label")}
     >
       <Label className="flex items-center gap-2 text-sm font-medium text-foreground">

@@ -30,12 +30,14 @@ describe("normalizeDiagramXml", () => {
   });
 
   it("空字符串抛出明确错误", () => {
-    expect(() => normalizeDiagramXml("")).toThrow("XML payload 不能为空");
+    expect(() => normalizeDiagramXml("")).toThrow(
+      "[6001] XML payload cannot be empty",
+    );
   });
 
   it("无法识别的输入抛出统一错误信息", () => {
     expect(() => normalizeDiagramXml("not-xml-or-base64")).toThrow(
-      "无法识别的 XML 格式",
+      "[6003] Decoded result is not valid XML",
     );
   });
 

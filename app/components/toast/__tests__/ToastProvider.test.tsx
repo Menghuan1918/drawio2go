@@ -1,7 +1,7 @@
 import React, { act } from "react";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { ToastProvider, useToast } from "../ToastProvider";
+import { ToastProvider, normalizeDuration, useToast } from "../ToastProvider";
 import type { ToastContextValue } from "@/app/types/toast";
 
 // i18n hook mock：返回兜底翻译函数，避免依赖真实 i18n 环境
@@ -35,15 +35,18 @@ const renderWithProvider = (): {
   const onReady = (ctx: ToastContextValue) => {
     captured = ctx;
   };
-  const utils = render(
-    <ToastProvider>
-      <TestConsumer onReady={onReady} />
-    </ToastProvider>,
-  );
+  let utils: ReturnType<typeof render>;
+  act(() => {
+    utils = render(
+      <ToastProvider>
+        <TestConsumer onReady={onReady} />
+      </ToastProvider>,
+    );
+  });
   if (!captured) {
     throw new Error("Toast context is not available");
   }
-  return { api: captured!, unmount: utils.unmount };
+  return { api: captured!, unmount: utils!.unmount };
 };
 
 describe("ToastProvider", () => {
@@ -133,6 +136,116 @@ describe("ToastProvider", () => {
 
       act(() => vi.advanceTimersByTime(EXIT_DURATION));
       expect(screen.queryByText("Fast close")).toBeNull();
+    });
+  });
+
+  describe("持久化时长", () => {
+    it("duration: Infinity 不自动关闭", () => {
+      const { api } = renderWithProvider();
+
+      act(() => {
+        api.push({
+          description: "Persistent",
+          variant: "info",
+          duration: Infinity,
+        });
+      });
+
+      const toastElement = screen.getByText("Persistent").closest(".toast");
+      expect(toastElement).not.toBeNull();
+
+      act(() => {
+        vi.advanceTimersByTime(10_000);
+      });
+
+      expect(toastElement).toBeInTheDocument();
+      expect(toastElement).not.toHaveClass("toast--leaving");
+    });
+
+    it("duration 为 0/-1/NaN 视为持久化，不自动关闭", () => {
+      const { api } = renderWithProvider();
+
+      const values = [0, -1, Number.NaN];
+      act(() => {
+        values.forEach((value, index) => {
+          api.push({
+            description: `Persistent-${index}`,
+            variant: "info",
+            duration: value,
+          });
+        });
+      });
+
+      act(() => {
+        vi.advanceTimersByTime(20_000);
+      });
+
+      values.forEach((_value, index) => {
+        const toastElement = screen
+          .getByText(`Persistent-${index}`)
+          .closest(".toast");
+        expect(toastElement).not.toBeNull();
+        expect(toastElement).not.toHaveClass("toast--leaving");
+      });
+    });
+
+    it("超大 duration 被钳制到 2147483647，避免溢出警告", () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      const normalized = normalizeDuration(3_000_000_000);
+      expect(normalized).toBe(2_147_483_647);
+
+      const timeoutId = setTimeout(() => {}, normalized ?? 0);
+      clearTimeout(timeoutId);
+
+      expect(warnSpy).not.toHaveBeenCalled();
+
+      warnSpy.mockRestore();
+    });
+
+    it("持久化 toast 悬停/聚焦暂停与恢复不会触发关闭", () => {
+      const { api } = renderWithProvider();
+
+      act(() => {
+        api.push({
+          description: "HoverPersist",
+          variant: "info",
+          duration: Infinity,
+        });
+      });
+
+      const toastElement = screen.getByText("HoverPersist").closest(".toast")!;
+
+      act(() => {
+        fireEvent.mouseEnter(toastElement);
+        fireEvent.mouseLeave(toastElement);
+        fireEvent.focus(toastElement);
+        fireEvent.blur(toastElement);
+        vi.advanceTimersByTime(15_000);
+      });
+
+      expect(toastElement).toBeInTheDocument();
+      expect(toastElement).not.toHaveClass("toast--leaving");
+    });
+
+    it("持久化 toast 可手动 dismiss", () => {
+      const { api } = renderWithProvider();
+      let toastId = "";
+
+      act(() => {
+        toastId = api.push({
+          description: "ManualDismiss",
+          variant: "danger",
+          duration: Infinity,
+        });
+      });
+
+      expect(screen.getByText("ManualDismiss")).toBeInTheDocument();
+
+      act(() => api.dismiss(toastId));
+      act(() => vi.advanceTimersByTime(EXIT_DURATION));
+
+      expect(screen.queryByText("ManualDismiss")).toBeNull();
     });
   });
 

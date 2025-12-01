@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import React from "react";
+import React, { type Key } from "react";
 import { createPortal } from "react-dom";
 import {
   Button,
@@ -14,6 +14,7 @@ import {
   TooltipContent,
   TooltipRoot,
 } from "@heroui/react";
+import type { Selection } from "react-aria-components";
 import {
   AlertTriangle,
   ArrowLeftRight,
@@ -66,6 +67,30 @@ type CompareLayout = "split" | "stack" | "overlay" | "smart";
 const MIN_SCALE = 0.3;
 const MAX_SCALE = 4;
 const SCALE_STEP = 0.2;
+
+const extractSingleKey = (keys: Selection): string | null => {
+  if (keys === "all") return null;
+  const keyArray = [...keys];
+  if (!keyArray.length) return null;
+  const first = keyArray[0];
+  if (typeof first === "number" || typeof first === "bigint") {
+    return String(first);
+  }
+  return first as string;
+};
+
+const normalizeSelection = (keys: Selection | Key | null): Selection | null => {
+  if (keys === null) return null;
+  if (keys === "all") return "all";
+  if (
+    typeof keys === "string" ||
+    typeof keys === "number" ||
+    typeof keys === "bigint"
+  ) {
+    return new Set([keys]) as Selection;
+  }
+  return keys;
+};
 
 function formatVersionMeta(version: XMLVersion, locale: string) {
   return `${version.semantic_version} · ${formatVersionTimestamp(
@@ -364,9 +389,10 @@ export function VersionCompare({
     pointerStart.current = null;
   };
 
-  const handleSelectPage = (value: React.Key | null) => {
-    if (value === null) return;
-    const nextIndex = Number(value);
+  const handleSelectPage = (keys: Selection) => {
+    const key = extractSingleKey(keys);
+    if (key === null) return;
+    const nextIndex = Number(key);
     if (Number.isNaN(nextIndex)) return;
     setCurrentIndex(Math.min(Math.max(nextIndex, 0), pagePairs.length - 1));
     setOffset({ x: 0, y: 0 });
@@ -381,10 +407,8 @@ export function VersionCompare({
   };
 
   // 处理版本选择
-  const handleVersionChange = (
-    target: "A" | "B",
-    versionId: React.Key | null,
-  ) => {
+  const handleVersionChange = (target: "A" | "B", keys: Selection) => {
+    const versionId = extractSingleKey(keys);
     if (versionId === null) return;
     const selectedVersion = versions.find((v) => v.id === String(versionId));
     if (!selectedVersion) return;
@@ -482,8 +506,12 @@ export function VersionCompare({
         <Card.Header className="version-compare__header">
           {/* 版本 A 选择器 */}
           <Select
-            value={currentVersionA.id}
-            onChange={(key) => handleVersionChange("A", key)}
+            selectedKey={currentVersionA.id}
+            onSelectionChange={(keys) => {
+              const selection = normalizeSelection(keys);
+              if (!selection) return;
+              handleVersionChange("A", selection);
+            }}
             className="version-compare__version-select"
           >
             <Label>{tVersion("compare.selectors.left")}</Label>
@@ -519,8 +547,12 @@ export function VersionCompare({
 
           {/* 版本 B 选择器 */}
           <Select
-            value={currentVersionB.id}
-            onChange={(key) => handleVersionChange("B", key)}
+            selectedKey={currentVersionB.id}
+            onSelectionChange={(keys) => {
+              const selection = normalizeSelection(keys);
+              if (!selection) return;
+              handleVersionChange("B", selection);
+            }}
             className="version-compare__version-select"
           >
             <Label>{tVersion("compare.selectors.right")}</Label>
@@ -929,8 +961,12 @@ export function VersionCompare({
             <Select
               aria-label={tVersion("aria.compare.pageSelect")}
               className="version-compare__select"
-              value={String(currentIndex)}
-              onChange={handleSelectPage}
+              selectedKey={String(currentIndex)}
+              onSelectionChange={(keys) => {
+                const selection = normalizeSelection(keys);
+                if (!selection) return;
+                handleSelectPage(selection);
+              }}
               isDisabled={!pagePairs.length}
             >
               <Select.Trigger className="version-compare__select-trigger">

@@ -8,7 +8,6 @@
  */
 
 import { ErrorCodes } from "@/app/errors/error-codes";
-import i18n from "@/app/i18n/client";
 import type { GetXMLResult, ReplaceXMLResult } from "../types/drawio-tools";
 import { getStorage } from "./storage/storage-factory";
 import { materializeVersionXml } from "./storage/xml-version-engine";
@@ -52,7 +51,7 @@ async function saveDrawioXMLInternal(
 export async function saveDrawioXML(xml: string): Promise<void> {
   if (typeof window === "undefined") {
     throw new Error(
-      `[${ErrorCodes.XML_ENV_NOT_SUPPORTED}] ${i18n.t("errors:xml.envNotSupported")}`,
+      `[${ErrorCodes.XML_ENV_NOT_SUPPORTED}] This function can only be used in browser environment`,
     );
   }
 
@@ -62,7 +61,7 @@ export async function saveDrawioXML(xml: string): Promise<void> {
     if (!validation.valid) {
       throw new Error(
         validation.error ||
-          `[${ErrorCodes.XML_INVALID_FORMAT}] ${i18n.t("errors:xml.invalidFormat")}`,
+          `[${ErrorCodes.XML_INVALID_FORMAT}] Decoded result is not valid XML`,
       );
     }
     await saveDrawioXMLInternal(context);
@@ -79,7 +78,7 @@ export async function getDrawioXML(): Promise<GetXMLResult> {
   if (typeof window === "undefined") {
     return {
       success: false,
-      error: `[${ErrorCodes.XML_ENV_NOT_SUPPORTED}] ${i18n.t("errors:xml.envNotSupported")}`,
+      error: `[${ErrorCodes.XML_ENV_NOT_SUPPORTED}] This function can only be used in browser environment`,
     };
   }
 
@@ -92,12 +91,7 @@ export async function getDrawioXML(): Promise<GetXMLResult> {
     if (!project) {
       return {
         success: false,
-        error: `[${ErrorCodes.STORAGE_PROJECT_NOT_FOUND}] ${i18n.t(
-          "errors:storage.projectNotFound",
-          {
-            projectId: projectUuid,
-          },
-        )}`,
+        error: `[${ErrorCodes.STORAGE_PROJECT_NOT_FOUND}] Project not found: ${projectUuid}`,
       };
     }
 
@@ -239,7 +233,7 @@ export async function replaceDrawioXML(
     if (!validation.valid) {
       return {
         success: false,
-        message: `[${ErrorCodes.XML_INVALID_FORMAT}] ${i18n.t("errors:xml.invalidFormat")}`,
+        message: `[${ErrorCodes.XML_INVALID_FORMAT}] Decoded result is not valid XML`,
         error: validation.error,
       };
     }

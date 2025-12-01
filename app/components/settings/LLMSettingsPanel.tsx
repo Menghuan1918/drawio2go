@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { type Key, useMemo } from "react";
 import {
   TextField,
   Label,
@@ -11,6 +11,7 @@ import {
   Slider,
   FieldError,
 } from "@heroui/react";
+import type { Selection } from "react-aria-components";
 import { LLMConfig, ProviderType } from "@/app/types/chat";
 import { getProviderOptions } from "./constants";
 import SystemPromptEditor from "./SystemPromptEditor";
@@ -33,6 +34,30 @@ export default function LLMSettingsPanel({
   const { t } = useAppTranslation("settings");
   const { t: tValidation } = useAppTranslation("validation");
   const providerOptions = useMemo(() => getProviderOptions(t), [t]);
+  const extractSingleKey = (keys: Selection): string | null => {
+    if (keys === "all") return null;
+    const keyArray = [...keys];
+    if (!keyArray.length) return null;
+    const first = keyArray[0];
+    if (typeof first === "number" || typeof first === "bigint") {
+      return String(first);
+    }
+    return first as string;
+  };
+  const normalizeSelection = (
+    keys: Selection | Key | null,
+  ): Selection | null => {
+    if (keys === null) return null;
+    if (keys === "all") return "all";
+    if (
+      typeof keys === "string" ||
+      typeof keys === "number" ||
+      typeof keys === "bigint"
+    ) {
+      return new Set([keys]) as Selection;
+    }
+    return keys;
+  };
 
   const temperatureMin = 0;
   const temperatureMax = 2;
@@ -93,12 +118,16 @@ export default function LLMSettingsPanel({
       {/* 供应商选择 */}
       <Select
         className="w-full mt-6"
-        value={config.providerType}
-        onChange={(value) =>
+        selectedKey={config.providerType}
+        onSelectionChange={(keys) => {
+          const selection = normalizeSelection(keys);
+          if (!selection) return;
+          const key = extractSingleKey(selection);
+          if (!key) return;
           onChange({
-            providerType: value as ProviderType,
-          })
-        }
+            providerType: key as ProviderType,
+          });
+        }}
       >
         <Label>{t("llm.provider.label")}</Label>
         <Select.Trigger className="mt-3 flex w-full items-center justify-between rounded-md border border-default-200 bg-content1 px-3 py-2 text-left text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 hover:border-primary">

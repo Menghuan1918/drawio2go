@@ -76,7 +76,10 @@
       "Bash(done)",
       "Bash(pnpm build:*)",
       "Bash(echo:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(npm run test:*)",
+      "Bash(npm test:*)",
+      "Bash(pnpm run lint:*)"
     ],
     "deny": [],
     "ask": []
