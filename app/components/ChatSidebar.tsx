@@ -288,6 +288,13 @@ export default function ChatSidebar({
         return next;
       });
       chatService.removeConversationCaches(ids);
+
+      // 清理指纹缓存，防止已删除会话的指纹残留导致内存增长
+      if (lastSyncedFingerprintsRef.current) {
+        ids.forEach((id) => {
+          delete lastSyncedFingerprintsRef.current![id];
+        });
+      }
     },
     [chatService],
   );
@@ -461,6 +468,10 @@ export default function ChatSidebar({
 
   // 使用 ref 缓存 setMessages，避免因为引用变化导致依赖效应重复执行
   const setMessagesRef = useRef(setMessages);
+  // 记录当前 useChat 消息与存储缓存的指纹，阻止相同数据反复触发状态更新
+  const lastSyncedFingerprintsRef = useRef<Record<string, string[]> | null>(
+    null,
+  );
 
   useEffect(() => {
     setMessagesRef.current = setMessages;
@@ -473,6 +484,15 @@ export default function ChatSidebar({
     [messages, ensureMessageMetadata],
   );
 
+  const areFingerprintsEqual = useCallback(
+    (a: string[] | undefined, b: string[] | undefined) => {
+      if (!a || !b) return false;
+      if (a.length !== b.length) return false;
+      return a.every((fp, index) => fp === b[index]);
+    },
+    [],
+  );
+
   useEffect(() => {
     const targetConversationId = activeConversationId;
     if (!targetConversationId) return;
@@ -481,24 +501,48 @@ export default function ChatSidebar({
     const cached = conversationMessages[targetConversationId];
     if (!cached) return;
 
+    const cachedFingerprints = cached.map(fingerprintMessage);
+    const lastSynced = lastSyncedFingerprintsRef.current?.[targetConversationId];
+
+    // 已同步过且内容未变化时直接跳过，避免无意义的 setState 循环
+    if (areFingerprintsEqual(cachedFingerprints, lastSynced)) {
+      return;
+    }
+
     setMessagesRef.current?.((current) => {
       // 再次校验状态与会话，避免切换时覆盖流式消息
       if (isChatStreaming || activeConversationId !== targetConversationId) {
         return current;
       }
 
-      const cachedFingerprints = cached.map(fingerprintMessage);
       const currentFingerprints = current.map(fingerprintMessage);
 
-      const isSame =
-        cachedFingerprints.length === currentFingerprints.length &&
-        cachedFingerprints.every(
-          (fp, index) => fp === currentFingerprints[index],
-        );
+      const isSame = areFingerprintsEqual(
+        cachedFingerprints,
+        currentFingerprints,
+      );
 
-      return isSame ? current : cached;
+      if (isSame) {
+        lastSyncedFingerprintsRef.current = {
+          ...(lastSyncedFingerprintsRef.current ?? {}),
+          [targetConversationId]: cachedFingerprints,
+        };
+        return current;
+      }
+
+      lastSyncedFingerprintsRef.current = {
+        ...(lastSyncedFingerprintsRef.current ?? {}),
+        [targetConversationId]: cachedFingerprints,
+      };
+
+      return cached;
     });
-  }, [activeConversationId, conversationMessages, isChatStreaming]);
+  }, [
+    activeConversationId,
+    conversationMessages,
+    isChatStreaming,
+    areFingerprintsEqual,
+  ]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -506,6 +550,16 @@ export default function ChatSidebar({
 
   useEffect(() => {
     if (!activeConversationId) return;
+
+    const cached = conversationMessages[activeConversationId];
+    const cachedFingerprints = cached?.map(fingerprintMessage);
+    const currentFingerprints = displayMessages.map(fingerprintMessage);
+
+    // 缓存与当前展示相同则无需再次触发同步，避免写-读循环
+    if (areFingerprintsEqual(cachedFingerprints, currentFingerprints)) {
+      return;
+    }
+
     chatService.syncMessages(activeConversationId, displayMessages, {
       resolveConversationId,
     });
@@ -513,6 +567,8 @@ export default function ChatSidebar({
     activeConversationId,
     chatService,
     displayMessages,
+    conversationMessages,
+    areFingerprintsEqual,
     resolveConversationId,
   ]);
 
