@@ -1,4 +1,12 @@
-import { LLMConfig, ProviderType } from "@/app/types/chat";
+import {
+  ActiveModelReference,
+  AgentSettings,
+  ModelConfig,
+  ProviderConfig,
+  ProviderType,
+} from "@/app/types/chat";
+import { generateProjectUUID } from "@/app/lib/utils";
+import type { StorageAdapter } from "@/app/lib/storage/adapter";
 
 export const DEFAULT_SYSTEM_PROMPT = `你是一个专业的 DrawIO XML 绘制助手，负责通过 Socket.IO + XPath 工具链安全地读取和编辑图表。
 
@@ -24,24 +32,13 @@ export const DEFAULT_SYSTEM_PROMPT = `你是一个专业的 DrawIO XML 绘制助
 
 export const DEFAULT_API_URL = "https://api.deepseek.com/v1";
 
-export const DEFAULT_LLM_CONFIG: LLMConfig = {
-  apiUrl: DEFAULT_API_URL,
-  apiKey: "",
-  temperature: 0.3,
-  modelName: "deepseek-chat",
-  systemPrompt: DEFAULT_SYSTEM_PROMPT,
-  providerType: "openai-compatible",
-  maxToolRounds: 5,
-};
-
-const PROVIDER_TYPES: ProviderType[] = [
-  "openai-reasoning",
-  "openai-compatible",
-  "deepseek",
-];
-
-export const isProviderType = (value: unknown): value is ProviderType =>
-  typeof value === "string" && PROVIDER_TYPES.includes(value as ProviderType);
+export function isProviderType(value: unknown): value is ProviderType {
+  return (
+    value === "openai-reasoning" ||
+    value === "openai-compatible" ||
+    value === "deepseek-native"
+  );
+}
 
 /**
  * 规范化 API URL
@@ -70,41 +67,158 @@ export const normalizeApiUrl = (
   return `${withoutTrailingSlash}/v1`;
 };
 
-/**
- * 规范化 LLM 配置
- * - 设置默认值
- * - 验证类型
- * - 标准化格式
- */
-export const normalizeLLMConfig = (value?: Partial<LLMConfig>): LLMConfig => {
-  const providerType = isProviderType(value?.providerType)
-    ? value.providerType
-    : DEFAULT_LLM_CONFIG.providerType;
+export const STORAGE_KEY_LLM_PROVIDERS = "settings.llm.providers";
+export const STORAGE_KEY_LLM_MODELS = "settings.llm.models";
+export const STORAGE_KEY_AGENT_SETTINGS = "settings.llm.agent";
+export const STORAGE_KEY_ACTIVE_MODEL = "settings.llm.activeModel";
 
-  return {
-    apiUrl: normalizeApiUrl(value?.apiUrl),
-    apiKey:
-      typeof value?.apiKey === "string"
-        ? value.apiKey
-        : DEFAULT_LLM_CONFIG.apiKey,
-    temperature:
-      typeof value?.temperature === "number" &&
-      Number.isFinite(value.temperature)
-        ? value.temperature
-        : DEFAULT_LLM_CONFIG.temperature,
-    modelName:
-      typeof value?.modelName === "string" && value.modelName.trim()
-        ? value.modelName
-        : DEFAULT_LLM_CONFIG.modelName,
-    systemPrompt:
-      typeof value?.systemPrompt === "string"
-        ? value.systemPrompt
-        : DEFAULT_LLM_CONFIG.systemPrompt,
-    providerType,
-    maxToolRounds:
-      typeof value?.maxToolRounds === "number" &&
-      Number.isFinite(value.maxToolRounds)
-        ? value.maxToolRounds
-        : DEFAULT_LLM_CONFIG.maxToolRounds,
-  };
+export const DEFAULT_PROVIDERS: ProviderConfig[] = [
+  {
+    id: "deepseek-default",
+    displayName: "DeepSeek",
+    providerType: "deepseek-native",
+    apiUrl: "https://api.deepseek.com/v1",
+    apiKey: "",
+    models: ["deepseek-chat-default", "deepseek-reasoner-default"],
+    customConfig: {},
+    createdAt: 0,
+    updatedAt: 0,
+  },
+];
+
+export const DEFAULT_MODELS: ModelConfig[] = [
+  {
+    id: "deepseek-chat-default",
+    providerId: "deepseek-default",
+    modelName: "deepseek-chat",
+    displayName: "DeepSeek Chat",
+    temperature: 0.3,
+    maxToolRounds: 5,
+    isDefault: true,
+    capabilities: {
+      supportsThinking: false,
+      supportsVision: false,
+    },
+    enableToolsInThinking: false,
+    customConfig: {},
+    createdAt: 0,
+    updatedAt: 0,
+  },
+  {
+    id: "deepseek-reasoner-default",
+    providerId: "deepseek-default",
+    modelName: "deepseek-reasoner",
+    displayName: "DeepSeek Reasoner",
+    temperature: 0.3,
+    maxToolRounds: 5,
+    isDefault: false,
+    capabilities: {
+      supportsThinking: true,
+      supportsVision: false,
+    },
+    enableToolsInThinking: true,
+    customConfig: {},
+    createdAt: 0,
+    updatedAt: 0,
+  },
+];
+
+export const DEFAULT_AGENT_SETTINGS: AgentSettings = {
+  systemPrompt: DEFAULT_SYSTEM_PROMPT,
+  updatedAt: 0,
 };
+
+export const DEFAULT_ACTIVE_MODEL: ActiveModelReference = {
+  providerId: "deepseek-default",
+  modelId: "deepseek-chat-default",
+  updatedAt: 0,
+};
+
+export async function initializeDefaultLLMConfig(
+  storage: StorageAdapter,
+): Promise<void> {
+  try {
+    const existingProviders = await storage.getSetting(STORAGE_KEY_LLM_PROVIDERS);
+
+    if (existingProviders !== null) {
+      return;
+    }
+
+    const now = Date.now();
+
+    const providers = JSON.parse(
+      JSON.stringify(DEFAULT_PROVIDERS),
+    ) as ProviderConfig[];
+    const models = JSON.parse(JSON.stringify(DEFAULT_MODELS)) as ModelConfig[];
+    const agentSettings = JSON.parse(
+      JSON.stringify(DEFAULT_AGENT_SETTINGS),
+    ) as AgentSettings;
+    const activeModel = JSON.parse(
+      JSON.stringify(DEFAULT_ACTIVE_MODEL),
+    ) as ActiveModelReference;
+
+    const providerIdMap = new Map<string, string>();
+    providers.forEach((provider) => {
+      const newId = generateProjectUUID();
+      providerIdMap.set(provider.id, newId);
+      provider.id = newId;
+      provider.createdAt = now;
+      provider.updatedAt = now;
+    });
+
+    const modelIdMap = new Map<string, string>();
+    models.forEach((model) => {
+      const mappedProviderId = providerIdMap.get(model.providerId);
+      if (mappedProviderId) {
+        model.providerId = mappedProviderId;
+      }
+
+      const newModelId = generateProjectUUID();
+      modelIdMap.set(model.id, newModelId);
+      model.id = newModelId;
+      model.createdAt = now;
+      model.updatedAt = now;
+    });
+
+    providers.forEach((provider) => {
+      provider.models = provider.models
+        .map((modelId) => modelIdMap.get(modelId))
+        .filter((id): id is string => Boolean(id));
+    });
+
+    const mappedProviderId = providerIdMap.get(activeModel.providerId);
+    const mappedModelId = modelIdMap.get(activeModel.modelId);
+
+    if (mappedProviderId) {
+      activeModel.providerId = mappedProviderId;
+    }
+    if (mappedModelId) {
+      activeModel.modelId = mappedModelId;
+    }
+    activeModel.updatedAt = now;
+
+    agentSettings.updatedAt = now;
+
+    await storage.setSetting(
+      STORAGE_KEY_LLM_PROVIDERS,
+      JSON.stringify(providers),
+    );
+    await storage.setSetting(STORAGE_KEY_LLM_MODELS, JSON.stringify(models));
+    await storage.setSetting(
+      STORAGE_KEY_AGENT_SETTINGS,
+      JSON.stringify(agentSettings),
+    );
+    await storage.setSetting(
+      STORAGE_KEY_ACTIVE_MODEL,
+      JSON.stringify(activeModel),
+    );
+
+    try {
+      await storage.deleteSetting("llmConfig");
+    } catch (cleanupError) {
+      console.warn("[LLM] Failed to delete legacy llmConfig", cleanupError);
+    }
+  } catch (error) {
+    console.error("[LLM] Failed to initialize default LLM config", error);
+  }
+}

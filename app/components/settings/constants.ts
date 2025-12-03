@@ -16,7 +16,7 @@ export interface ProviderOption {
  */
 export const PROVIDER_OPTIONS: ProviderType[] = [
   "openai-compatible",
-  "deepseek",
+  "deepseek-native",
   "openai-reasoning",
 ];
 
