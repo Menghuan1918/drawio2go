@@ -142,8 +142,7 @@ export interface Message {
   id: string;
   conversation_id: string;
   role: MessageRole;
-  content: string;
-  tool_invocations?: string; // JSON 序列化的工具调用记录
+  parts_structure: string; // JSON 序列化的 parts（reasoning/text/tool）及顺序
   model_name?: string | null; // 发送消息时使用的模型
   xml_version_id?: string; // 关联的 XML 版本 ID
   sequence_number?: number; // 会话内的顺序序号，单调递增

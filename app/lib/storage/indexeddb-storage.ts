@@ -788,7 +788,12 @@ export class IndexedDBStorage implements StorageAdapter {
     }
 
     const fullMessage: Message = {
-      ...message,
+      id: message.id,
+      conversation_id: message.conversation_id,
+      role: message.role,
+      parts_structure: message.parts_structure,
+      model_name: message.model_name ?? null,
+      xml_version_id: message.xml_version_id,
       sequence_number: sequenceNumber,
       created_at: createdAt,
     };
@@ -853,7 +858,12 @@ export class IndexedDBStorage implements StorageAdapter {
       }
 
       const fullMessage: Message = {
-        ...msg,
+        id: msg.id,
+        conversation_id: msg.conversation_id,
+        role: msg.role,
+        parts_structure: msg.parts_structure,
+        model_name: msg.model_name ?? null,
+        xml_version_id: msg.xml_version_id,
         sequence_number: sequenceNumber,
         created_at: createdAt,
       };

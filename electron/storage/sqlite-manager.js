@@ -647,16 +647,16 @@ class SQLiteManager {
 
     const upsertStmt = this.db.prepare(
       `
-        INSERT INTO messages (id, conversation_id, role, content, tool_invocations, model_name, xml_version_id, sequence_number, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO messages (id, conversation_id, role, parts_structure, model_name, xml_version_id, sequence_number, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           conversation_id = excluded.conversation_id,
           role = excluded.role,
-          content = excluded.content,
-          tool_invocations = excluded.tool_invocations,
+          parts_structure = excluded.parts_structure,
           model_name = excluded.model_name,
           xml_version_id = excluded.xml_version_id,
-          sequence_number = excluded.sequence_number
+          sequence_number = excluded.sequence_number,
+          created_at = excluded.created_at
       `,
     );
 
@@ -676,8 +676,7 @@ class SQLiteManager {
           msg.id,
           msg.conversation_id,
           msg.role,
-          msg.content,
-          msg.tool_invocations || null,
+          msg.parts_structure,
           msg.model_name || null,
           msg.xml_version_id || null,
           sequenceNumber,
@@ -705,16 +704,16 @@ class SQLiteManager {
 
   createMessages(messages) {
     const upsertStmt = this.db.prepare(`
-      INSERT INTO messages (id, conversation_id, role, content, tool_invocations, model_name, xml_version_id, sequence_number, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO messages (id, conversation_id, role, parts_structure, model_name, xml_version_id, sequence_number, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         conversation_id = excluded.conversation_id,
         role = excluded.role,
-        content = excluded.content,
-        tool_invocations = excluded.tool_invocations,
+        parts_structure = excluded.parts_structure,
         model_name = excluded.model_name,
         xml_version_id = excluded.xml_version_id,
-        sequence_number = excluded.sequence_number
+        sequence_number = excluded.sequence_number,
+        created_at = excluded.created_at
     `);
 
     const selectByIdStmt = this.db.prepare(
@@ -748,8 +747,7 @@ class SQLiteManager {
           msg.id,
           msg.conversation_id,
           msg.role,
-          msg.content,
-          msg.tool_invocations || null,
+          msg.parts_structure,
           msg.model_name || null,
           msg.xml_version_id || null,
           sequenceNumber,

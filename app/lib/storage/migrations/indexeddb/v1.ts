@@ -72,6 +72,7 @@ export function applyIndexedDbV1Migration(
   const convStore = ensureStore(db, tx, "conversations", { keyPath: "id" });
   ensureIndex(convStore, "project_uuid", "project_uuid");
 
+  // messages: { id, conversation_id, role, parts_structure, model_name?, xml_version_id?, sequence_number?, created_at }
   const msgStore = ensureStore(db, tx, "messages", { keyPath: "id" });
   ensureIndex(msgStore, "conversation_id", "conversation_id");
   ensureIndex(msgStore, "xml_version_id", "xml_version_id");

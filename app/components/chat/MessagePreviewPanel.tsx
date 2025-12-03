@@ -93,9 +93,39 @@ export default function MessagePreviewPanel({
                   {t(`messages.roles.${msg.role}`)}
                 </span>
                 <p className="history-preview__text">
-                  {msg.content?.slice(0, 160) ||
-                    t("messages.emptyMessage", { defaultValue: "" }) ||
-                    ""}
+                  {(() => {
+                    try {
+                      const parsed = JSON.parse(msg.parts_structure);
+                      const textParts = Array.isArray(parsed)
+                        ? parsed
+                            .filter(
+                              (part) =>
+                                part &&
+                                typeof part === "object" &&
+                                (part as { type?: unknown }).type === "text" &&
+                                typeof (part as { text?: unknown }).text ===
+                                  "string",
+                            )
+                            .map((part) => (part as { text: string }).text)
+                        : [];
+
+                      const textContent = textParts.join("\n");
+                      return (
+                        textContent.slice(0, 160) ||
+                        t("messages.emptyMessage", { defaultValue: "" }) ||
+                        ""
+                      );
+                    } catch (error) {
+                      console.error(
+                        "[MessagePreviewPanel] 解析 parts_structure 失败:",
+                        error,
+                        msg.id,
+                      );
+                      return (
+                        t("messages.emptyMessage", { defaultValue: "" }) || ""
+                      );
+                    }
+                  })()}
                 </p>
               </li>
             ))}

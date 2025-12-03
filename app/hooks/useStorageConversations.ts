@@ -532,9 +532,10 @@ export function useStorageConversations() {
     async (
       conversationId: string,
       role: "user" | "assistant" | "system",
-      content: string,
-      toolInvocations?: unknown,
+      parts: unknown[],
       modelName?: string | null,
+      xmlVersionId?: string,
+      createdAt?: number,
     ): Promise<Message> => {
       return runStorageTask(
         async () => {
@@ -545,11 +546,10 @@ export function useStorageConversations() {
                 id: uuidv4(),
                 conversation_id: conversationId,
                 role,
-                content,
-                tool_invocations: toolInvocations
-                  ? JSON.stringify(toolInvocations)
-                  : undefined,
+                parts_structure: JSON.stringify(parts ?? []),
                 model_name: modelName ?? null,
+                xml_version_id: xmlVersionId,
+                created_at: createdAt,
               }),
               getStorageTimeoutMessage(),
             );
