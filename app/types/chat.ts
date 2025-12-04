@@ -76,6 +76,9 @@ export interface RuntimeLLMConfig {
   customConfig: { [key: string]: JsonValue }; // 合并后的自定义配置（模型优先）
 }
 
+// 向后兼容别名（老代码仍使用 LLMConfig）
+export type LLMConfig = RuntimeLLMConfig;
+
 export type ToolInvocationState =
   | "input-streaming"
   | "input-available"

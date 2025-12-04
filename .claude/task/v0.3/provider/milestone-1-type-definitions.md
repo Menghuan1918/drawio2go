@@ -14,23 +14,23 @@
 
 **文件**: `app/types/chat.ts`
 
-- [ ] 保留现有的 `ProviderType` 枚举定义
-- [ ] **删除**旧的 `LLMConfig` 接口（破坏性更改）
-- [ ] 新增 `JsonValue` 类型（JSON 可序列化值的递归类型定义）
+- [x] 保留现有的 `ProviderType` 枚举定义
+- [x] **删除**旧的 `LLMConfig` 接口（破坏性更改）
+- [x] 新增 `JsonValue` 类型（JSON 可序列化值的递归类型定义）
   - 支持：string、number、boolean、null、数组和对象
-- [ ] 新增 `ProviderConfig` 接口（供应商配置）
+- [x] 新增 `ProviderConfig` 接口（供应商配置）
   - 包含字段：id, displayName, providerType, apiUrl, apiKey, models, **customConfig**, createdAt, updatedAt
   - customConfig 类型：`{ [key: string]: JsonValue }`，默认为空对象 `{}`
   - customConfig 用途：存储供应商级别的额外设置（如速率限制、区域设置等）
-- [ ] 新增 `ModelConfig` 接口（单个模型配置）
+- [x] 新增 `ModelConfig` 接口（单个模型配置）
   - 包含字段：id, providerId, modelName, displayName, temperature, maxToolRounds, isDefault, **customConfig**, createdAt, updatedAt
   - customConfig 类型：`{ [key: string]: JsonValue }`，默认为空对象 `{}`
   - customConfig 用途：存储模型级别的额外设置（如 maxTokens、topP、topK 等高级参数）
-- [ ] 新增 `AgentSettings` 接口（全局Agent设置）
+- [x] 新增 `AgentSettings` 接口（全局Agent设置）
   - 包含字段：systemPrompt, updatedAt
-- [ ] 新增 `ActiveModelReference` 接口（当前活动模型引用）
+- [x] 新增 `ActiveModelReference` 接口（当前活动模型引用）
   - 包含字段：providerId, modelId, updatedAt
-- [ ] 新增 `RuntimeLLMConfig` 接口（运行时合并配置）
+- [x] 新增 `RuntimeLLMConfig` 接口（运行时合并配置）
   - 合并供应商、模型、Agent设置的所有字段
   - **customConfig 字段**：合并供应商和模型的 customConfig（模型优先级更高，使用浅合并）
 
@@ -38,7 +38,7 @@
 
 **文件**: `app/types/chat.ts`
 
-- [ ] 新增 `ModelCapabilities` 接口
+- [x] 新增 `ModelCapabilities` 接口
 
   ```typescript
   export interface ModelCapabilities {
@@ -47,12 +47,12 @@
   }
   ```
 
-- [ ] 在 `ModelConfig` 接口中新增字段
+- [x] 在 `ModelConfig` 接口中新增字段
   - `capabilities: ModelCapabilities` - 模型能力标记
   - `enableToolsInThinking: boolean` - 思考中使用工具调用（仅对supportsThinking为true的模型有意义）
   - 默认值: capabilities 为 `{ supportsThinking: false, supportsVision: false }`, enableToolsInThinking 为 `false`
 
-- [ ] 在 `RuntimeLLMConfig` 接口中新增相应字段
+- [x] 在 `RuntimeLLMConfig` 接口中新增相应字段
   - 继承 ModelConfig 的 capabilities 和 enableToolsInThinking
   - 用于 API 运行时配置
 
@@ -60,7 +60,7 @@
 
 **文件**: `app/types/chat.ts` 和 `app/lib/config-utils.ts`
 
-- [ ] 更新 `ProviderType` 枚举定义
+- [x] 更新 `ProviderType` 枚举定义
 
   ```typescript
   export type ProviderType =
@@ -72,7 +72,7 @@
   - **删除**: "deepseek" (破坏性更改)
   - **新增**: "deepseek-native"
 
-- [ ] 更新 `app/lib/config-utils.ts` 中的验证逻辑
+- [x] 更新 `app/lib/config-utils.ts` 中的验证逻辑
   - 移除 "deepseek" 的验证
   - 添加 "deepseek-native" 的验证
 
@@ -80,25 +80,25 @@
 
 **文件**: `app/lib/config-utils.ts`
 
-- [ ] 保留现有的 `DEFAULT_SYSTEM_PROMPT` 常量
-- [ ] 保留现有的 `DEFAULT_API_URL` 常量
-- [ ] **删除** `DEFAULT_LLM_CONFIG` 常量
-- [ ] 新增 `DEFAULT_PROVIDERS` 常量数组
+- [x] 保留现有的 `DEFAULT_SYSTEM_PROMPT` 常量
+- [x] 保留现有的 `DEFAULT_API_URL` 常量
+- [x] **删除** `DEFAULT_LLM_CONFIG` 常量
+- [x] 新增 `DEFAULT_PROVIDERS` 常量数组
   - 包含默认的DeepSeek供应商
   - 包含2个默认模型：deepseek-chat 和 deepseek-reasoner
   - 每个模型设置temperature=0.3, maxToolRounds=5
   - deepseek-chat 标记为 isDefault
   - **所有 customConfig 字段初始化为空对象 `{}`**
-- [ ] 新增 `DEFAULT_AGENT_SETTINGS` 常量
+- [x] 新增 `DEFAULT_AGENT_SETTINGS` 常量
   - 使用现有的 DEFAULT_SYSTEM_PROMPT
-- [ ] 新增 `DEFAULT_ACTIVE_MODEL` 常量
+- [x] 新增 `DEFAULT_ACTIVE_MODEL` 常量
   - 指向默认的 deepseek-chat 模型
-- [ ] 新增 `initializeDefaultLLMConfig()` 函数
+- [x] 新增 `initializeDefaultLLMConfig()` 函数
   - 检查存储中是否存在 `llm_providers` 键
   - 不存在则创建默认配置（供应商、模型、Agent设置、活动模型）
   - 使用 `generateUUID()` 生成所有ID
   - 可选：删除旧的 `llmConfig` 键
-- [ ] **删除** `normalizeLLMConfig()` 函数（不再需要）
+- [x] **删除** `normalizeLLMConfig()` 函数（不再需要）
 
 ## 涉及文件
 
@@ -109,43 +109,43 @@
 
 ### TypeScript编译
 
-- [ ] 运行 `pnpm tsc --noEmit` 无类型错误
-- [ ] 所有新类型定义完整且正确
+- [x] 运行 `pnpm tsc --noEmit` 无类型错误
+- [x] 所有新类型定义完整且正确
 
 ### 类型完整性
 
-- [ ] `ProviderConfig` 包含所有必需字段和正确的类型
-- [ ] `ModelConfig` 正确关联到 `providerId`
-- [ ] `RuntimeLLMConfig` 正确合并所有配置字段
-- [ ] 所有时间戳字段使用 `number` 类型
+- [x] `ProviderConfig` 包含所有必需字段和正确的类型
+- [x] `ModelConfig` 正确关联到 `providerId`
+- [x] `RuntimeLLMConfig` 正确合并所有配置字段
+- [x] 所有时间戳字段使用 `number` 类型
 
 ### 默认配置
 
-- [ ] `DEFAULT_PROVIDERS` 包含完整的DeepSeek供应商配置
-- [ ] 所有默认模型都有正确的初始参数
-- [ ] `initializeDefaultLLMConfig()` 函数逻辑清晰
-- [ ] **所有 customConfig 字段初始化为空对象 `{}`**
+- [x] `DEFAULT_PROVIDERS` 包含完整的DeepSeek供应商配置
+- [x] 所有默认模型都有正确的初始参数
+- [x] `initializeDefaultLLMConfig()` 函数逻辑清晰
+- [x] **所有 customConfig 字段初始化为空对象 `{}`**
 
 ### customConfig 字段验证
 
-- [ ] `JsonValue` 类型正确定义递归结构，支持所有 JSON 标准类型
-- [ ] `ProviderConfig.customConfig` 类型为 `{ [key: string]: JsonValue }`
-- [ ] `ModelConfig.customConfig` 类型为 `{ [key: string]: JsonValue }`
-- [ ] `RuntimeLLMConfig.customConfig` 正确合并供应商和模型配置
-- [ ] 合并策略说明：使用浅合并（展开运算符），模型的值覆盖供应商的同名字段
+- [x] `JsonValue` 类型正确定义递归结构，支持所有 JSON 标准类型
+- [x] `ProviderConfig.customConfig` 类型为 `{ [key: string]: JsonValue }`
+- [x] `ModelConfig.customConfig` 类型为 `{ [key: string]: JsonValue }`
+- [x] `RuntimeLLMConfig.customConfig` 正确合并供应商和模型配置
+- [x] 合并策略说明：使用浅合并（展开运算符），模型的值覆盖供应商的同名字段
 
 ### 模型能力类型验收
 
-- [ ] `ModelCapabilities` 接口包含 supportsThinking 和 supportsVision 布尔字段
-- [ ] `ModelConfig.capabilities` 有明确的类型定义
-- [ ] `ModelConfig.enableToolsInThinking` 类型为 boolean
-- [ ] `RuntimeLLMConfig` 正确继承能力相关字段
+- [x] `ModelCapabilities` 接口包含 supportsThinking 和 supportsVision 布尔字段
+- [x] `ModelConfig.capabilities` 有明确的类型定义
+- [x] `ModelConfig.enableToolsInThinking` 类型为 boolean
+- [x] `RuntimeLLMConfig` 正确继承能力相关字段
 
 ### DeepSeek 类型验收
 
-- [ ] `ProviderType` 不再包含 "deepseek"
-- [ ] `ProviderType` 包含 "deepseek-native"
-- [ ] TypeScript 编译时对旧 "deepseek" 类型产生错误
+- [x] `ProviderType` 不再包含 "deepseek"
+- [x] `ProviderType` 包含 "deepseek-native"
+- [x] TypeScript 编译时对旧 "deepseek" 类型产生错误
 
 ## 依赖关系
 

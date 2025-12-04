@@ -4,7 +4,9 @@ import {
   ModelConfig,
   ProviderConfig,
   ProviderType,
+  type RuntimeLLMConfig,
 } from "@/app/types/chat";
+import { getDefaultCapabilities } from "@/app/lib/model-capabilities";
 import { generateProjectUUID } from "@/app/lib/utils";
 import type { StorageAdapter } from "@/app/lib/storage/adapter";
 
@@ -95,10 +97,7 @@ export const DEFAULT_MODELS: ModelConfig[] = [
     temperature: 0.3,
     maxToolRounds: 5,
     isDefault: true,
-    capabilities: {
-      supportsThinking: false,
-      supportsVision: false,
-    },
+    capabilities: getDefaultCapabilities("deepseek-chat"),
     enableToolsInThinking: false,
     customConfig: {},
     createdAt: 0,
@@ -112,10 +111,7 @@ export const DEFAULT_MODELS: ModelConfig[] = [
     temperature: 0.3,
     maxToolRounds: 5,
     isDefault: false,
-    capabilities: {
-      supportsThinking: true,
-      supportsVision: false,
-    },
+    capabilities: getDefaultCapabilities("deepseek-reasoner"),
     enableToolsInThinking: true,
     customConfig: {},
     createdAt: 0,
@@ -134,13 +130,164 @@ export const DEFAULT_ACTIVE_MODEL: ActiveModelReference = {
   updatedAt: 0,
 };
 
+export const DEFAULT_LLM_CONFIG: RuntimeLLMConfig = Object.freeze({
+  apiUrl: DEFAULT_API_URL,
+  apiKey: "",
+  providerType: "deepseek-native" as const,
+  modelName: "deepseek-chat",
+  temperature: 0.3,
+  maxToolRounds: 5,
+  capabilities: getDefaultCapabilities("deepseek-chat"),
+  enableToolsInThinking: false,
+  systemPrompt: DEFAULT_SYSTEM_PROMPT,
+  customConfig: {},
+});
+
+const toFiniteNumber = (value: unknown, fallback: number): number => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallback;
+};
+
+const normalizeCustomConfig = (
+  customConfig: unknown,
+): RuntimeLLMConfig["customConfig"] => {
+  if (
+    customConfig &&
+    typeof customConfig === "object" &&
+    !Array.isArray(customConfig)
+  ) {
+    return {
+      ...DEFAULT_LLM_CONFIG.customConfig,
+      ...(customConfig as RuntimeLLMConfig["customConfig"]),
+    };
+  }
+  return { ...DEFAULT_LLM_CONFIG.customConfig };
+};
+
+/**
+ * 规范化运行时 LLM 配置
+ * - 合并默认值
+ * - 规范化 API URL（移除尾斜杠 + 自动补 /v1）
+ * - 确保类型安全（数字/字符串校验、能力回退）
+ */
+export function normalizeLLMConfig(
+  config?: Partial<RuntimeLLMConfig> | null,
+): RuntimeLLMConfig {
+  const safeConfig = config ?? {};
+
+  const modelName =
+    typeof safeConfig.modelName === "string" && safeConfig.modelName.trim()
+      ? safeConfig.modelName.trim()
+      : DEFAULT_LLM_CONFIG.modelName;
+
+  const providerType = isProviderType(safeConfig.providerType)
+    ? safeConfig.providerType
+    : DEFAULT_LLM_CONFIG.providerType;
+
+  const capabilities =
+    safeConfig.capabilities ?? getDefaultCapabilities(modelName);
+
+  const enableToolsInThinking =
+    typeof safeConfig.enableToolsInThinking === "boolean"
+      ? safeConfig.enableToolsInThinking
+      : capabilities.supportsThinking;
+
+  const systemPrompt =
+    typeof safeConfig.systemPrompt === "string" &&
+    safeConfig.systemPrompt.trim()
+      ? safeConfig.systemPrompt
+      : DEFAULT_SYSTEM_PROMPT;
+
+  const customConfig = normalizeCustomConfig(safeConfig.customConfig);
+
+  return {
+    apiUrl: normalizeApiUrl(
+      safeConfig.apiUrl ?? DEFAULT_LLM_CONFIG.apiUrl,
+      DEFAULT_LLM_CONFIG.apiUrl,
+    ),
+    apiKey:
+      typeof safeConfig.apiKey === "string"
+        ? safeConfig.apiKey
+        : DEFAULT_LLM_CONFIG.apiKey,
+    providerType,
+    modelName,
+    temperature: toFiniteNumber(
+      safeConfig.temperature,
+      DEFAULT_LLM_CONFIG.temperature,
+    ),
+    maxToolRounds: Math.max(
+      1,
+      Math.round(
+        toFiniteNumber(
+          safeConfig.maxToolRounds,
+          DEFAULT_LLM_CONFIG.maxToolRounds,
+        ),
+      ),
+    ),
+    capabilities,
+    enableToolsInThinking,
+    systemPrompt,
+    customConfig,
+  };
+}
+
 export async function initializeDefaultLLMConfig(
   storage: StorageAdapter,
 ): Promise<void> {
   try {
-    const existingProviders = await storage.getSetting(STORAGE_KEY_LLM_PROVIDERS);
+    const cleanupLegacyKey = async () => {
+      try {
+        await storage.deleteSetting("llmConfig");
+      } catch (cleanupError) {
+        console.warn("[LLM] Failed to delete legacy llmConfig", cleanupError);
+      }
+    };
+
+    const existingProviders = await storage.getSetting(
+      STORAGE_KEY_LLM_PROVIDERS,
+    );
 
     if (existingProviders !== null) {
+      try {
+        const parsedProviders = JSON.parse(existingProviders) as Array<
+          Record<string, unknown>
+        >;
+        let hasMigration = false;
+
+        const migratedProviders = parsedProviders.map((provider) => {
+          const providerType = (provider as { providerType?: string })
+            .providerType;
+
+          if (providerType === "deepseek") {
+            hasMigration = true;
+            return {
+              ...provider,
+              providerType: "deepseek-native" as ProviderType,
+            };
+          }
+          return provider;
+        });
+
+        if (hasMigration) {
+          await storage.setSetting(
+            STORAGE_KEY_LLM_PROVIDERS,
+            JSON.stringify(migratedProviders),
+          );
+          console.warn(
+            "[LLM] providerType 'deepseek' 已迁移为 'deepseek-native'，请确认自定义配置是否需要更新",
+          );
+        }
+      } catch (migrationError) {
+        console.error(
+          "[LLM] 解析或迁移已存在的 LLM providers 时失败，已跳过兼容迁移",
+          migrationError,
+        );
+      }
+      await cleanupLegacyKey();
       return;
     }
 
@@ -212,12 +359,7 @@ export async function initializeDefaultLLMConfig(
       STORAGE_KEY_ACTIVE_MODEL,
       JSON.stringify(activeModel),
     );
-
-    try {
-      await storage.deleteSetting("llmConfig");
-    } catch (cleanupError) {
-      console.warn("[LLM] Failed to delete legacy llmConfig", cleanupError);
-    }
+    await cleanupLegacyKey();
   } catch (error) {
     console.error("[LLM] Failed to initialize default LLM config", error);
   }

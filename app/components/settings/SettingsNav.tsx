@@ -1,14 +1,14 @@
 "use client";
 
 import { Button } from "@heroui/react";
-import { Settings, Bot, GitBranch } from "lucide-react";
+import { Settings, BrainCircuit, Sparkles, GitBranch } from "lucide-react";
 
 import { useAppTranslation } from "@/app/i18n/hooks";
 
 /**
  * 设置标签类型
  */
-export type SettingsTab = "general" | "llm" | "version";
+export type SettingsTab = "general" | "models" | "agent" | "version";
 
 interface SettingsNavProps {
   activeTab: SettingsTab;
@@ -39,11 +39,20 @@ export default function SettingsNav({
       <Button
         variant="tertiary"
         isIconOnly
-        className={`settings-nav-item ${activeTab === "llm" ? "active" : ""}`}
-        onPress={() => onTabChange("llm")}
-        aria-label={t("nav.llm", { defaultValue: "LLM" })}
+        className={`settings-nav-item ${activeTab === "models" ? "active" : ""}`}
+        onPress={() => onTabChange("models")}
+        aria-label={t("nav.models", { defaultValue: "Models" })}
       >
-        <Bot size={24} />
+        <BrainCircuit size={24} />
+      </Button>
+      <Button
+        variant="tertiary"
+        isIconOnly
+        className={`settings-nav-item ${activeTab === "agent" ? "active" : ""}`}
+        onPress={() => onTabChange("agent")}
+        aria-label={t("nav.agent", { defaultValue: "Agent" })}
+      >
+        <Sparkles size={24} />
       </Button>
       <Button
         variant="tertiary"

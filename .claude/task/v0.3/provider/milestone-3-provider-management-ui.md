@@ -14,12 +14,12 @@
 
 **文件**: `app/components/settings/SettingsNav.tsx`
 
-- [ ] 修改 `SettingsTab` 类型定义
+- [x] 修改 `SettingsTab` 类型定义
   - 从 `"file" | "llm" | "version"` 改为 `"file" | "models" | "agent" | "version"`
-- [ ] 更新导航按钮配置
+- [x] 更新导航按钮配置
   - 将 "llm" tab 重命名为 "models"
   - 新增 "agent" tab（在 models 和 version 之间）
-- [ ] 更新图标（如需要）
+- [x] 更新图标（如需要）
   - models: 使用 `BrainCircuit` 或类似图标
   - agent: 使用 `Sparkles` 或类似图标
 
@@ -27,44 +27,44 @@
 
 **文件**: `app/components/SettingsSidebar.tsx`
 
-- [ ] 调整tab切换逻辑以支持新的4个tab
-- [ ] 将原有的 `LLMSettingsPanel` 替换为 `ModelsSettingsPanel`
-- [ ] 新增 `AgentSettingsPanel`（本milestone只需占位，详细实现在milestone 5）
-- [ ] 确保tab切换动画流畅
+- [x] 调整tab切换逻辑以支持新的4个tab
+- [x] 将原有的 `LLMSettingsPanel` 替换为 `ModelsSettingsPanel`
+- [x] 新增 `AgentSettingsPanel`（本milestone只需占位，详细实现在milestone 5）
+- [x] 确保tab切换动画流畅
 
 ### 3. 创建供应商管理面板
 
 **文件**: `app/components/settings/ModelsSettingsPanel.tsx`（新建，替代LLMSettingsPanel）
 
-- [ ] 从存储层加载供应商列表
-- [ ] 使用HeroUI v3 `Accordion` 组件（复合组件模式）
+- [x] 从存储层加载供应商列表
+- [x] 使用HeroUI v3 `Accordion` 组件（复合组件模式）
   - variant="separated" 实现分隔样式
-- [ ] 实现供应商列表结构
+- [x] 实现供应商列表结构
   - 每个供应商为一个 `Accordion.Item`
   - Header显示：供应商名称 + 模型数量Badge + 操作菜单
   - Content显示：供应商基本信息（类型、API地址、密钥状态）+ 模型列表（预留，详细实现在milestone 4）
-- [ ] 实现操作菜单（使用 `Dropdown` + `ListBox`）
+- [x] 实现操作菜单（使用 `Dropdown` + `ListBox`）
   - 编辑供应商
   - 删除供应商
-- [ ] 实现"添加供应商"按钮
+- [x] 实现"添加供应商"按钮
   - 使用 `Button` 组件，variant="secondary"
   - 点击打开供应商编辑对话框
-- [ ] 处理供应商删除的级联逻辑
+- [x] 处理供应商删除的级联逻辑
   - 检查是否为当前活动模型的供应商
   - 显示确认对话框
   - 切换活动模型（如需要）
-- [ ] 添加空状态提示（无供应商时）
+- [x] 添加空状态提示（无供应商时）
 
 ### 4. 创建供应商编辑对话框
 
 **文件**: `app/components/settings/ProviderEditDialog.tsx`（新建）
 
-- [ ] 使用HeroUI v3 `Modal` 组件（复合组件模式）
-- [ ] 实现对话框结构
+- [x] 使用HeroUI v3 `Modal` 组件（复合组件模式）
+- [x] 实现对话框结构
   - `Modal.Header`: 标题（"添加供应商" / "编辑供应商"）+ 关闭按钮
   - `Modal.Body`: 表单字段
   - `Modal.Footer`: 取消和保存按钮
-- [ ] 实现表单字段
+- [x] 实现表单字段
   - 供应商名称（TextField + Input）
   - 供应商类型（Select + ListBox）
     - 选项：openai-compatible, deepseek, openai-reasoning
@@ -72,21 +72,21 @@
     - 带描述：建议包含 /v1 路径
   - API密钥（TextField + Input, type="password"）
     - 可选，留空则不使用
-- [ ] 集成连接测试器（复用现有的 `ConnectionTester` 组件）
-- [ ] 实现表单验证
+- [x] 集成连接测试器（复用现有的 `ConnectionTester` 组件）
+- [x] 实现表单验证
   - 供应商名称不能为空
   - API地址格式验证
   - 供应商类型必选
-- [ ] 实现保存逻辑
+- [x] 实现保存逻辑
   - 新增：调用 `addProvider()` 方法
   - 编辑：调用 `updateProvider()` 方法
   - 保存成功后关闭对话框并刷新列表
-- [ ] 实现取消逻辑
+- [x] 实现取消逻辑
   - 关闭对话框并清空表单
 
 ### 5. 删除旧组件
 
-- [ ] **删除** `app/components/settings/LLMSettingsPanel.tsx`
+- [x] **删除** `app/components/settings/LLMSettingsPanel.tsx`
 
 ## 涉及文件
 
@@ -125,37 +125,37 @@
 
 ### UI显示
 
-- [ ] 供应商列表使用Accordion正确展示
-- [ ] 每个供应商的Header显示完整信息
-- [ ] 操作菜单（编辑/删除）正常工作
-- [ ] 添加供应商按钮位置合理
+- [x] 供应商列表使用Accordion正确展示
+- [x] 每个供应商的Header显示完整信息
+- [x] 操作菜单（编辑/删除）正常工作
+- [x] 添加供应商按钮位置合理
 
 ### 对话框功能
 
-- [ ] 供应商编辑对话框正确打开/关闭
-- [ ] 所有表单字段正常输入
-- [ ] 供应商类型下拉选择正常
-- [ ] 连接测试器集成正常
+- [x] 供应商编辑对话框正确打开/关闭
+- [x] 所有表单字段正常输入
+- [x] 供应商类型下拉选择正常
+- [x] 连接测试器集成正常
 
 ### 数据操作
 
-- [ ] 新增供应商成功保存到存储
-- [ ] 编辑供应商成功更新存储
-- [ ] 删除供应商时显示确认对话框
-- [ ] 删除当前活动供应商时正确切换
+- [x] 新增供应商成功保存到存储
+- [x] 编辑供应商成功更新存储
+- [x] 删除供应商时显示确认对话框
+- [x] 删除当前活动供应商时正确切换
 
 ### 表单验证
 
-- [ ] 必填字段验证生效
-- [ ] API地址格式验证生效
-- [ ] 验证错误显示清晰
+- [x] 必填字段验证生效
+- [x] API地址格式验证生效
+- [x] 验证错误显示清晰
 
 ### HeroUI规范
 
-- [ ] 所有组件使用复合组件模式
-- [ ] 所有Button使用语义化variant
-- [ ] 所有交互使用 `onPress`
-- [ ] 深色/浅色主题适配正常
+- [x] 所有组件使用复合组件模式
+- [x] 所有Button使用语义化variant
+- [x] 所有交互使用 `onPress`
+- [x] 深色/浅色主题适配正常
 
 ## 依赖关系
 

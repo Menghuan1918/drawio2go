@@ -79,7 +79,7 @@ export default function SystemPromptEditor({
             />
           </TextField>
           <div className="modal-actions">
-            <Button variant="ghost" size="sm" onPress={handleClose}>
+            <Button variant="tertiary" size="sm" onPress={handleClose}>
               {t("systemPrompt.cancel")}
             </Button>
             <Button variant="secondary" size="sm" onPress={handleReset}>

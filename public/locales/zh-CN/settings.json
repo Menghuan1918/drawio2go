@@ -1,7 +1,8 @@
 {
   "nav": {
     "general": "通用",
-    "llm": "LLM 配置",
+    "models": "模型",
+    "agent": "智能体",
     "version": "版本设置"
   },
   "general": {
@@ -62,6 +63,96 @@
         "description": "针对 o3 等推理模型的专用入口"
       }
     }
+  },
+  "agent": {
+    "title": "Agent 设置",
+    "description": "配置 AI 代理的行为和能力。这些设置将全局应用于所有模型。",
+    "systemPrompt": {
+      "label": "系统提示词",
+      "description": "给 AI 代理的默认指令。可以在单个对话中覆盖此设置。"
+    },
+    "futureFeatures": "后续版本将增加更多 Agent 配置选项，如思考模式开关、工具调用策略等。"
+  },
+  "models": {
+    "emptyState": {
+      "title": "暂无供应商",
+      "description": "添加一个供应商以开始使用"
+    },
+    "addProvider": "添加供应商",
+    "editProvider": "编辑供应商",
+    "provider": {
+      "type": "类型",
+      "apiUrl": "API 地址",
+      "apiKey": "API Key",
+      "noApiKey": "未设置"
+    },
+    "modelsList": {
+      "title": "模型",
+      "empty": "暂无模型配置"
+    },
+    "default": "默认",
+    "active": "正在使用",
+    "actions": {
+      "edit": "编辑",
+      "delete": "删除"
+    },
+    "form": {
+      "name": {
+        "label": "供应商名称",
+        "placeholder": "我的 OpenAI 供应商",
+        "description": "用于展示的友好名称",
+        "required": "供应商名称为必填项",
+        "minLength": "供应商名称至少 {min} 个字符",
+        "maxLength": "供应商名称最多 {max} 个字符"
+      },
+      "type": {
+        "label": "供应商类型",
+        "description": "选择供应商类型",
+        "options": {
+          "openaiCompatible": "标准 OpenAI 兼容 API",
+          "deepseekNative": "DeepSeek 原生 API（含推理）",
+          "openaiReasoning": "OpenAI 推理模型（o1/o3）"
+        }
+      },
+      "apiUrl": {
+        "label": "API 地址",
+        "placeholder": "https://api.openai.com/v1",
+        "description": "API 基础地址，需包含 /v1 路径",
+        "required": "API 地址为必填项",
+        "invalid": "URL 格式不正确",
+        "invalidProtocol": "URL 必须使用 HTTP 或 HTTPS"
+      },
+      "apiKey": {
+        "label": "API Key",
+        "placeholder": "sk-...",
+        "description": "可选。不填则使用无认证访问",
+        "minLength": "API Key 至少 {min} 个字符"
+      },
+      "testConnection": "测试连接"
+    },
+    "test": {
+      "success": "连接成功",
+      "error": "连接失败",
+      "networkError": "网络错误，请检查地址"
+    },
+    "save": {
+      "createSuccess": "供应商“{name}”已创建",
+      "updateSuccess": "供应商“{name}”已更新",
+      "error": "保存供应商失败"
+    },
+    "delete": {
+      "confirmTitle": "删除供应商",
+      "confirmMessage": "确定要删除“{name}”吗？这将同时删除关联的所有模型。",
+      "success": "供应商“{name}”已删除",
+      "successWithSwitch": "供应商“{name}”已删除，已切换到“{newModel}”",
+      "successNoActiveModel": "供应商“{name}”已删除，没有可用的活动模型，请配置模型。",
+      "error": "删除供应商失败"
+    }
+  },
+  "common": {
+    "optional": "(可选)",
+    "cancel": "取消",
+    "save": "保存"
   },
   "systemPrompt": {
     "label": "系统提示词",

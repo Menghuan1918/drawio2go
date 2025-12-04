@@ -97,11 +97,12 @@
 
 **Props**: `onSettingsChange`
 
-**三个面板**:
+**四个面板**:
 
-- **LLMSettingsPanel**: LLM 提供商、API 配置、系统提示词
-- **VersionSettingsPanel**: AI 自动版本快照开关（`autoVersionOnAIEdit`）
 - **GeneralSettingsPanel**: 语言切换 + 默认文件路径选择（Electron 环境支持 `selectFolder`）
+- **ModelsSettingsPanel**: 供应商/模型管理（Accordion 列表、级联删除、Provider 编辑占位）
+- **AgentSettingsPanel**: 全局系统提示词（System Prompt）编辑
+- **VersionSettingsPanel**: AI 自动版本快照开关（`autoVersionOnAIEdit`）
 
 **特性**: 底部操作条（有修改时显示取消/保存）、供应商切换（OpenAI Responses/Chat Completions/DeepSeek）
 

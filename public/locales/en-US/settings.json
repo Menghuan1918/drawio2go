@@ -1,7 +1,8 @@
 {
   "nav": {
     "general": "General",
-    "llm": "LLM Config",
+    "models": "Models",
+    "agent": "Agent",
     "version": "Version Settings"
   },
   "general": {
@@ -62,6 +63,96 @@
         "description": "Dedicated entry for reasoning models like o3"
       }
     }
+  },
+  "agent": {
+    "title": "Agent Settings",
+    "description": "Configure the AI agent's behavior and capabilities. These settings apply globally across all models.",
+    "systemPrompt": {
+      "label": "System Prompt",
+      "description": "The default instructions given to the AI agent. This can be overridden per conversation."
+    },
+    "futureFeatures": "Future releases will include additional agent configuration options such as thinking mode toggles, tool call strategies, and more."
+  },
+  "models": {
+    "emptyState": {
+      "title": "No providers configured",
+      "description": "Add a provider to get started"
+    },
+    "addProvider": "Add Provider",
+    "editProvider": "Edit Provider",
+    "provider": {
+      "type": "Type",
+      "apiUrl": "API URL",
+      "apiKey": "API Key",
+      "noApiKey": "Not set"
+    },
+    "modelsList": {
+      "title": "Models",
+      "empty": "No models configured"
+    },
+    "default": "Default",
+    "active": "Active",
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "form": {
+      "name": {
+        "label": "Provider Name",
+        "placeholder": "My OpenAI Provider",
+        "description": "A friendly name for this provider",
+        "required": "Provider name is required",
+        "minLength": "Provider name must be at least {min} characters",
+        "maxLength": "Provider name must be at most {max} characters"
+      },
+      "type": {
+        "label": "Provider Type",
+        "description": "Select the type of provider",
+        "options": {
+          "openaiCompatible": "Standard OpenAI-compatible API",
+          "deepseekNative": "DeepSeek native API with reasoning support",
+          "openaiReasoning": "OpenAI reasoning models (o1, o3)"
+        }
+      },
+      "apiUrl": {
+        "label": "API URL",
+        "placeholder": "https://api.openai.com/v1",
+        "description": "The base URL for the API. Should include /v1 path.",
+        "required": "API URL is required",
+        "invalid": "Invalid URL format",
+        "invalidProtocol": "URL must use HTTP or HTTPS"
+      },
+      "apiKey": {
+        "label": "API Key",
+        "placeholder": "sk-...",
+        "description": "Optional. Leave blank to use without authentication.",
+        "minLength": "API Key must be at least {min} characters"
+      },
+      "testConnection": "Test Connection"
+    },
+    "test": {
+      "success": "Connection successful",
+      "error": "Connection failed",
+      "networkError": "Network error. Please check your URL."
+    },
+    "save": {
+      "createSuccess": "Provider \"{name}\" created",
+      "updateSuccess": "Provider \"{name}\" updated",
+      "error": "Failed to save provider"
+    },
+    "delete": {
+      "confirmTitle": "Delete Provider",
+      "confirmMessage": "Are you sure you want to delete \"{name}\"? This will also delete all associated models.",
+      "success": "Provider \"{name}\" deleted",
+      "successWithSwitch": "Provider \"{name}\" deleted. Switched to \"{newModel}\"",
+      "successNoActiveModel": "Provider \"{name}\" deleted. No active model available. Please configure a model.",
+      "error": "Failed to delete provider"
+    }
+  },
+  "common": {
+    "optional": "(optional)",
+    "cancel": "Cancel",
+    "save": "Save"
   },
   "systemPrompt": {
     "label": "System Prompt",

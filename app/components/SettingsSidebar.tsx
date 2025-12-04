@@ -1,14 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@heroui/react";
-import { LLMConfig } from "@/app/types/chat";
-import { DEFAULT_LLM_CONFIG, normalizeLLMConfig } from "@/app/lib/config-utils";
+import {
+  type ActiveModelReference,
+  type AgentSettings,
+  type ModelConfig,
+  type ProviderConfig,
+} from "@/app/types/chat";
+import { DEFAULT_AGENT_SETTINGS } from "@/app/lib/config-utils";
 import { useStorageSettings } from "@/app/hooks/useStorageSettings";
 import SettingsNav, { type SettingsTab } from "./settings/SettingsNav";
-import LLMSettingsPanel from "./settings/LLMSettingsPanel";
+import ModelsSettingsPanel from "./settings/ModelsSettingsPanel";
 import { VersionSettingsPanel } from "./settings/VersionSettingsPanel";
-import { GeneralSettingsPanel } from "@/app/components/settings";
+import {
+  AgentSettingsPanel,
+  GeneralSettingsPanel,
+} from "@/app/components/settings";
 import { useAppTranslation } from "@/app/i18n/hooks";
 import { useToast } from "@/app/components/toast";
 import { createLogger } from "@/lib/logger";
@@ -28,8 +36,11 @@ export default function SettingsSidebar({
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
 
   const {
-    getLLMConfig,
-    saveLLMConfig,
+    getProviders,
+    getModels,
+    getAgentSettings,
+    saveAgentSettings,
+    getActiveModel,
     getDefaultPath,
     saveDefaultPath,
     getSetting,
@@ -39,9 +50,20 @@ export default function SettingsSidebar({
   const [defaultPath, setDefaultPath] = useState("");
   const [savedPath, setSavedPath] = useState("");
 
-  const [llmConfig, setLlmConfig] = useState<LLMConfig>(DEFAULT_LLM_CONFIG);
-  const [savedLlmConfig, setSavedLlmConfig] =
-    useState<LLMConfig>(DEFAULT_LLM_CONFIG);
+  const [providers, setProviders] = useState<ProviderConfig[]>([]);
+  const [savedProviders, setSavedProviders] = useState<ProviderConfig[]>([]);
+  const [models, setModels] = useState<ModelConfig[]>([]);
+  const [savedModels, setSavedModels] = useState<ModelConfig[]>([]);
+  const [agentSettings, setAgentSettings] = useState<AgentSettings>(
+    DEFAULT_AGENT_SETTINGS,
+  );
+  const [savedAgentSettings, setSavedAgentSettings] = useState<AgentSettings>(
+    DEFAULT_AGENT_SETTINGS,
+  );
+  const [activeModel, setActiveModelState] =
+    useState<ActiveModelReference | null>(null);
+  const [savedActiveModel, setSavedActiveModel] =
+    useState<ActiveModelReference | null>(null);
 
   const [versionSettings, setVersionSettings] = useState({
     autoVersionOnAIEdit: true,
@@ -53,36 +75,67 @@ export default function SettingsSidebar({
   const [hasChanges, setHasChanges] = useState(false);
   const { push } = useToast();
 
+  const showToast = useCallback(
+    (params: Parameters<typeof push>[0]) => {
+      push(params);
+    },
+    [push],
+  );
+
   // 加载保存的设置
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const savedPath = await getDefaultPath();
-        const path = savedPath || "";
-        setDefaultPath(path);
-        setSavedPath(path);
+        const [
+          path,
+          loadedProviders,
+          loadedModels,
+          loadedAgent,
+          loadedActiveModel,
+          versionSetting,
+        ] = await Promise.all([
+          getDefaultPath(),
+          getProviders(),
+          getModels(),
+          getAgentSettings(),
+          getActiveModel(),
+          getSetting("version.autoVersionOnAIEdit"),
+        ]);
 
-        const savedConfig = await getLLMConfig();
-        if (savedConfig) {
-          const configWithDefaults = normalizeLLMConfig(savedConfig);
-          setLlmConfig(configWithDefaults);
-          setSavedLlmConfig(configWithDefaults);
-        } else {
-          setLlmConfig(DEFAULT_LLM_CONFIG);
-          setSavedLlmConfig(DEFAULT_LLM_CONFIG);
-        }
+        const normalizedPath = path || "";
+        setDefaultPath(normalizedPath);
+        setSavedPath(normalizedPath);
 
-        const autoVersionSetting = await getSetting("autoVersionOnAIEdit");
-        const autoVersionOnAIEdit = autoVersionSetting !== "false";
+        setProviders(loadedProviders);
+        setSavedProviders(loadedProviders);
+
+        setModels(loadedModels);
+        setSavedModels(loadedModels);
+
+        const agent = loadedAgent ?? DEFAULT_AGENT_SETTINGS;
+        setAgentSettings(agent);
+        setSavedAgentSettings(agent);
+
+        setActiveModelState(loadedActiveModel);
+        setSavedActiveModel(loadedActiveModel);
+
+        const autoVersionOnAIEdit =
+          versionSetting !== "0" && versionSetting !== "false";
         setVersionSettings({ autoVersionOnAIEdit });
         setSavedVersionSettings({ autoVersionOnAIEdit });
       } catch (e) {
         logger.error(t("errors.loadFailed"), e);
-        setLlmConfig(DEFAULT_LLM_CONFIG);
-        setSavedLlmConfig(DEFAULT_LLM_CONFIG);
+        setProviders([]);
+        setSavedProviders([]);
+        setModels([]);
+        setSavedModels([]);
+        setAgentSettings(DEFAULT_AGENT_SETTINGS);
+        setSavedAgentSettings(DEFAULT_AGENT_SETTINGS);
+        setActiveModelState(null);
+        setSavedActiveModel(null);
         setVersionSettings({ autoVersionOnAIEdit: true });
         setSavedVersionSettings({ autoVersionOnAIEdit: true });
-        push({
+        showToast({
           variant: "danger",
           description: t("toasts.loadFailed", {
             error: (e as Error)?.message || "unknown",
@@ -91,23 +144,52 @@ export default function SettingsSidebar({
       }
     };
 
-    loadSettings();
-  }, [getDefaultPath, getLLMConfig, getSetting, push, t]);
+    void loadSettings();
+  }, [
+    getAgentSettings,
+    getDefaultPath,
+    getModels,
+    getProviders,
+    getActiveModel,
+    getSetting,
+    showToast,
+    t,
+  ]);
 
   // 监听变化，检测是否有修改
   useEffect(() => {
     const pathChanged = defaultPath !== savedPath;
-    const llmConfigChanged =
-      JSON.stringify(llmConfig) !== JSON.stringify(savedLlmConfig);
+    const providersChanged =
+      JSON.stringify(providers) !== JSON.stringify(savedProviders);
+    const modelsChanged =
+      JSON.stringify(models) !== JSON.stringify(savedModels);
+    const agentChanged =
+      JSON.stringify(agentSettings) !== JSON.stringify(savedAgentSettings);
+    const activeModelChanged =
+      JSON.stringify(activeModel) !== JSON.stringify(savedActiveModel);
     const versionSettingsChanged =
       versionSettings.autoVersionOnAIEdit !==
       savedVersionSettings.autoVersionOnAIEdit;
-    setHasChanges(pathChanged || llmConfigChanged || versionSettingsChanged);
+
+    setHasChanges(
+      pathChanged ||
+        providersChanged ||
+        modelsChanged ||
+        agentChanged ||
+        activeModelChanged ||
+        versionSettingsChanged,
+    );
   }, [
     defaultPath,
     savedPath,
-    llmConfig,
-    savedLlmConfig,
+    providers,
+    savedProviders,
+    models,
+    savedModels,
+    agentSettings,
+    savedAgentSettings,
+    activeModel,
+    savedActiveModel,
     versionSettings,
     savedVersionSettings,
   ]);
@@ -116,31 +198,47 @@ export default function SettingsSidebar({
     setDefaultPath(path);
   };
 
-  // 保存设置
+  const handleProvidersChange = (items: ProviderConfig[]) => {
+    setProviders(items);
+  };
+
+  const handleModelsChange = (items: ModelConfig[]) => {
+    setModels(items);
+  };
+
+  const handleActiveModelChange = (model: ActiveModelReference | null) => {
+    setActiveModelState(model);
+  };
+
+  const handleAgentSettingsChange = (settings: AgentSettings) => {
+    setAgentSettings(settings);
+  };
+
+  // 保存设置（providers/models 保存由各自面板负责，这里同步 agent/version/defaultPath 状态）
   const handleSave = async () => {
     try {
-      await saveDefaultPath(defaultPath);
+      await Promise.all([
+        saveDefaultPath(defaultPath),
+        saveAgentSettings(agentSettings),
+        setSetting(
+          "version.autoVersionOnAIEdit",
+          versionSettings.autoVersionOnAIEdit ? "1" : "0",
+        ),
+      ]);
+
       setSavedPath(defaultPath);
-
-      const normalizedLlmConfig = normalizeLLMConfig(llmConfig);
-      await saveLLMConfig(normalizedLlmConfig);
-      setLlmConfig(normalizedLlmConfig);
-      setSavedLlmConfig(normalizedLlmConfig);
-
-      await setSetting(
-        "autoVersionOnAIEdit",
-        versionSettings.autoVersionOnAIEdit.toString(),
-      );
+      setSavedAgentSettings(agentSettings);
       setSavedVersionSettings({ ...versionSettings });
+      setSavedProviders(providers);
+      setSavedModels(models);
+      setSavedActiveModel(activeModel);
 
-      if (onSettingsChange) {
-        onSettingsChange({ defaultPath });
-      }
+      onSettingsChange?.({ defaultPath });
 
-      push({ variant: "success", description: t("toasts.saveSuccess") });
+      showToast({ variant: "success", description: t("toasts.saveSuccess") });
     } catch (e) {
       logger.error(t("errors.saveFailed"), e);
-      push({
+      showToast({
         variant: "danger",
         description: t("toasts.saveFailed", {
           error: (e as Error)?.message || "unknown",
@@ -152,13 +250,11 @@ export default function SettingsSidebar({
   // 取消修改
   const handleCancel = () => {
     setDefaultPath(savedPath);
-    setLlmConfig({ ...savedLlmConfig });
+    setProviders([...savedProviders]);
+    setModels([...savedModels]);
+    setAgentSettings({ ...savedAgentSettings });
+    setActiveModelState(savedActiveModel);
     setVersionSettings({ ...savedVersionSettings });
-  };
-
-  // LLM 配置变更处理
-  const handleLLMConfigChange = (updates: Partial<LLMConfig>) => {
-    setLlmConfig((prev) => ({ ...prev, ...updates }));
   };
 
   return (
@@ -174,10 +270,21 @@ export default function SettingsSidebar({
             />
           )}
 
-          {activeTab === "llm" && (
-            <LLMSettingsPanel
-              config={llmConfig}
-              onChange={handleLLMConfigChange}
+          {activeTab === "models" && (
+            <ModelsSettingsPanel
+              providers={providers}
+              models={models}
+              activeModel={activeModel}
+              onProvidersChange={handleProvidersChange}
+              onModelsChange={handleModelsChange}
+              onActiveModelChange={handleActiveModelChange}
+            />
+          )}
+
+          {activeTab === "agent" && (
+            <AgentSettingsPanel
+              agentSettings={agentSettings}
+              onChange={handleAgentSettingsChange}
             />
           )}
 
@@ -197,7 +304,7 @@ export default function SettingsSidebar({
             <span className="status-text">{t("actionBar.unsavedChanges")}</span>
           </div>
           <div className="settings-action-buttons">
-            <Button variant="ghost" size="sm" onPress={handleCancel}>
+            <Button variant="tertiary" size="sm" onPress={handleCancel}>
               {t("actionBar.cancel")}
             </Button>
             <Button variant="primary" size="sm" onPress={handleSave}>
