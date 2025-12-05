@@ -34,6 +34,7 @@ interface UnifiedSidebarProps {
   projectUuid?: string | null;
   onVersionRestore?: (versionId: string) => void;
   editorRef: RefObject<DrawioEditorRef | null>;
+  isSocketConnected?: boolean;
 }
 
 type SidebarPointerEvent = ReactPointerEvent<HTMLDivElement>;
@@ -48,6 +49,7 @@ export default function UnifiedSidebar({
   projectUuid,
   onVersionRestore,
   editorRef,
+  isSocketConnected = true,
 }: UnifiedSidebarProps) {
   const { t } = useAppTranslation("sidebar");
   // 存储 Hook
@@ -195,9 +197,10 @@ export default function UnifiedSidebar({
             style={{ display: activeTab === "chat" ? "block" : "none" }}
           >
             <ChatSidebar
-              isOpen={true}
+              isOpen={activeTab === "chat"}
               onClose={onClose}
               currentProjectId={currentProjectId}
+              isSocketConnected={isSocketConnected}
             />
           </div>
 

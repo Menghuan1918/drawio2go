@@ -23,6 +23,7 @@
 
 /* 组件样式模块 */
 @import "./styles/components/chat.css" layer(components);
+@import "./styles/components/alert-dialog.css" layer(components);
 @import "./styles/components/modal.css" layer(components);
 @import "./styles/components/sessions.css" layer(components);
 @import "./styles/components/history-view.css" layer(components);

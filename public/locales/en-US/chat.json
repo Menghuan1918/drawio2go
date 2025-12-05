@@ -198,9 +198,21 @@
       "to": "End date"
     }
   },
+  "dialogs": {
+    "deleteConversationTitle": "Delete conversation",
+    "deleteConversationDescription": "This will delete \"{{title}}\" ({{messageCount}}). This action cannot be undone.",
+    "deleteConversationsTitle": "Delete conversations ({{count}})",
+    "deleteConversationsDescription": "This will delete {{count}} conversations ({{messageCount}} total). This action cannot be undone."
+  },
   "status": {
     "socketDisconnected": "Socket.IO disconnected",
     "socketWarning": "AI tool features temporarily unavailable"
+  },
+  "modelSelector": {
+    "label": "Current model",
+    "placeholder": "Select or search model",
+    "empty": "No models available. Add providers and models in Settings first.",
+    "noResult": "No available models"
   },
   "errors": {
     "loadFailed": "Failed to load messages",

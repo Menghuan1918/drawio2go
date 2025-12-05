@@ -10,6 +10,12 @@
     "weeksAgo_one": "{{count}} week ago",
     "weeksAgo_other": "{{count}} weeks ago"
   },
+  "actions": {
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "close": "Close",
+    "processing": "Processing..."
+  },
   "toast": {
     "close": "Close notification",
     "copy": "Copy notification",

@@ -499,7 +499,7 @@ export function VersionCompare({
               <Select.Value />
               <Select.Indicator />
             </Select.Trigger>
-            <Select.Content>
+            <Select.Popover>
               <ListBox>
                 {versions.map((v) => (
                   <ListBox.Item
@@ -511,7 +511,7 @@ export function VersionCompare({
                   </ListBox.Item>
                 ))}
               </ListBox>
-            </Select.Content>
+            </Select.Popover>
           </Select>
 
           {/* 交换按钮 */}
@@ -540,7 +540,7 @@ export function VersionCompare({
               <Select.Value />
               <Select.Indicator />
             </Select.Trigger>
-            <Select.Content>
+            <Select.Popover>
               <ListBox>
                 {versions.map((v) => (
                   <ListBox.Item
@@ -552,7 +552,7 @@ export function VersionCompare({
                   </ListBox.Item>
                 ))}
               </ListBox>
-            </Select.Content>
+            </Select.Popover>
           </Select>
         </Card.Header>
 
@@ -953,7 +953,7 @@ export function VersionCompare({
                 <Select.Value className="version-compare__select-value" />
                 <Select.Indicator />
               </Select.Trigger>
-              <Select.Content className="version-compare__select-content">
+              <Select.Popover className="version-compare__select-content">
                 <ListBox className="version-compare__select-list">
                   {pagePairs.map((pair, index) => (
                     <ListBox.Item
@@ -966,7 +966,7 @@ export function VersionCompare({
                     </ListBox.Item>
                   ))}
                 </ListBox>
-              </Select.Content>
+              </Select.Popover>
             </Select>
           </div>
 

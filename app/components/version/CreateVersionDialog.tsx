@@ -637,7 +637,7 @@ export function CreateVersionDialog({
                 <Select.Value className="text-sm leading-6 text-foreground" />
                 <Select.Indicator />
               </Select.Trigger>
-              <Select.Content className="rounded-2xl border border-default-200 bg-content1 p-2 shadow-2xl">
+              <Select.Popover className="rounded-2xl border border-default-200 bg-content1 p-2 shadow-2xl">
                 <ListBox className="flex flex-col gap-1">
                   {parentOptions.map((version) => (
                     <ListBox.Item
@@ -659,7 +659,7 @@ export function CreateVersionDialog({
                     </ListBox.Item>
                   ))}
                 </ListBox>
-              </Select.Content>
+              </Select.Popover>
               {parentOptionsError ? (
                 <FieldError className="mt-2">{parentOptionsError}</FieldError>
               ) : isLoadingParents ? (

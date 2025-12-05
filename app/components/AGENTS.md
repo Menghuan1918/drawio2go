@@ -174,6 +174,22 @@
 - 读取 `i18n.language` 显示当前语言，调用 `i18n.changeLanguage` 即时切换
 - 语言选项来自 `localeDisplayNames`，支持 en-US / zh-CN，文案源自 settings 命名空间
 
+### 9. AlertDialogProvider & GlobalAlertDialog
+
+**文件**: `app/components/alert/AlertDialogProvider.tsx`, `app/components/alert/GlobalAlertDialog.tsx`
+
+**用途**:
+
+- 全局单实例告警/确认弹窗，覆盖 window.confirm 与静态警告
+- 支持 `danger` / `warning` 状态，异步 `onAction` 自动加载、禁用按钮
+- 样式位于 `app/styles/components/alert-dialog.css`，z-index 1450
+
+**API**:
+
+- 使用 `useAlertDialog()` → `{ open, close }`
+- `open(payload)` 结构参见 `app/types/alert-dialog.ts`（title/description/actionLabel/cancelLabel/isDismissable/onAction/onCancel）
+- 受控模式，按钮事件使用 `onPress`
+
 ---
 
 ## HeroUI v3 使用规范

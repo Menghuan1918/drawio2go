@@ -505,18 +505,6 @@ export default function Home() {
 
   return (
     <main className={`main-container ${isSidebarOpen ? "sidebar-open" : ""}`}>
-      {/* 顶部通知区域：Socket 断连 & DrawIO 合并错误 */}
-      {!isConnected && (
-        <div className="connection-alert">
-          <Alert status="danger" className="connection-alert__item">
-            <Alert.Indicator />
-            <Alert.Content>
-              <Alert.Title>{tp("main.socketDisconnected")}</Alert.Title>
-            </Alert.Content>
-          </Alert>
-        </div>
-      )}
-
       {/* 项目加载失败提示 */}
       {!projectLoading && !currentProject && (
         <div className="error-overlay">
@@ -585,6 +573,7 @@ export default function Home() {
         projectUuid={currentProject?.uuid}
         onVersionRestore={handleVersionRestore}
         editorRef={editorRef}
+        isSocketConnected={isConnected}
       />
 
       {/* 工程选择器 */}

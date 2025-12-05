@@ -1,6 +1,7 @@
 /* 主容器样式 */
 .main-container {
-  height: 100vh;
+  height: 100dvh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -19,7 +20,8 @@
   overflow: hidden;
   transition: width 0.3s ease;
   width: 100%;
-  height: calc(100vh - var(--top-bar-height));
+  height: calc(100dvh - var(--top-bar-height));
+  min-height: calc(100vh - var(--top-bar-height));
   position: relative;
 }
 
@@ -115,4 +117,10 @@
 .top-bar-project.top-bar-project[data-variant="secondary"]:hover,
 .top-bar-button.top-bar-button[data-variant="secondary"]:hover {
   background: var(--bg-hover);
+}
+
+@media (max-width: 768px) {
+  .main-container.sidebar-open {
+    padding-right: 0;
+  }
 }

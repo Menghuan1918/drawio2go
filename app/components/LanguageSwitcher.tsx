@@ -64,7 +64,7 @@ export default function LanguageSwitcher({ className }: LanguageSwitcherProps) {
         <Select.Indicator className="text-default-500" />
       </Select.Trigger>
 
-      <Select.Content className="rounded-2xl border border-default-200 bg-content1 p-2 shadow-2xl">
+      <Select.Popover className="rounded-2xl border border-default-200 bg-content1 p-2 shadow-2xl">
         <ListBox className="flex flex-col gap-1">
           {locales.map((locale) => (
             <ListBox.Item
@@ -78,7 +78,7 @@ export default function LanguageSwitcher({ className }: LanguageSwitcherProps) {
             </ListBox.Item>
           ))}
         </ListBox>
-      </Select.Content>
+      </Select.Popover>
 
       <Description className="mt-3">
         {t("general.language.description")}

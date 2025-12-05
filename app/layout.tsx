@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import I18nProvider from "@/app/components/I18nProvider";
+import { AlertDialogProvider } from "@/app/components/alert";
 import { ToastProvider } from "@/app/components/toast";
 
 export const metadata: Metadata = {
@@ -46,7 +47,9 @@ export default function RootLayout({
       <body className="bg-background text-foreground antialiased transition-colors duration-300">
         {/* 国际化上下文：同步 i18n 状态并维护 <html lang> */}
         <I18nProvider>
-          <ToastProvider>{children}</ToastProvider>
+          <AlertDialogProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </AlertDialogProvider>
         </I18nProvider>
       </body>
     </html>

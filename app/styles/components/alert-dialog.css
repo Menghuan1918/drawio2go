@@ -1,0 +1,105 @@
+.global-alert-dialog__backdrop {
+  z-index: 1450;
+  background: color-mix(in oklch, var(--background) 70%, transparent);
+  backdrop-filter: var(--glass-effect);
+}
+
+.global-alert-dialog__container {
+  z-index: 1450;
+}
+
+.global-alert-dialog__trigger {
+  display: none;
+}
+
+.global-alert-dialog__dialog {
+  width: min(520px, 92vw);
+  background: var(--background);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-8);
+  border: 1px solid var(--border-light);
+  padding: var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.global-alert-dialog__header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.global-alert-dialog__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.global-alert-dialog__dialog--danger .global-alert-dialog__icon {
+  background: color-mix(in oklch, var(--danger) 15%, transparent);
+  color: var(--danger);
+}
+
+.global-alert-dialog__dialog--warning .global-alert-dialog__icon {
+  background: color-mix(in oklch, var(--warning) 18%, transparent);
+  color: var(--warning);
+}
+
+.global-alert-dialog__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.global-alert-dialog__body {
+  margin: 0;
+}
+
+.global-alert-dialog__description {
+  margin: 0;
+  color: var(--foreground);
+  line-height: 1.6;
+}
+
+.global-alert-dialog__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+}
+
+.global-alert-dialog__action-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+@media (max-width: 640px) {
+  .global-alert-dialog__dialog {
+    width: 96vw;
+    padding: var(--spacing-md);
+  }
+
+  .global-alert-dialog__footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 480px) {
+  .global-alert-dialog__dialog {
+    width: 98vw;
+    padding: var(--spacing-sm);
+    gap: var(--spacing-sm);
+  }
+
+  .global-alert-dialog__header {
+    align-items: flex-start;
+  }
+}

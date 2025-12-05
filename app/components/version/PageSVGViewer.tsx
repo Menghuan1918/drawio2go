@@ -486,7 +486,7 @@ export function PageSVGViewer({
                     <Select.Value className="page-svg-viewer__select-value" />
                     <Select.Indicator />
                   </Select.Trigger>
-                  <Select.Content className="page-svg-viewer__select-content">
+                  <Select.Popover className="page-svg-viewer__select-content">
                     <ListBox className="page-svg-viewer__select-list">
                       {pages.map((page) => (
                         <ListBox.Item
@@ -499,7 +499,7 @@ export function PageSVGViewer({
                         </ListBox.Item>
                       ))}
                     </ListBox>
-                  </Select.Content>
+                  </Select.Popover>
                 </Select>
               )}
             </div>

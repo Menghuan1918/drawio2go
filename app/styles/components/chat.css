@@ -260,3 +260,49 @@
   content: "\A";
   white-space: pre;
 }
+
+@media (max-width: 640px) {
+  .chat-input-actions {
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: var(--spacing-compact-sm, 0.5rem);
+  }
+
+  .chat-actions-left {
+    flex: 1 1 0;
+    min-width: 180px;
+    gap: var(--spacing-compact-md, 0.25rem);
+  }
+
+  .chat-actions-right {
+    flex-shrink: 0;
+    gap: var(--spacing-compact-md, 0.25rem);
+  }
+
+  .message-body--user {
+    max-width: 90%;
+  }
+}
+
+@media (max-width: 480px) {
+  .chat-input-actions {
+    gap: var(--spacing-compact-md, 0.25rem);
+  }
+
+  .chat-actions-left {
+    min-width: 160px;
+  }
+
+  .chat-actions-right button,
+  .chat-actions-right [role="button"] {
+    min-height: 44px;
+  }
+
+  .messages-scroll-area {
+    padding: 0.25rem 0.25rem 0.75rem;
+  }
+
+  .message-body--user {
+    max-width: 94%;
+  }
+}

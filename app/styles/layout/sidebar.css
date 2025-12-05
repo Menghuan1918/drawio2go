@@ -334,3 +334,16 @@
   align-items: center;
   gap: var(--spacing-sm);
 }
+
+@media (max-width: 768px) {
+  .unified-sidebar,
+  .settings-sidebar {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+  }
+
+  .sidebar-tab-strip {
+    padding: 0 var(--spacing-sm);
+  }
+}

@@ -10,6 +10,12 @@
     "weeksAgo_one": "{{count}} 周前",
     "weeksAgo_other": "{{count}} 周前"
   },
+  "actions": {
+    "confirm": "确认",
+    "cancel": "取消",
+    "close": "关闭",
+    "processing": "处理中..."
+  },
   "toast": {
     "close": "关闭通知",
     "copy": "复制通知内容",

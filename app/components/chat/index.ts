@@ -14,6 +14,7 @@ export { default as MessageContent } from "./MessageContent";
 export { default as EmptyState } from "./EmptyState";
 export { default as ChatInputArea } from "./ChatInputArea";
 export { default as ChatInputActions } from "./ChatInputActions";
+export { default as ModelComboBox } from "./ModelComboBox";
 export { default as ToolCallCard } from "./ToolCallCard";
 export { default as ThinkingBlock } from "./ThinkingBlock";
 export { default as ChatHistoryView } from "./ChatHistoryView";

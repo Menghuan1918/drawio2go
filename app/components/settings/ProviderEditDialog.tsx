@@ -317,7 +317,7 @@ export function ProviderEditDialog({
                     <Select.Value />
                     <Select.Indicator />
                   </Select.Trigger>
-                  <Select.Content>
+                  <Select.Popover>
                     <ListBox>
                       <ListBox.Item id="openai-compatible">
                         OpenAI Compatible
@@ -338,7 +338,7 @@ export function ProviderEditDialog({
                         </Description>
                       </ListBox.Item>
                     </ListBox>
-                  </Select.Content>
+                  </Select.Popover>
                   <Description>{t("models.form.type.description")}</Description>
                 </Select>
 

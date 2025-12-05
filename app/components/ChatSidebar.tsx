@@ -8,14 +8,13 @@ import {
   useCallback,
   type FormEvent,
 } from "react";
-import { AlertTriangle, Cpu } from "lucide-react";
-import { Select, Label, ListBox, Header, Chip } from "@heroui/react";
 import { useChat } from "@ai-sdk/react";
 import {
   useStorageSettings,
   useStorageConversations,
   useStorageXMLVersions,
 } from "@/app/hooks";
+import { useAlertDialog } from "@/app/components/alert";
 import { useToast } from "@/app/components/toast";
 import { useI18n } from "@/app/i18n/hooks";
 import { DEFAULT_PROJECT_UUID } from "@/app/lib/storage";
@@ -40,6 +39,7 @@ import ChatSessionHeader from "./chat/ChatSessionHeader";
 import MessageList from "./chat/MessageList";
 import ChatInputArea from "./chat/ChatInputArea";
 import ChatHistoryView from "./chat/ChatHistoryView";
+import ModelComboBox from "./chat/ModelComboBox";
 
 // 导出工具
 import {
@@ -61,6 +61,7 @@ interface ChatSidebarProps {
 // ========== 主组件 ==========
 
 export default function ChatSidebar({
+  isOpen = true,
   currentProjectId,
   isSocketConnected = true,
 }: ChatSidebarProps) {
@@ -104,9 +105,6 @@ export default function ChatSidebar({
   const [llmConfig, setLlmConfig] = useState<LLMConfig | null>(null);
   const [configLoading, setConfigLoading] = useState(true);
   const [selectorLoading, setSelectorLoading] = useState(true);
-  const [selectedProviderId, setSelectedProviderId] = useState<string | null>(
-    null,
-  );
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [providers, setProviders] = useState<ProviderConfig[]>([]);
   const [models, setModels] = useState<ModelConfig[]>([]);
@@ -124,6 +122,7 @@ export default function ChatSidebar({
   const [saveError, setSaveError] = useState<string | null>(null);
   const { t, i18n } = useI18n();
   const { push } = useToast();
+  const { open: openAlertDialog, close: closeAlertDialog } = useAlertDialog();
 
   // ========== 引用 ==========
   const sendingSessionIdRef = useRef<string | null>(null);
@@ -133,6 +132,10 @@ export default function ChatSidebar({
   } | null>(null);
   const creatingDefaultConversationRef = useRef(false);
   const chatServiceRef = useRef<ChatSessionService | null>(null);
+  const alertOwnerRef = useRef<
+    "socket" | "single-delete" | "batch-delete" | null
+  >(null);
+  const socketAlertSeenRef = useRef(false);
 
   // ========== 派生状态 ==========
   const activeConversation = useMemo(() => {
@@ -150,35 +153,6 @@ export default function ChatSidebar({
     () => llmConfig?.modelName ?? DEFAULT_LLM_CONFIG.modelName,
     [llmConfig],
   );
-
-  const groupedModels = useMemo(() => {
-    if (providers.length === 0 || models.length === 0) {
-      return [];
-    }
-
-    const modelsByProvider = models.reduce<Map<string, ModelConfig[]>>(
-      (acc, model) => {
-        const list = acc.get(model.providerId);
-        if (list) {
-          list.push(model);
-        } else {
-          acc.set(model.providerId, [model]);
-        }
-        return acc;
-      },
-      new Map(),
-    );
-
-    return providers.reduce<
-      Array<{ provider: ProviderConfig; models: ModelConfig[] }>
-    >((acc, provider) => {
-      const providerModels = modelsByProvider.get(provider.id);
-      if (providerModels && providerModels.length > 0) {
-        acc.push({ provider, models: providerModels });
-      }
-      return acc;
-    }, []);
-  }, [providers, models]);
 
   const resolveModelSelection = useCallback(
     (
@@ -339,7 +313,6 @@ export default function ChatSidebar({
           preserveSelection ? selectedModelId : null,
         );
 
-        setSelectedProviderId(providerId);
         setSelectedModelId(modelId);
 
         if (providerId && modelId) {
@@ -419,6 +392,44 @@ export default function ChatSidebar({
     },
     [chatService],
   );
+
+  useEffect(() => {
+    if (!isOpen) {
+      if (alertOwnerRef.current === "socket") {
+        alertOwnerRef.current = null;
+        closeAlertDialog();
+      }
+      socketAlertSeenRef.current = false;
+      return;
+    }
+
+    if (!isSocketConnected) {
+      if (!socketAlertSeenRef.current) {
+        socketAlertSeenRef.current = true;
+        alertOwnerRef.current = "socket";
+        openAlertDialog({
+          status: "warning",
+          title: t("chat:status.socketDisconnected"),
+          description: t("chat:status.socketWarning"),
+          actionLabel: t("actions.confirm", "确认"),
+          cancelLabel: t("actions.cancel", "取消"),
+          isDismissable: true,
+          onAction: () => {
+            alertOwnerRef.current = null;
+          },
+          onCancel: () => {
+            alertOwnerRef.current = null;
+          },
+        });
+      }
+    } else {
+      socketAlertSeenRef.current = false;
+      if (alertOwnerRef.current === "socket") {
+        alertOwnerRef.current = null;
+        closeAlertDialog();
+      }
+    }
+  }, [closeAlertDialog, isOpen, isSocketConnected, openAlertDialog, t]);
 
   const ensureMessagesForConversation = useCallback(
     (conversationId: string): Promise<ChatUIMessage[]> => {
@@ -880,32 +891,59 @@ export default function ChatSidebar({
       return;
     }
 
-    if (
-      confirm(t("chat:aria.deleteConfirm", { title: activeConversation.title }))
-    ) {
-      try {
-        await deleteConversationFromStorage(activeConversation.id);
+    const messages =
+      conversationMessages[activeConversation.id] ??
+      (await ensureMessagesForConversation(activeConversation.id));
+    const messageCountLabel = t("chat:messages.counts.messageCount", {
+      count: messages.length,
+    });
 
-        setActiveConversationId(null);
-        removeConversationsFromState([activeConversation.id]);
-      } catch (error) {
-        logger.error("[ChatSidebar] 删除对话失败:", error);
-        const errorMessage =
-          extractErrorMessage(error) ?? t("toasts.unknownError");
-        showNotice(
-          t("toasts.sessionDeleteFailed", { error: errorMessage }),
-          "danger",
-        );
-      }
-    }
+    alertOwnerRef.current = "single-delete";
+    openAlertDialog({
+      status: "danger",
+      title: t("chat:dialogs.deleteConversationTitle", {
+        title: activeConversation.title,
+      }),
+      description: t("chat:dialogs.deleteConversationDescription", {
+        title: activeConversation.title,
+        messageCount: messageCountLabel,
+      }),
+      actionLabel: t("chat:conversations.actions.delete"),
+      cancelLabel: t("actions.cancel", "取消"),
+      isDismissable: false,
+      onAction: async () => {
+        try {
+          await deleteConversationFromStorage(activeConversation.id);
+          setActiveConversationId(null);
+          removeConversationsFromState([activeConversation.id]);
+          alertOwnerRef.current = null;
+        } catch (error) {
+          logger.error("[ChatSidebar] 删除对话失败:", error);
+          const errorMessage =
+            extractErrorMessage(error) ?? t("toasts.unknownError");
+          showNotice(
+            t("toasts.sessionDeleteFailed", { error: errorMessage }),
+            "danger",
+          );
+          throw error;
+        }
+      },
+      onCancel: () => {
+        alertOwnerRef.current = null;
+      },
+    });
   }, [
     activeConversation,
+    conversationMessages,
+    ensureMessagesForConversation,
     extractErrorMessage,
     conversations.length,
     deleteConversationFromStorage,
+    openAlertDialog,
     removeConversationsFromState,
     showNotice,
     t,
+    setActiveConversationId,
   ]);
 
   const handleExportSession = async () => {
@@ -960,37 +998,105 @@ export default function ChatSidebar({
   const handleBatchDelete = useCallback(
     async (ids: string[]) => {
       if (!ids || ids.length === 0) return;
-      const remaining = conversations.length - ids.length;
-      if (remaining <= 0) {
-        const confirmed = confirm(t("chat:aria.deleteAllConfirm"));
-        if (!confirmed) return;
-      }
+      const uniqueIds = Array.from(new Set(ids));
+      const remaining = conversations.length - uniqueIds.length;
+      const conversationMap = new Map(
+        conversations.map((conv) => [conv.id, conv]),
+      );
 
-      const deletingActive =
-        activeConversationId != null && ids.includes(activeConversationId);
+      const messageCounts = await Promise.all(
+        uniqueIds.map(async (id) => {
+          try {
+            const messages = await ensureMessagesForConversation(id);
+            return { id, count: messages.length };
+          } catch (error) {
+            logger.error("[ChatSidebar] 统计会话消息数量失败:", {
+              conversationId: id,
+              error,
+            });
+            return { id, count: 0 };
+          }
+        }),
+      );
 
-      try {
-        await batchDeleteConversations(ids);
-        removeConversationsFromState(ids);
-        if (deletingActive) {
-          setActiveConversationId(null);
-        }
-      } catch (error) {
-        logger.error("[ChatSidebar] 批量删除对话失败:", error);
-        const errorMessage =
-          extractErrorMessage(error) ?? t("toasts.unknownError");
-        showNotice(
-          t("toasts.batchDeleteFailed", { error: errorMessage }),
-          "danger",
-        );
-      }
+      const totalMessages = messageCounts.reduce(
+        (sum, item) => sum + item.count,
+        0,
+      );
+      const messageCountLabel = t("chat:messages.counts.messageCount", {
+        count: totalMessages,
+      });
+
+      const isSingle = uniqueIds.length === 1;
+      const targetTitle =
+        conversationMap.get(uniqueIds[0])?.title ??
+        t("chat:conversations.defaultName", { number: 1 });
+
+      const baseDescription = t(
+        isSingle
+          ? "chat:dialogs.deleteConversationDescription"
+          : "chat:dialogs.deleteConversationsDescription",
+        {
+          title: targetTitle,
+          count: uniqueIds.length,
+          messageCount: messageCountLabel,
+        },
+      );
+
+      const description =
+        remaining <= 0
+          ? `${baseDescription} ${t("chat:aria.deleteAllConfirm")}`
+          : baseDescription;
+
+      alertOwnerRef.current = isSingle ? "single-delete" : "batch-delete";
+
+      openAlertDialog({
+        status: "danger",
+        title: isSingle
+          ? t("chat:dialogs.deleteConversationTitle", { title: targetTitle })
+          : t("chat:dialogs.deleteConversationsTitle", {
+              count: uniqueIds.length,
+            }),
+        description,
+        actionLabel: t("chat:conversations.actions.delete"),
+        cancelLabel: t("actions.cancel", "取消"),
+        isDismissable: false,
+        onCancel: () => {
+          alertOwnerRef.current = null;
+        },
+        onAction: async () => {
+          const deletingActive =
+            activeConversationId != null &&
+            uniqueIds.includes(activeConversationId);
+          try {
+            await batchDeleteConversations(uniqueIds);
+            removeConversationsFromState(uniqueIds);
+            if (deletingActive) {
+              setActiveConversationId(null);
+            }
+            alertOwnerRef.current = null;
+          } catch (error) {
+            logger.error("[ChatSidebar] 批量删除对话失败:", error);
+            const errorMessage =
+              extractErrorMessage(error) ?? t("toasts.unknownError");
+            showNotice(
+              t("toasts.batchDeleteFailed", { error: errorMessage }),
+              "danger",
+            );
+            throw error;
+          }
+        },
+      });
     },
     [
       activeConversationId,
       batchDeleteConversations,
-      conversations.length,
+      conversations,
+      ensureMessagesForConversation,
       extractErrorMessage,
+      openAlertDialog,
       removeConversationsFromState,
+      setActiveConversationId,
       showNotice,
       t,
     ],
@@ -1033,7 +1139,6 @@ export default function ChatSidebar({
       const providerId = targetModel?.providerId ?? null;
 
       setSelectedModelId(modelId);
-      setSelectedProviderId(providerId);
 
       if (!providerId) {
         pushErrorToast("未找到该模型的供应商");
@@ -1076,98 +1181,7 @@ export default function ChatSidebar({
     }));
   };
 
-  const showSocketWarning = !isSocketConnected;
-
   const modelSelectorDisabled = isChatStreaming || selectorLoading;
-
-  const renderModelSelector = (mode: "inline" | "floating" = "inline") => {
-    const isInline = mode === "inline";
-
-    return (
-      <div
-        className={`model-selector-container${
-          isInline ? " model-selector-container--inline" : ""
-        }`}
-      >
-        {providers.length === 0 || models.length === 0 ? (
-          <p className="model-selector-empty">
-            暂无可用模型，请先在设置中添加供应商和模型
-          </p>
-        ) : (
-          <Select
-            value={selectedModelId ?? undefined}
-            onChange={(value) => handleModelChange(value as string)}
-            isDisabled={modelSelectorDisabled}
-            placeholder="选择模型"
-            className={`model-selector${
-              isInline ? " model-selector--inline" : ""
-            }`}
-          >
-            <Label>当前模型</Label>
-            <Select.Trigger>
-              <Select.Value>
-                {({ defaultChildren, isPlaceholder }) => {
-                  if (isPlaceholder || !selectedModelId) {
-                    return defaultChildren;
-                  }
-
-                  const model = models.find(
-                    (item) => item.id === selectedModelId,
-                  );
-                  const provider = providers.find(
-                    (item) => item.id === selectedProviderId,
-                  );
-
-                  return (
-                    <div className="model-selector-trigger-content">
-                      <Cpu size={16} />
-                      <span>{model?.displayName || model?.modelName}</span>
-                      <span className="provider-name">
-                        {provider?.displayName}
-                      </span>
-                    </div>
-                  );
-                }}
-              </Select.Value>
-              <Select.Indicator />
-            </Select.Trigger>
-            <Select.Content>
-              <ListBox>
-                {groupedModels.map(({ provider, models: providerModels }) => (
-                  <ListBox.Section key={provider.id}>
-                    <Header>{provider.displayName}</Header>
-                    {providerModels.map((model) => (
-                      <ListBox.Item
-                        key={model.id}
-                        id={model.id}
-                        textValue={model.displayName || model.modelName}
-                      >
-                        <div className="model-option-content">
-                          <span className="model-name">
-                            {model.displayName || model.modelName}
-                          </span>
-                          {model.isDefault && (
-                            <Chip size="sm" variant="secondary">
-                              默认
-                            </Chip>
-                          )}
-                          <span className="model-params">
-                            温度: {model.temperature} | 工具轮次:{" "}
-                            {model.maxToolRounds}
-                          </span>
-                        </div>
-                        <ListBox.ItemIndicator />
-                      </ListBox.Item>
-                    ))}
-                  </ListBox.Section>
-                ))}
-              </ListBox>
-            </Select.Content>
-          </Select>
-        )}
-      </div>
-    );
-  };
 
   if (currentView === "history") {
     return (
@@ -1212,18 +1226,6 @@ export default function ChatSidebar({
             onExportAllSessions={handleExportAllSessions}
           />
 
-          {showSocketWarning && (
-            <div className="chat-inline-warning" role="status">
-              <span className="chat-inline-warning-icon" aria-hidden>
-                <AlertTriangle size={16} />
-              </span>
-              <div className="chat-inline-warning-text">
-                <p>{t("chat:status.socketDisconnected")}</p>
-                <p>{t("chat:status.socketWarning")}</p>
-              </div>
-            </div>
-          )}
-
           {/* 消息列表 */}
           <MessageList
             messages={displayMessages}
@@ -1248,7 +1250,16 @@ export default function ChatSidebar({
           onCancel={handleCancel}
           onNewChat={handleNewChat}
           onHistory={handleHistory}
-          modelSelector={renderModelSelector()}
+          modelSelector={
+            <ModelComboBox
+              providers={providers}
+              models={models}
+              selectedModelId={selectedModelId}
+              onSelect={(value) => handleModelChange(value)}
+              disabled={modelSelectorDisabled}
+              isLoading={selectorLoading}
+            />
+          }
         />
       </div>
     </>
