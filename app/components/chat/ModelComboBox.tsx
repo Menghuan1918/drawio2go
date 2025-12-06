@@ -10,7 +10,6 @@ import {
   Spinner,
   type Key,
 } from "@heroui/react";
-import { Cpu } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -20,6 +19,7 @@ import {
 } from "react";
 import { useI18n } from "@/app/i18n/hooks";
 import type { ModelConfig, ProviderConfig } from "@/app/types/chat";
+import ModelIcon from "@/app/components/common/ModelIcon";
 
 export interface ModelComboBoxProps {
   providers: ProviderConfig[];
@@ -184,33 +184,56 @@ export default function ModelComboBox({
           ) : (
             filteredGroups.map(({ provider, models: providerModels }) => (
               <ListBox.Section key={provider.id}>
-                <Header>{provider.displayName}</Header>
+                <Header>
+                  <div className="flex items-center gap-2">
+                    <ModelIcon
+                      size={14}
+                      providerId={provider.id}
+                      providerType={provider.providerType}
+                    />
+                    <span>{provider.displayName}</span>
+                  </div>
+                </Header>
                 {providerModels.map((model) => (
                   <ListBox.Item
                     key={model.id}
                     id={model.id}
                     textValue={getModelLabel(model)}
                   >
-                    <div className="model-option-content">
-                      <div className="model-option-header">
-                        <span className="model-name">
-                          {getModelLabel(model)}
-                        </span>
-                        {model.isDefault && (
-                          <Chip size="sm" variant="secondary">
-                            默认
-                          </Chip>
-                        )}
-                      </div>
-                      <div className="model-option-meta">
-                        <span className="model-params">
-                          温度: {model.temperature} | 工具轮次:{" "}
-                          {model.maxToolRounds}
-                        </span>
-                        <span className="provider-name">
-                          <Cpu size={14} aria-hidden />
-                          <span>{provider.displayName}</span>
-                        </span>
+                    <div className="model-option-content flex items-start gap-2">
+                      <ModelIcon
+                        size={18}
+                        modelId={model.id}
+                        modelName={getModelLabel(model)}
+                        providerId={provider.id}
+                        providerType={provider.providerType}
+                        className="mt-0.5 text-primary"
+                      />
+                      <div className="flex min-w-0 flex-1 flex-col gap-1">
+                        <div className="model-option-header flex flex-wrap items-center gap-1.5">
+                          <span className="model-name">
+                            {getModelLabel(model)}
+                          </span>
+                          {model.isDefault && (
+                            <Chip size="sm" variant="secondary">
+                              默认
+                            </Chip>
+                          )}
+                        </div>
+                        <div className="model-option-meta flex flex-wrap items-center gap-2 text-xs text-default-500">
+                          <span className="model-params">
+                            温度: {model.temperature} | 工具轮次:{" "}
+                            {model.maxToolRounds}
+                          </span>
+                          <span className="provider-name inline-flex items-center gap-1">
+                            <ModelIcon
+                              size={14}
+                              providerId={provider.id}
+                              providerType={provider.providerType}
+                            />
+                            <span>{provider.displayName}</span>
+                          </span>
+                        </div>
                       </div>
                     </div>
                     <ListBox.ItemIndicator />

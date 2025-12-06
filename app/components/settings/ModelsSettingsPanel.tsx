@@ -19,6 +19,7 @@ import { useToast } from "@/app/components/toast";
 import ProviderEditDialog from "./ProviderEditDialog";
 import ModelEditDialog from "./ModelEditDialog";
 import ConfirmDialog from "@/app/components/common/ConfirmDialog";
+import ModelIcon from "@/app/components/common/ModelIcon";
 import type {
   ActiveModelReference,
   ModelConfig,
@@ -355,6 +356,12 @@ export default function ModelsSettingsPanel({
                   <div className="flex items-center justify-between gap-2 rounded-lg px-2 py-2">
                     <Accordion.Trigger className="flex flex-1 items-center justify-between gap-2 text-left">
                       <div className="flex items-center gap-2">
+                        <ModelIcon
+                          size={18}
+                          providerId={provider.id}
+                          providerType={provider.providerType}
+                          className="text-primary"
+                        />
                         <span className="text-base font-medium text-foreground">
                           {provider.displayName}
                         </span>
@@ -496,6 +503,8 @@ export default function ModelsSettingsPanel({
                       ) : (
                         <div className="flex flex-col gap-2">
                           {providerModels.map((model) => {
+                            const modelDisplayName =
+                              model.displayName || model.modelName;
                             const isActiveModel =
                               activeModel?.modelId === model.id;
                             const isModelOperating =
@@ -512,11 +521,19 @@ export default function ModelsSettingsPanel({
                               >
                                 <Card.Content className="flex flex-col gap-2 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
                                   <div className="flex flex-col gap-1.5">
-                                    <div className="flex flex-wrap items-center gap-1.5">
-                                      <span className="text-sm font-semibold text-foreground">
-                                        {model.displayName || model.modelName}
-                                      </span>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <ModelIcon
+                                        size={18}
+                                        modelId={model.id}
+                                        modelName={modelDisplayName}
+                                        providerId={provider.id}
+                                        providerType={provider.providerType}
+                                        className="text-primary"
+                                      />
                                       <div className="flex flex-wrap items-center gap-1.5">
+                                        <span className="text-sm font-semibold text-foreground">
+                                          {modelDisplayName}
+                                        </span>
                                         {[
                                           {
                                             key: "thinking",

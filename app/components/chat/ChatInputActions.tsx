@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Button,
   Popover,
@@ -9,11 +9,12 @@ import {
   TooltipRoot,
   type ButtonProps,
 } from "@heroui/react";
-import { Cpu, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { useAppTranslation } from "@/app/i18n/hooks";
 import type { ModelConfig, ProviderConfig } from "@/app/types/chat";
 import ModelComboBox from "./ModelComboBox";
 import { useToast } from "@/app/components/toast";
+import ModelIcon from "@/app/components/common/ModelIcon";
 
 interface ChatInputActionsProps {
   isSendDisabled: boolean;
@@ -74,6 +75,21 @@ export default function ChatInputActions({
       setIsModelPopoverOpen(false);
     }
   }, [isModelSelectorDisabled]);
+
+  const activeModel = useMemo(
+    () => models.find((model) => model.id === selectedModelId) ?? null,
+    [models, selectedModelId],
+  );
+
+  const activeProvider = useMemo(
+    () =>
+      activeModel
+        ? (providers.find(
+            (provider) => provider.id === activeModel.providerId,
+          ) ?? null)
+        : null,
+    [activeModel, providers],
+  );
 
   const handleModelSelect = useCallback(
     async (modelId: string) => {
@@ -184,7 +200,14 @@ export default function ChatInputActions({
               {isModelSelectorLoading ? (
                 <Spinner size="sm" />
               ) : (
-                <Cpu size={16} aria-hidden />
+                <ModelIcon
+                  size={16}
+                  modelId={selectedModelId}
+                  modelName={activeModel?.modelName || activeModel?.displayName}
+                  providerId={activeProvider?.id}
+                  providerType={activeProvider?.providerType ?? null}
+                  className="text-primary"
+                />
               )}
               <span className="chat-model-button__label">{modelLabel}</span>
             </Button>

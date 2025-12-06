@@ -149,7 +149,7 @@ export const drawioReadTool = tool({
     .object({
       xpath: z.string().optional(),
       id: z.union([z.string(), z.array(z.string())]).optional(),
-      filter: z.enum(["all", "vertices", "edges"]).default("all").optional(),
+      filter: z.enum(["all", "vertices", "edges"]).optional(),
     })
     .superRefine((data, ctx) => {
       if (data.xpath && data.id) {

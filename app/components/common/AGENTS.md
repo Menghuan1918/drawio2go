@@ -14,3 +14,9 @@
 - 默认文案：确认/取消（中文），可通过 props 覆盖。
 
 新增组件请在此文件补充用途与关键交互约定，确保后续代理快速对齐规范。
+
+## ModelIcon
+
+- 路径：`app/components/common/ModelIcon.tsx`
+- 作用：基于 `app/lib/model-icons.ts` 的模型/供应商图标展示，按模型规则 > 供应商品牌 > 通用 CPU 图标的优先级返回 React Icon。
+- 使用：传入 `modelId`/`modelName`/`providerId`/`providerType`（可选），可通过 `size`/`className` 控制外观，默认使用 `currentColor` 适配亮暗主题。

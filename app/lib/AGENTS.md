@@ -17,6 +17,7 @@
 - **svg-smart-diff.ts**: SVG 智能差异对比引擎（基于 data-cell-id + 几何语义匹配的元素级高亮）
 - **config-utils.ts**: LLM 配置规范化工具（默认值、类型校验、URL 规范化）
 - **model-capabilities.ts**: 模型能力白名单与查找辅助函数（supportsThinking / supportsVision）
+- **model-icons.ts**: 模型与供应商图标映射工具（@lobehub/icons 品牌图标 + lucide fallback，按模型规则/供应商/通用优先级）
 - **version-utils.ts**: 语义化版本号工具（解析、过滤子版本、子版本计数与递增推荐）
 - **format-utils.ts**: 统一的日期格式化工具（版本时间戳、会话日期）
 - **select-utils.ts**: HeroUI Select 选择值提取与标准化工具，消除重复实现

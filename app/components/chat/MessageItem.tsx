@@ -6,6 +6,7 @@ import type { ChatUIMessage, MessageMetadata } from "@/app/types/chat";
 import { DEFAULT_LLM_CONFIG } from "@/app/lib/config-utils";
 import { formatRelativeTime } from "@/app/lib/format-utils";
 import { useAppTranslation } from "@/app/i18n/hooks";
+import ModelIcon from "@/app/components/common/ModelIcon";
 
 interface MessageItemProps {
   message: ChatUIMessage;
@@ -55,6 +56,13 @@ export default function MessageItem({
         <span className="message-meta-icon" aria-hidden>
           {isUser ? <UserRound size={14} /> : <Bot size={14} />}
         </span>
+        {!isUser && (
+          <ModelIcon
+            size={14}
+            modelName={modelName}
+            className="ml-1 text-primary"
+          />
+        )}
         <span className="message-meta-text">{metaLabel}</span>
       </div>
       <div
