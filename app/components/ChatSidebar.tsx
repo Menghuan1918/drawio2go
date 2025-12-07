@@ -113,6 +113,7 @@ export default function ChatSidebar({
     null,
   );
   const { t, i18n } = useI18n();
+  const isI18nReady = i18n.isInitialized && Boolean(i18n.resolvedLanguage);
   const { push } = useToast();
   const { open: openAlertDialog, close: closeAlertDialog } = useAlertDialog();
 
@@ -392,16 +393,28 @@ export default function ChatSidebar({
       return;
     }
 
+    if (!isI18nReady) {
+      return;
+    }
+
+    const socketTitle = t("chat:status.socketDisconnected", "Socket 未连接");
+    const socketDescription = t(
+      "chat:status.socketWarning",
+      "AI 工具功能暂时不可用",
+    );
+    const confirmLabel = t("actions.confirm", "确认");
+    const cancelLabel = t("actions.cancel", "取消");
+
     if (!isSocketConnected) {
       if (!socketAlertSeenRef.current) {
         socketAlertSeenRef.current = true;
         alertOwnerRef.current = "socket";
         openAlertDialog({
           status: "warning",
-          title: t("chat:status.socketDisconnected"),
-          description: t("chat:status.socketWarning"),
-          actionLabel: t("actions.confirm", "确认"),
-          cancelLabel: t("actions.cancel", "取消"),
+          title: socketTitle,
+          description: socketDescription,
+          actionLabel: confirmLabel,
+          cancelLabel: cancelLabel,
           isDismissable: true,
           onAction: () => {
             alertOwnerRef.current = null;
@@ -418,7 +431,14 @@ export default function ChatSidebar({
         closeAlertDialog();
       }
     }
-  }, [closeAlertDialog, isOpen, isSocketConnected, openAlertDialog, t]);
+  }, [
+    closeAlertDialog,
+    isI18nReady,
+    isOpen,
+    isSocketConnected,
+    openAlertDialog,
+    t,
+  ]);
 
   const ensureMessagesForConversation = useCallback(
     (conversationId: string): Promise<ChatUIMessage[]> => {

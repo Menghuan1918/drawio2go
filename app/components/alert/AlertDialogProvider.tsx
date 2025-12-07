@@ -70,7 +70,36 @@ export function AlertDialogProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(alertDialogReducer, initialState);
 
   const open = useCallback((payload: AlertDialogPayload) => {
-    dispatch({ type: "OPEN", payload });
+    const normalize = (value?: string) => value?.trim() ?? "";
+    const normalizedTitle = normalize(payload.title);
+    const normalizedDescription = normalize(payload.description);
+    const isContentMissing =
+      normalizedTitle.length === 0 && normalizedDescription.length === 0;
+
+    if (isContentMissing) {
+      // 避免出现空白弹窗，输出调试信息并使用兜底文案
+      console.error(
+        "[AlertDialogProvider] open() skipped empty title/description",
+        payload,
+      );
+    }
+
+    const fallbackTitle = "错误";
+    const fallbackDescription = "发生未知错误";
+
+    dispatch({
+      type: "OPEN",
+      payload: {
+        ...payload,
+        title: isContentMissing ? fallbackTitle : normalizedTitle,
+        description: isContentMissing
+          ? fallbackDescription
+          : normalizedDescription,
+        isDismissable:
+          payload.isDismissable ??
+          (isContentMissing ? true : initialState.isDismissable),
+      },
+    });
   }, []);
 
   const close = useCallback(() => {
