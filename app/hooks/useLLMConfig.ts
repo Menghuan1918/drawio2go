@@ -93,6 +93,7 @@ export function useLLMConfig(): UseLLMConfigResult {
   const isMountedRef = useRef(true);
 
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
     };
@@ -113,12 +114,6 @@ export function useLLMConfig(): UseLLMConfigResult {
           getActiveModel(),
         ]);
 
-        if (
-          currentRequestId !== requestIdRef.current ||
-          !isMountedRef.current
-        )
-          return;
-
         setProviders(providerList);
         setModels(modelList);
 
@@ -131,14 +126,23 @@ export function useLLMConfig(): UseLLMConfigResult {
 
         setSelectedModelId(modelId);
 
+        // 如果存储里还没有活动模型，但已经解析出可用的 provider/model，则立即写回，避免后续读取为 null
+        if (
+          providerId &&
+          modelId &&
+          (!activeModel ||
+            activeModel.providerId !== providerId ||
+            activeModel.modelId !== modelId)
+        ) {
+          try {
+            await setActiveModel(providerId, modelId);
+          } catch {
+            // ignore write-back error, 保持后续流程继续使用内存态
+          }
+        }
+
         if (providerId && modelId) {
           const runtimeConfig = await getRuntimeConfig(providerId, modelId);
-
-          if (
-            currentRequestId !== requestIdRef.current ||
-            !isMountedRef.current
-          )
-            return;
 
           setLlmConfig(
             runtimeConfig
@@ -149,21 +153,13 @@ export function useLLMConfig(): UseLLMConfigResult {
           setLlmConfig({ ...DEFAULT_LLM_CONFIG });
         }
       } catch {
-        if (
-          currentRequestId === requestIdRef.current &&
-          isMountedRef.current
-        ) {
+        if (currentRequestId === requestIdRef.current && isMountedRef.current) {
           // 不中断流程，使用上一次的 llmConfig 或默认值
           setLlmConfig((prev) => prev ?? { ...DEFAULT_LLM_CONFIG });
         }
       } finally {
-        if (
-          currentRequestId === requestIdRef.current &&
-          isMountedRef.current
-        ) {
-          setSelectorLoading(false);
-          setConfigLoading(false);
-        }
+        setSelectorLoading(false);
+        setConfigLoading(false);
       }
     },
     [
@@ -171,6 +167,7 @@ export function useLLMConfig(): UseLLMConfigResult {
       getModels,
       getProviders,
       getRuntimeConfig,
+      setActiveModel,
       selectedModelId,
     ],
   );
@@ -214,18 +211,12 @@ export function useLLMConfig(): UseLLMConfigResult {
       try {
         await setActiveModel(providerId, modelId);
 
-        if (
-          currentRequestId !== requestIdRef.current ||
-          !isMountedRef.current
-        )
+        if (currentRequestId !== requestIdRef.current || !isMountedRef.current)
           return;
 
         const runtimeConfig = await getRuntimeConfig(providerId, modelId);
 
-        if (
-          currentRequestId !== requestIdRef.current ||
-          !isMountedRef.current
-        )
+        if (currentRequestId !== requestIdRef.current || !isMountedRef.current)
           return;
 
         setLlmConfig(
@@ -235,10 +226,7 @@ export function useLLMConfig(): UseLLMConfigResult {
         );
       } catch {
         // 只有最新请求的错误才显示给用户
-        if (
-          currentRequestId === requestIdRef.current &&
-          isMountedRef.current
-        ) {
+        if (currentRequestId === requestIdRef.current && isMountedRef.current) {
           pushErrorToast(
             t("chat:messages.modelSwitchFailed", "模型切换失败，请稍后重试"),
           );
@@ -249,8 +237,8 @@ export function useLLMConfig(): UseLLMConfigResult {
             setLlmConfig(previousConfig);
           } else if (previousModelId) {
             const previousProviderId =
-              models.find((model) => model.id === previousModelId)?.providerId ??
-              null;
+              models.find((model) => model.id === previousModelId)
+                ?.providerId ?? null;
 
             if (previousProviderId) {
               try {
@@ -281,10 +269,7 @@ export function useLLMConfig(): UseLLMConfigResult {
           }
         }
       } finally {
-        if (
-          currentRequestId === requestIdRef.current &&
-          isMountedRef.current
-        ) {
+        if (currentRequestId === requestIdRef.current && isMountedRef.current) {
           setSelectorLoading(false);
           setConfigLoading(false);
         }

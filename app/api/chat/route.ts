@@ -137,39 +137,61 @@ export async function POST(req: NextRequest) {
           : "missing",
     };
 
+    const isServerEnvironment = typeof window === "undefined";
+
     const requestLogger = logger.withContext({
       projectUuid,
       conversationId,
       ...paramSources,
     });
 
-    let conversation;
-    try {
-      const storage = await getStorage();
-      conversation = await storage.getConversation(conversationId);
-    } catch (storageError) {
-      requestLogger.error("会话所有权校验失败（存储访问异常）", {
-        error:
-          storageError instanceof Error ? storageError.message : storageError,
-      });
-      return apiError(
-        ErrorCodes.CHAT_SEND_FAILED,
-        "Failed to validate conversation ownership",
-        500,
-        { source: "storage" },
-      );
-    }
-
-    if (!conversation || conversation.project_uuid !== projectUuid) {
-      requestLogger.warn("拒绝访问：会话不存在或不属于当前项目", {
-        conversationProject: conversation?.project_uuid,
+    if (headerProjectUuid && headerProjectUuid !== projectUuid) {
+      requestLogger.warn("拒绝访问：projectUuid 不一致", {
+        bodyProjectUuid,
+        headerProjectUuid,
       });
       return apiError(
         ErrorCodes.CHAT_CONVERSATION_FORBIDDEN,
-        "Unauthorized access to conversation",
+        "Project UUID mismatch between body and header",
         403,
         paramSources,
       );
+    }
+
+    let conversation;
+    if (isServerEnvironment) {
+      // API 路由运行在 Node.js 服务器环境（无 window/indexedDB），跳过会话所有权校验
+      requestLogger.info("服务器环境检测到，已跳过会话所有权校验", {
+        environment: "server",
+      });
+    } else {
+      try {
+        const storage = await getStorage();
+        conversation = await storage.getConversation(conversationId);
+      } catch (storageError) {
+        requestLogger.error("会话所有权校验失败（存储访问异常）", {
+          error:
+            storageError instanceof Error ? storageError.message : storageError,
+        });
+        return apiError(
+          ErrorCodes.CHAT_SEND_FAILED,
+          "Failed to validate conversation ownership",
+          500,
+          { source: "storage" },
+        );
+      }
+
+      if (!conversation || conversation.project_uuid !== projectUuid) {
+        requestLogger.warn("拒绝访问：会话不存在或不属于当前项目", {
+          conversationProject: conversation?.project_uuid,
+        });
+        return apiError(
+          ErrorCodes.CHAT_CONVERSATION_FORBIDDEN,
+          "Unauthorized access to conversation",
+          403,
+          paramSources,
+        );
+      }
     }
 
     const toolContext: ToolExecutionContext = {

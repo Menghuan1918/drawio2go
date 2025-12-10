@@ -247,8 +247,19 @@ export default function ChatSidebar({
   }, [activeConversationId, conversationMessages]);
 
   useEffect(() => {
+    console.info("[ChatSidebar] calling loadModelSelector on mount");
     void loadModelSelector();
-  }, [loadModelSelector]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Web 端偶发出现模型列表为空（IndexedDB 数据已存在但未加载到状态）。
+  // 当侧栏重新展开或依然为空时主动重载一次，避免卡在“暂无可用模型”空态。
+  useEffect(() => {
+    if (!isOpen) return;
+    if (providers.length === 0 || models.length === 0) {
+      void loadModelSelector({ preserveSelection: true });
+    }
+  }, [isOpen, providers.length, models.length, loadModelSelector]);
 
   useEffect(() => {
     chatService.handleConversationSwitch(activeConversationId);
@@ -599,8 +610,13 @@ export default function ChatSidebar({
 
   useEffect(() => {
     const previousOnline = previousOnlineStatusRef.current;
+    const isFirstRender = previousOnline === null;
     const onlineStatusChanged = previousOnline !== isOnline;
     previousOnlineStatusRef.current = isOnline;
+
+    if (isFirstRender && offlineReason === "socket-disconnect") {
+      return;
+    }
 
     if (!onlineStatusChanged) return;
 
@@ -666,6 +682,7 @@ export default function ChatSidebar({
     resolveConversationId,
     stop,
     t,
+    offlineReason,
     offlineReasonLabel,
     updateStreamingFlag,
   ]);

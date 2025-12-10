@@ -355,6 +355,7 @@ export function useChatSessionsController(
       (subscribeError) => {
         if (isUnmounted) return;
         setError(subscribeError);
+        setIsLoadingConversations(false);
       },
     );
 
@@ -377,7 +378,9 @@ export function useChatSessionsController(
       },
     );
 
-    void chatService.ensureMessages(activeConversationId);
+    chatService.ensureMessages(activeConversationId).catch((err) => {
+      logger.error("[useChatSessionsController] 消息加载失败:", err);
+    });
 
     return unsubscribe;
   }, [activeConversationId, chatService]);

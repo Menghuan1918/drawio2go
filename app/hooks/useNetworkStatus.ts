@@ -109,8 +109,16 @@ export function useNetworkStatus(
   const [pingHealthy, setPingHealthy] = useState<boolean | null>(null);
   const [lastCheckedAt, setLastCheckedAt] = useState<number | null>(null);
   const [isChecking, setIsChecking] = useState(false);
+  const socketEverConnectedRef = useRef(socketConnected);
+  const getEffectiveSocket = useCallback((rawSocketConnected: boolean) => {
+    if (rawSocketConnected) {
+      socketEverConnectedRef.current = true;
+      return true;
+    }
+    return socketEverConnectedRef.current ? rawSocketConnected : true;
+  }, []);
   const [status, setStatus] = useState(() =>
-    computeStatus(navOnline, pingHealthy, socketConnected),
+    computeStatus(navOnline, pingHealthy, getEffectiveSocket(socketConnected)),
   );
 
   const failuresRef = useRef(0);
@@ -126,17 +134,14 @@ export function useNetworkStatus(
   useEffect(() => {
     socketConnectedRef.current = socketConnected;
     setStatus((prev) => {
-      const next = computeStatus(
-        navOnline,
-        pingHealthy,
-        socketConnectedRef.current,
-      );
+      const effectiveSocket = getEffectiveSocket(socketConnectedRef.current);
+      const next = computeStatus(navOnline, pingHealthy, effectiveSocket);
       return prev.isOnline === next.isOnline &&
         prev.offlineReason === next.offlineReason
         ? prev
         : next;
     });
-  }, [navOnline, pingHealthy, socketConnected]);
+  }, [getEffectiveSocket, navOnline, pingHealthy, socketConnected]);
 
   const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -164,10 +169,11 @@ export function useNetworkStatus(
       nextPingHealthy: boolean | null,
       source: string,
     ) => {
+      const effectiveSocket = getEffectiveSocket(socketConnectedRef.current);
       const next = computeStatus(
         nextNavOnline,
         nextPingHealthy,
-        socketConnectedRef.current,
+        effectiveSocket,
       );
 
       setStatus((prev) => {
@@ -189,7 +195,7 @@ export function useNetworkStatus(
         return next;
       });
     },
-    [],
+    [getEffectiveSocket],
   );
 
   const computeBackoff = useCallback(
