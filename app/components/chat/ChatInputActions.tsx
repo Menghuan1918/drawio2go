@@ -15,6 +15,8 @@ import type { ModelConfig, ProviderConfig } from "@/app/types/chat";
 import ModelComboBox from "./ModelComboBox";
 import { useToast } from "@/app/components/toast";
 import ModelIcon from "@/app/components/common/ModelIcon";
+import ImageUploadButton from "@/components/chat/ImageUploadButton";
+import { MAX_IMAGES_PER_MESSAGE } from "@/lib/attachment-converter";
 
 interface ChatInputActionsProps {
   isSendDisabled: boolean;
@@ -27,6 +29,7 @@ interface ChatInputActionsProps {
   onNewChat: () => void;
   onHistory: () => void;
   onRetry: () => void;
+  onImageUpload?: (files: File[]) => void;
   modelSelectorProps: {
     providers: ProviderConfig[];
     models: ModelConfig[];
@@ -49,6 +52,7 @@ export default function ChatInputActions({
   onNewChat,
   onHistory,
   onRetry,
+  onImageUpload,
   modelSelectorProps,
 }: ChatInputActionsProps) {
   const { t } = useAppTranslation("chat");
@@ -175,6 +179,17 @@ export default function ChatInputActions({
           </Button>
           <TooltipContent placement="top">
             <p>{t("input.openHistory")}</p>
+          </TooltipContent>
+        </TooltipRoot>
+
+        <TooltipRoot delay={0} isDisabled={!onImageUpload}>
+          <ImageUploadButton
+            onFiles={onImageUpload ?? (() => undefined)}
+            disabled={isChatStreaming || !canSendNewMessage}
+            maxFiles={MAX_IMAGES_PER_MESSAGE}
+          />
+          <TooltipContent placement="top">
+            <p>上传图片</p>
           </TooltipContent>
         </TooltipRoot>
       </div>

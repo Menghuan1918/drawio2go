@@ -21,7 +21,9 @@
     "paths": {
       "@/*": ["./*"],
       "@/lib/*": ["./app/lib/*"],
-      "@/lib/storage/*": ["./app/lib/storage/*"]
+      "@/lib/storage/*": ["./app/lib/storage/*"],
+      "@/hooks/*": ["./app/hooks/*"],
+      "@/components/*": ["./app/components/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

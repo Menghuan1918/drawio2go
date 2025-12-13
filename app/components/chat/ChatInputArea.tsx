@@ -1,14 +1,30 @@
 "use client";
 
-import { type FormEvent, type KeyboardEvent, useEffect, useRef } from "react";
+import {
+  type ClipboardEvent,
+  type FormEvent,
+  type KeyboardEvent,
+  useCallback,
+  useEffect,
+  useRef,
+} from "react";
 import { TextArea } from "@heroui/react";
+import { ImagePlus } from "lucide-react";
 import {
   type LLMConfig,
   type ModelConfig,
   type ProviderConfig,
 } from "@/app/types/chat";
 import ChatInputActions from "./ChatInputActions";
-import { useAppTranslation } from "@/app/i18n/hooks";
+import { useAppTranslation, useI18n } from "@/app/i18n/hooks";
+import { useToast } from "@/app/components/toast";
+import {
+  useImageAttachments,
+  type AttachmentItem,
+} from "@/hooks/useImageAttachments";
+import { useDropzone } from "@/hooks/useDropzone";
+import ImagePreviewBar from "@/components/chat/ImagePreviewBar";
+import { toErrorString } from "@/app/lib/error-handler";
 
 const MIN_BASE_TEXTAREA_HEIGHT = 60;
 
@@ -27,6 +43,8 @@ interface ChatInputAreaProps {
   onNewChat: () => void;
   onHistory: () => void;
   onRetry: () => void;
+  imageAttachments?: ReturnType<typeof useImageAttachments>;
+  onAttachmentsChange?: (attachments: AttachmentItem[]) => void;
   modelSelectorProps: {
     providers: ProviderConfig[];
     models: ModelConfig[];
@@ -53,12 +71,31 @@ export default function ChatInputArea({
   onNewChat,
   onHistory,
   onRetry,
+  imageAttachments,
+  onAttachmentsChange,
   modelSelectorProps,
 }: ChatInputAreaProps) {
   const { t } = useAppTranslation("chat");
+  const { t: tCommon } = useI18n();
+  const { push } = useToast();
   const textareaContainerRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const baseHeightRef = useRef<number | null>(null);
+  const internalAttachments = useImageAttachments();
+  const attachments = imageAttachments ?? internalAttachments;
+  const {
+    attachments: attachmentItems,
+    addFiles,
+    removeAttachment,
+    clearAll,
+    hasAttachments,
+  } = attachments;
+  const isInputDisabled =
+    configLoading ||
+    !llmConfig ||
+    !canSendNewMessage ||
+    !isOnline ||
+    !isSocketConnected;
   const isSendDisabled =
     !input.trim() ||
     isChatStreaming ||
@@ -67,6 +104,91 @@ export default function ChatInputArea({
     !canSendNewMessage ||
     !isOnline ||
     !isSocketConnected;
+
+  useEffect(() => {
+    onAttachmentsChange?.(attachmentItems);
+  }, [attachmentItems, onAttachmentsChange]);
+
+  const handleAddImages = useCallback(
+    async (files: File[]) => {
+      if (isInputDisabled) return;
+
+      try {
+        const added = await addFiles(files);
+        if (!added.length) return;
+
+        const failed = added.filter((item) => item.status === "error");
+        if (failed.length > 0) {
+          const success = added.length - failed.length;
+          push({
+            variant: success > 0 ? "warning" : "danger",
+            title: tCommon("toasts.imageUploadPartialFailedTitle"),
+            description: tCommon("toasts.imageUploadPartialFailed", {
+              success,
+              failed: failed.length,
+            }),
+          });
+        }
+      } catch (error) {
+        push({
+          variant: "danger",
+          title: tCommon("toasts.imageUploadFailedTitle"),
+          description: tCommon("toasts.imageUploadFailed", {
+            error: toErrorString(error),
+          }),
+        });
+      }
+    },
+    [addFiles, isInputDisabled, push, tCommon],
+  );
+
+  const handleImageUpload = useCallback(
+    (files: File[]) => {
+      void handleAddImages(files);
+    },
+    [handleAddImages],
+  );
+
+  const { isDraggingFiles, rootProps } = useDropzone({
+    onFiles: handleAddImages,
+    disabled: isInputDisabled,
+  });
+
+  const handlePaste = useCallback(
+    async (event: ClipboardEvent<HTMLTextAreaElement>) => {
+      if (isInputDisabled) return;
+
+      const items = event.clipboardData.items;
+      const imageFiles: File[] = [];
+
+      for (let i = 0; i < items.length; i += 1) {
+        const item = items[i];
+        if (item.kind === "file" && item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) imageFiles.push(file);
+        }
+      }
+
+      if (imageFiles.length > 0) {
+        event.preventDefault(); // 阻止粘贴文本
+        await handleAddImages(imageFiles);
+      }
+    },
+    [handleAddImages, isInputDisabled],
+  );
+
+  const handleSubmitWrapper = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      try {
+        await onSubmit(event);
+      } finally {
+        if (hasAttachments) {
+          clearAll();
+        }
+      }
+    },
+    [clearAll, hasAttachments, onSubmit],
+  );
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {
@@ -80,7 +202,9 @@ export default function ChatInputArea({
           value: event.currentTarget.form,
           enumerable: true,
         });
-        onSubmit(formEvent as unknown as FormEvent<HTMLFormElement>);
+        void handleSubmitWrapper(
+          formEvent as unknown as FormEvent<HTMLFormElement>,
+        );
       }
     }
   };
@@ -117,21 +241,30 @@ export default function ChatInputArea({
   }, [input]);
 
   return (
-    <div className="chat-input-area" ref={textareaContainerRef}>
-      <form onSubmit={onSubmit} className="chat-input-container">
+    <div
+      className="chat-input-area relative"
+      ref={textareaContainerRef}
+      {...rootProps}
+    >
+      <form
+        onSubmit={handleSubmitWrapper}
+        className="chat-input-container gap-2"
+      >
+        {hasAttachments ? (
+          <ImagePreviewBar
+            attachments={attachmentItems}
+            onRemove={removeAttachment}
+          />
+        ) : null}
+
         {/* 多行文本输入框 */}
         <TextArea
           placeholder={t("input.placeholder")}
           value={input}
           onChange={(event) => setInput(event.target.value)}
-          disabled={
-            configLoading ||
-            !llmConfig ||
-            !canSendNewMessage ||
-            !isOnline ||
-            !isSocketConnected
-          }
+          disabled={isInputDisabled}
           onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
           className="w-full"
           aria-label={t("aria.input")}
         />
@@ -162,9 +295,25 @@ export default function ChatInputArea({
           onNewChat={onNewChat}
           onHistory={onHistory}
           onRetry={onRetry}
+          onImageUpload={handleImageUpload}
           modelSelectorProps={modelSelectorProps}
         />
       </form>
+
+      <div
+        aria-hidden="true"
+        className={[
+          "pointer-events-none absolute inset-0 z-10 flex items-center justify-center",
+          "rounded-lg border-2 border-dashed border-blue-500 bg-blue-500/10",
+          "transition-[opacity,transform] duration-150 ease-out",
+          isDraggingFiles ? "opacity-100 scale-100" : "opacity-0 scale-95",
+        ].join(" ")}
+      >
+        <div className="flex items-center gap-2 rounded-md bg-white/70 px-4 py-3 text-blue-700 shadow-sm backdrop-blur dark:bg-black/40 dark:text-blue-200">
+          <ImagePlus size={18} aria-hidden />
+          <span className="text-sm font-medium">拖拽图片到此处上传</span>
+        </div>
+      </div>
     </div>
   );
 }
