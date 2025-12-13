@@ -63,16 +63,24 @@ class SQLiteManager {
     }
   }
 
-  _toBuffer(data) {
-    if (!data) return null;
+  _toBuffer(data, label = "binary") {
+    if (data == null) return null;
     if (Buffer.isBuffer(data)) return data;
     if (data instanceof ArrayBuffer) {
-      return Buffer.from(new Uint8Array(data));
-    }
-    if (ArrayBuffer.isView(data)) {
       return Buffer.from(data);
     }
-    throw new Error("Unsupported blob_data type for attachment");
+    if (ArrayBuffer.isView(data)) {
+      return Buffer.from(data.buffer, data.byteOffset, data.byteLength);
+    }
+    if (
+      typeof data === "object" &&
+      data &&
+      data.type === "Buffer" &&
+      Array.isArray(data.data)
+    ) {
+      return Buffer.from(data.data);
+    }
+    throw new TypeError(`Unsupported ${label} type for SQLite BLOB`);
   }
 
   _getAttachmentExt(mimeType) {
@@ -445,9 +453,9 @@ class SQLiteManager {
           ? version.page_count
           : 1,
         version.page_names || null,
-        version.preview_svg || null,
-        version.pages_svg || null,
-        version.preview_image || null, // Buffer for BLOB
+        this._toBuffer(version.preview_svg, "preview_svg"),
+        this._toBuffer(version.pages_svg, "pages_svg"),
+        this._toBuffer(version.preview_image, "preview_image"),
         now,
       );
 
@@ -541,17 +549,17 @@ class SQLiteManager {
         }
         case "preview_image": {
           fields.push("preview_image = ?");
-          values.push(value || null);
+          values.push(this._toBuffer(value, "preview_image"));
           break;
         }
         case "preview_svg": {
           fields.push("preview_svg = ?");
-          values.push(value || null);
+          values.push(this._toBuffer(value, "preview_svg"));
           break;
         }
         case "pages_svg": {
           fields.push("pages_svg = ?");
-          values.push(value || null);
+          values.push(this._toBuffer(value, "pages_svg"));
           break;
         }
         case "page_count": {
@@ -1005,7 +1013,10 @@ class SQLiteManager {
   }
 
   createAttachment(attachment) {
-    const dataBuffer = this._toBuffer(attachment.blob_data);
+    const dataBuffer = this._toBuffer(
+      attachment.blob_data,
+      "attachment.blob_data",
+    );
     this._validateAttachmentMeta(attachment, dataBuffer?.byteLength);
 
     if (!dataBuffer) {

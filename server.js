@@ -4,7 +4,7 @@ const next = require("next");
 const { Server } = require("socket.io");
 
 const dev = process.env.NODE_ENV !== "production";
-const hostname = "localhost";
+const hostname = process.env.HOST || "localhost";
 const port = parseInt(process.env.PORT, 10) || 3000;
 
 const app = next({
@@ -27,10 +27,34 @@ app.prepare().then(() => {
     }
   });
 
+  const allowedOrigins = (process.env.CORS_ORIGIN || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  const resolveCorsOrigin = (origin, callback) => {
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    if (allowedOrigins.length === 0) {
+      callback(null, true);
+      return;
+    }
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error(`CORS blocked: ${origin}`), false);
+  };
+
   // 创建 Socket.IO 服务器
   const io = new Server(httpServer, {
     cors: {
-      origin: dev ? "*" : `http://${hostname}:${port}`,
+      origin: dev ? "*" : resolveCorsOrigin,
       methods: ["GET", "POST"],
     },
   });
