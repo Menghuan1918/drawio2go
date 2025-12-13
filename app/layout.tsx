@@ -3,6 +3,7 @@ import "./globals.css";
 import I18nProvider from "@/app/components/I18nProvider";
 import { AlertDialogProvider } from "@/app/components/alert";
 import { ToastProvider } from "@/app/components/toast";
+import { defaultLocale } from "@/app/i18n/config";
 
 export const metadata: Metadata = {
   title: "DrawIO2Go - Electron DrawIO Editor",
@@ -15,7 +16,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="zh-CN" suppressHydrationWarning>
+    <html lang={defaultLocale} suppressHydrationWarning>
       <head>
         {/* 主题初始化脚本 - 在首次渲染前执行，避免闪烁 */}
         <script

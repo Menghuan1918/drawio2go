@@ -99,9 +99,14 @@ const DrawioEditorNative = forwardRef<DrawioEditorRef, DrawioEditorNativeProps>(
     const { t: tp } = useAppTranslation("page");
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const [isReady, setIsReady] = useState(false);
+    const isReadyRef = useRef(false);
     const previousXmlRef = useRef<string | undefined>(initialXml);
     const isFirstLoadRef = useRef(true);
     const activeRequestIdRef = useRef<string | undefined>(undefined);
+    const initialXmlRef = useRef<string | undefined>(initialXml);
+    const onSaveRef = useRef<DrawioEditorNativeProps["onSave"]>(onSave);
+    const onSelectionChangeRef =
+      useRef<DrawioEditorNativeProps["onSelectionChange"]>(onSelectionChange);
 
     // 检测初始主题（用于设置 DrawIO URL 参数）
     // 优先读取 localStorage 中的用户偏好，回退到系统主题
@@ -247,7 +252,11 @@ const DrawioEditorNative = forwardRef<DrawioEditorRef, DrawioEditorNativeProps>(
         options?: SVGExportOptions,
       ): Promise<string> => {
         return new Promise((resolve) => {
-          if (iframeRef.current && iframeRef.current.contentWindow && isReady) {
+          if (
+            iframeRef.current &&
+            iframeRef.current.contentWindow &&
+            isReadyRef.current
+          ) {
             // SVG 导出默认值（根据官方文档）
             const defaultSvgOptions: SVGExportOptions = {
               embedImages: true,
@@ -305,7 +314,7 @@ const DrawioEditorNative = forwardRef<DrawioEditorRef, DrawioEditorNativeProps>(
           }
         });
       },
-      [isReady],
+      [],
     );
 
     const exportDiagram = useCallback(
@@ -358,11 +367,21 @@ const DrawioEditorNative = forwardRef<DrawioEditorRef, DrawioEditorNativeProps>(
     // 使用 ref 保存最新的函数引用，确保防抖函数始终能访问到最新版本
     const loadDiagramRef = useRef(loadDiagram);
     const mergeWithFallbackRef = useRef(mergeWithFallback);
+    const requestExportRef = useRef(requestExport);
+    const exportDiagramRef = useRef(exportDiagram);
 
     useEffect(() => {
       loadDiagramRef.current = loadDiagram;
       mergeWithFallbackRef.current = mergeWithFallback;
-    }, [loadDiagram, mergeWithFallback]);
+      requestExportRef.current = requestExport;
+      exportDiagramRef.current = exportDiagram;
+    }, [loadDiagram, mergeWithFallback, requestExport, exportDiagram]);
+
+    useEffect(() => {
+      initialXmlRef.current = initialXml;
+      onSaveRef.current = onSave;
+      onSelectionChangeRef.current = onSelectionChange;
+    }, [initialXml, onSave, onSelectionChange]);
 
     // 防抖的更新函数 - 使用 useMemo 确保只创建一次
     const debouncedUpdate = useMemo(
@@ -398,13 +417,14 @@ const DrawioEditorNative = forwardRef<DrawioEditorRef, DrawioEditorNativeProps>(
           if (data.event === "init") {
             logger.debug("DrawIO iframe 初始化成功！");
             setIsReady(true);
+            isReadyRef.current = true;
             replayPendingLoads();
 
             // 先导出当前 DrawIO 的 XML，用于对比
             logger.debug("请求 export 以获取 DrawIO 当前 XML");
             // 使用 setTimeout 确保 setIsReady 状态已更新
             setTimeout(() => {
-              requestExport("xml");
+              requestExportRef.current("xml");
             }, 100);
 
             // 启动 autosave 监测定时器（2秒后检查）
@@ -414,7 +434,7 @@ const DrawioEditorNative = forwardRef<DrawioEditorRef, DrawioEditorNativeProps>(
                 !initializationCompleteRef.current
               ) {
                 logger.debug("2秒内未收到 autosave，主动执行 export");
-                exportDiagram();
+                exportDiagramRef.current();
               }
             }, 2000);
           } else if (data.event === "export") {
@@ -462,7 +482,7 @@ const DrawioEditorNative = forwardRef<DrawioEditorRef, DrawioEditorNativeProps>(
 
               if (!initializationCompleteRef.current) {
                 const normalizedExported = decodedXml.trim();
-                const normalizedInitial = (initialXml || "").trim();
+                const normalizedInitial = (initialXmlRef.current || "").trim();
 
                 if (normalizedExported !== normalizedInitial) {
                   logger.debug("检测到 XML 不同，执行 load 操作");
@@ -472,7 +492,7 @@ const DrawioEditorNative = forwardRef<DrawioEditorRef, DrawioEditorNativeProps>(
                   logger.debug(
                     `  - DrawIO XML 长度: ${normalizedExported.length} 字符`,
                   );
-                  loadDiagram(initialXml, true);
+                  loadDiagramRef.current(initialXmlRef.current, true);
                 } else {
                   logger.debug("XML 相同，跳过 load 操作");
                 }
@@ -514,8 +534,9 @@ const DrawioEditorNative = forwardRef<DrawioEditorRef, DrawioEditorNativeProps>(
           } else if (data.event === "autosave" || data.event === "save") {
             logger.debug("DrawIO 保存事件触发");
             autosaveReceivedRef.current = true; // 标记已收到 autosave
-            if (onSave && data.xml) {
-              onSave(data.xml);
+            const latestOnSave = onSaveRef.current;
+            if (latestOnSave && data.xml) {
+              latestOnSave(data.xml);
             }
           } else if (data.event === "load") {
             logger.debug("DrawIO 已加载内容");
@@ -538,7 +559,7 @@ const DrawioEditorNative = forwardRef<DrawioEditorRef, DrawioEditorNativeProps>(
               })),
             };
 
-            onSelectionChange?.(selectionInfo);
+            onSelectionChangeRef.current?.(selectionInfo);
           }
         } catch (error) {
           logger.error("解析消息失败:", error);
@@ -568,6 +589,18 @@ const DrawioEditorNative = forwardRef<DrawioEditorRef, DrawioEditorNativeProps>(
     useEffect(() => {
       // 只在 isReady 为 true 且 initialXml 真正变化时才更新
       if (isReady && initialXml !== previousXmlRef.current) {
+        const normalizedPrevious = (previousXmlRef.current || "").trim();
+        const normalizedNext = (initialXml || "").trim();
+
+        // 工程切换/首次挂载时，initialXml 可能先以空字符串完成初始化，稍后才拿到真实 XML。
+        // 这种情况下如果走 merge，可能出现合并失败/内容保持空白的风险，因此强制使用 load 完整重载。
+        const shouldForceLoadForLateInitialXml =
+          !forceReload &&
+          initializationCompleteRef.current &&
+          !isFirstLoadRef.current &&
+          normalizedPrevious === "" &&
+          normalizedNext !== "";
+
         logger.debug("检测到 XML 更新");
         logger.debug(
           "之前的 XML:",
@@ -582,7 +615,7 @@ const DrawioEditorNative = forwardRef<DrawioEditorRef, DrawioEditorNativeProps>(
         logger.debug("强制重载:", forceReload ? "是" : "否");
 
         // 如果需要强制重载（如用户手动加载文件），使用 load 动作
-        if (forceReload) {
+        if (forceReload || shouldForceLoadForLateInitialXml) {
           logger.debug("使用 load 动作（完全重载）");
           loadDiagram(initialXml);
           isFirstLoadRef.current = false;

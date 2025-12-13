@@ -27,16 +27,16 @@ const getDocumentLang = () => {
  * - 避免首屏访问 localStorage，兼容 SSR/SSG 和 Electron file:// 场景
  */
 export function I18nProvider({ children, locale }: I18nProviderProps) {
-  // 首次渲染仅使用安全来源（props/htmlTag/default），避免触发浏览器存储访问
+  // 首次渲染仅使用安全来源（props/i18n/default），避免触发浏览器存储访问
   const [_language, setLanguage] = useState<string>(
-    locale ?? getDocumentLang() ?? i18n.language ?? defaultLocale,
+    locale ?? i18n.language ?? getDocumentLang() ?? defaultLocale,
   );
 
   useEffect(() => {
     const initialLang =
-      locale ?? getDocumentLang() ?? i18n.language ?? defaultLocale;
+      locale ?? i18n.language ?? getDocumentLang() ?? defaultLocale;
 
-    // SSR/SSG 传入的 locale 或 htmlTag 语言优先级最高
+    // SSR/SSG 传入的 locale 语言优先级最高（htmlTag 仅作为兜底回退）
     if (initialLang && i18n.language !== initialLang) {
       void i18n.changeLanguage(initialLang);
     }
