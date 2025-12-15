@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { Button } from "@heroui/react";
 import {
   type ActiveModelReference,
   type AgentSettings,
@@ -25,13 +24,6 @@ import { createLogger } from "@/lib/logger";
 import { subscribeSidebarNavigate } from "@/app/lib/ui-events";
 
 const logger = createLogger("SettingsSidebar");
-
-type SaveStatus = "idle" | "saving" | "saved" | "failed";
-
-type FailedSave =
-  | { kind: "defaultPath"; value: string }
-  | { kind: "agentSettings"; value: AgentSettings }
-  | { kind: "versionSettings"; value: { autoVersionOnAIEdit: boolean } };
 
 interface SettingsSidebarProps {
   isOpen: boolean;
@@ -72,8 +64,6 @@ export default function SettingsSidebar({
   });
 
   const { push } = useToast();
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
-  const [failedSave, setFailedSave] = useState<FailedSave | null>(null);
 
   const showToast = useCallback(
     (params: Parameters<typeof push>[0]) => {
@@ -82,10 +72,7 @@ export default function SettingsSidebar({
     [push],
   );
 
-  const isMountedRef = useRef(false);
-  const inFlightSavesRef = useRef(0);
-  const hasFailureRef = useRef(false);
-  const hideSavedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSaveErrorAtRef = useRef(0);
 
   const saveDefaultPathNowRef = useRef<(path: string) => Promise<void>>(
     async () => {},
@@ -99,78 +86,40 @@ export default function SettingsSidebar({
     agentSettingsRef.current = agentSettings;
   }, [agentSettings]);
 
-  const clearHideSavedTimer = useCallback(() => {
-    if (hideSavedTimerRef.current) {
-      clearTimeout(hideSavedTimerRef.current);
-      hideSavedTimerRef.current = null;
-    }
-  }, []);
-
-  const scheduleHideSaved = useCallback(() => {
-    clearHideSavedTimer();
-    hideSavedTimerRef.current = setTimeout(() => {
-      if (!isMountedRef.current) return;
-      setSaveStatus("idle");
-    }, 2000);
-  }, [clearHideSavedTimer]);
-
   /**
    * 统一的保存包装器：
-   * - 维护 Saving/Saved/Failed 状态
-   * - 处理 toast 错误提示
-   * - 支持并发保存（以最后一次完成为准）
+   * - 成功静默（不展示顶部状态条/Toast）
+   * - 失败使用统一 Toast 通知（带简单去抖，避免输入时刷屏）
    */
   const runSaveTask = useCallback(
-    async (task: () => Promise<void>, failure: FailedSave) => {
-      inFlightSavesRef.current += 1;
-
-      if (isMountedRef.current) {
-        clearHideSavedTimer();
-        hasFailureRef.current = false;
-        setFailedSave(null);
-        setSaveStatus("saving");
-      }
-
+    async (task: () => Promise<void>) => {
       try {
         await task();
       } catch (e) {
-        hasFailureRef.current = true;
         logger.error(t("errors.saveFailed"), e);
-        showToast({
-          variant: "danger",
-          description: t("toasts.saveFailed", {
-            error: (e as Error)?.message || "unknown",
-          }),
-        });
 
-        if (isMountedRef.current) {
-          setFailedSave(failure);
-          setSaveStatus("failed");
+        const now = Date.now();
+        const last = lastSaveErrorAtRef.current;
+        if (now - last >= 2500) {
+          lastSaveErrorAtRef.current = now;
+          showToast({
+            variant: "danger",
+            description: t("toasts.saveFailed", {
+              error: (e as Error)?.message || "unknown",
+            }),
+          });
         }
-        return;
-      } finally {
-        inFlightSavesRef.current = Math.max(0, inFlightSavesRef.current - 1);
       }
-
-      if (!isMountedRef.current) return;
-      if (hasFailureRef.current) return;
-      if (inFlightSavesRef.current !== 0) return;
-
-      setSaveStatus("saved");
-      scheduleHideSaved();
     },
-    [clearHideSavedTimer, scheduleHideSaved, showToast, t],
+    [showToast, t],
   );
 
   const saveDefaultPathNow = useCallback(
     async (path: string) => {
-      await runSaveTask(
-        async () => {
-          await saveDefaultPath(path);
-          onSettingsChange?.({ defaultPath: path });
-        },
-        { kind: "defaultPath", value: path },
-      );
+      await runSaveTask(async () => {
+        await saveDefaultPath(path);
+        onSettingsChange?.({ defaultPath: path });
+      });
     },
     [onSettingsChange, runSaveTask, saveDefaultPath],
   );
@@ -179,27 +128,21 @@ export default function SettingsSidebar({
     async (settings: AgentSettings) => {
       if (!isSystemPromptValid(settings.systemPrompt)) return;
 
-      await runSaveTask(
-        async () => {
-          await saveAgentSettings(settings);
-        },
-        { kind: "agentSettings", value: settings },
-      );
+      await runSaveTask(async () => {
+        await saveAgentSettings(settings);
+      });
     },
     [runSaveTask, saveAgentSettings],
   );
 
   const saveVersionSettingsNow = useCallback(
     async (settings: { autoVersionOnAIEdit: boolean }) => {
-      await runSaveTask(
-        async () => {
-          await setSetting(
-            "version.autoVersionOnAIEdit",
-            settings.autoVersionOnAIEdit ? "1" : "0",
-          );
-        },
-        { kind: "versionSettings", value: settings },
-      );
+      await runSaveTask(async () => {
+        await setSetting(
+          "version.autoVersionOnAIEdit",
+          settings.autoVersionOnAIEdit ? "1" : "0",
+        );
+      });
     },
     [runSaveTask, setSetting],
   );
@@ -234,7 +177,6 @@ export default function SettingsSidebar({
   }, [debouncedSaveAgentSettings, debouncedSaveDefaultPath]);
 
   useEffect(() => {
-    isMountedRef.current = true;
     return subscribeSidebarNavigate((detail) => {
       if (detail.tab === "settings" && detail.settingsTab) {
         flushPendingSaves();
@@ -309,11 +251,9 @@ export default function SettingsSidebar({
   // 组件卸载时强制 flush，确保最后一次编辑被写入存储
   useEffect(() => {
     return () => {
-      isMountedRef.current = false;
       flushPendingSaves();
-      clearHideSavedTimer();
     };
-  }, [clearHideSavedTimer, flushPendingSaves]);
+  }, [flushPendingSaves]);
 
   const systemPromptError = useMemo(
     () =>
@@ -381,94 +321,12 @@ export default function SettingsSidebar({
     [flushPendingSaves],
   );
 
-  const handleRetrySave = useCallback(() => {
-    flushPendingSaves();
-    const target = failedSave;
-    if (!target) return;
-
-    switch (target.kind) {
-      case "defaultPath":
-        saveDefaultPathNow(target.value).catch(() => {});
-        break;
-      case "agentSettings":
-        saveAgentSettingsNow(target.value).catch(() => {});
-        break;
-      case "versionSettings":
-        saveVersionSettingsNow(target.value).catch(() => {});
-        break;
-      default:
-        break;
-    }
-  }, [
-    failedSave,
-    flushPendingSaves,
-    saveAgentSettingsNow,
-    saveDefaultPathNow,
-    saveVersionSettingsNow,
-  ]);
-
-  const saveIndicatorText = useMemo(() => {
-    switch (saveStatus) {
-      case "saving":
-        return t("saveIndicator.saving", "Saving...");
-      case "saved":
-        return t("saveIndicator.saved", "Saved");
-      case "failed":
-        return t("saveIndicator.failed", "Failed");
-      default:
-        return "";
-    }
-  }, [saveStatus, t]);
-
-  const saveIndicatorDotStyle = useMemo(() => {
-    let colorVar = "var(--warning)";
-    if (saveStatus === "failed") {
-      colorVar = "var(--danger)";
-    } else if (saveStatus === "saved") {
-      colorVar = "var(--success)";
-    }
-
-    return {
-      background: colorVar,
-      boxShadow: `0 0 0 4px color-mix(in oklch, ${colorVar} 25%, transparent)`,
-    } as const;
-  }, [saveStatus]);
-
   return (
     <div className="sidebar-container settings-sidebar-new">
       <div className="settings-layout">
         <SettingsNav activeTab={activeTab} onTabChange={handleTabChange} />
 
         <div className="settings-content">
-          {saveStatus !== "idle" ? (
-            <div
-              className="mb-3 flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm"
-              style={{
-                border: "1px solid var(--border-light)",
-                background: "var(--surface)",
-              }}
-              role="status"
-              aria-live="polite"
-            >
-              <div className="flex items-center gap-2">
-                <span
-                  className="inline-block h-2 w-2 rounded-full"
-                  style={saveIndicatorDotStyle}
-                  aria-hidden="true"
-                />
-                <span className="text-foreground-secondary">
-                  {saveIndicatorText}
-                </span>
-              </div>
-
-              {saveStatus === "failed" ? (
-                <Button variant="tertiary" size="sm" onPress={handleRetrySave}>
-                  {t("saveIndicator.retry", "Retry")}
-                </Button>
-              ) : null}
-            </div>
-          ) : null}
-
           {activeTab === "general" && (
             <GeneralSettingsPanel
               defaultPath={defaultPath}

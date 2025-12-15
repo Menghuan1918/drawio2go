@@ -19,16 +19,16 @@
 
 ## 设置面板列表
 
-| 面板                     | 职责            | 核心配置项                                                                     |
-| ------------------------ | --------------- | ------------------------------------------------------------------------------ |
-| **GeneralSettingsPanel** | 通用设置        | 语言选择、默认文件路径                                                         |
-| **ModelsSettingsPanel**  | 供应商/模型管理 | 供应商列表（Accordion）、模型预览、删除供应商级联处理、Provider/Model 编辑     |
-| **ProviderEditDialog**   | 供应商新增/编辑 | HeroUI Modal 弹窗，支持新增/编辑供应商、表单校验、Toast 反馈                   |
-| **ModelEditDialog**      | 模型新增/编辑   | HeroUI Modal 弹窗，模型名称/温度/工具轮次校验，能力（思考/视觉）勾选、模型测试 |
-| **AgentSettingsPanel**   | Agent 配置      | 全局系统提示词（System Prompt）编辑                                            |
-| **VersionSettingsPanel** | 版本管理        | AI 编辑前自动创建版本快照                                                      |
-| **ConnectionTester**     | 连接测试器      | 测试 LLM API 连接可用性                                                        |
-| **SettingsNav**          | 设置导航栏      | 标签页切换（通用 / 模型 / Agent / 版本，图标导航）                             |
+| 面板                     | 职责            | 核心配置项                                                                                            |
+| ------------------------ | --------------- | ----------------------------------------------------------------------------------------------------- |
+| **GeneralSettingsPanel** | 通用设置        | 语言选择、默认文件路径                                                                                |
+| **ModelsSettingsPanel**  | 供应商/模型管理 | 供应商列表（Accordion）、模型预览、删除供应商级联处理、Provider/Model 编辑                            |
+| **ProviderEditDialog**   | 供应商新增/编辑 | HeroUI Modal 弹窗，支持新增/编辑供应商、表单校验、Toast 反馈                                          |
+| **ModelEditDialog**      | 模型新增/编辑   | HeroUI Modal 弹窗，模型名称/温度/工具轮次校验，能力（思考/视觉/工具）按钮切换（含 Tooltip）、模型测试 |
+| **AgentSettingsPanel**   | Agent 配置      | 全局系统提示词（System Prompt）编辑                                                                   |
+| **VersionSettingsPanel** | 版本管理        | AI 编辑前自动创建版本快照                                                                             |
+| **ConnectionTester**     | 连接测试器      | 测试 LLM API 连接可用性                                                                               |
+| **SettingsNav**          | 设置导航栏      | 标签页切换（通用 / 模型 / Agent / 版本，图标导航）                                                    |
 
 ---
 

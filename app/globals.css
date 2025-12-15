@@ -30,6 +30,7 @@
 @import "./styles/components/history-view.css" layer(components);
 @import "./styles/components/toast.css" layer(components);
 @import "./styles/components/model-selector.css" layer(components); /* 新增 */
+@import "./styles/components/settings-models.css" layer(components);
 @import "./styles/components/loading.css" layer(components);
 @import "./styles/components/version-animations.css" layer(components);
 @import "./styles/components/version-sidebar.css" layer(components);

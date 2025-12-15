@@ -17,8 +17,9 @@ import {
   Label,
   Spinner,
   Surface,
-  Switch,
   TextField,
+  TooltipContent,
+  TooltipRoot,
 } from "@heroui/react";
 import { Brain, Eye, Wrench, Zap } from "lucide-react";
 import {
@@ -561,120 +562,130 @@ export function ModelEditDialog({
                     "标记模型是否支持思考/视觉能力，影响工具调用策略",
                   )}
                 </Description>
-                <Fieldset.Group className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <Switch
-                    isSelected={form.capabilities.supportsThinking}
-                    onChange={(selected) => {
-                      const supportsThinking = Boolean(selected);
-                      const nextCapabilities = {
-                        ...form.capabilities,
-                        supportsThinking,
-                      };
-                      const nextEnableTools =
-                        supportsThinking && form.enableToolsInThinking
-                          ? form.enableToolsInThinking
-                          : false;
-                      setForm((prev) => ({
-                        ...prev,
-                        capabilities: nextCapabilities,
-                        enableToolsInThinking: nextEnableTools,
-                      }));
-                    }}
-                    className="flex items-start gap-3 rounded-lg border border-default-200 px-3 py-3"
-                  >
-                    <Switch.Control className="mt-0.5 shrink-0">
-                      <Switch.Thumb />
-                    </Switch.Control>
-                    <div className="flex flex-1 items-start gap-3">
-                      <Brain className="mt-0.5 h-4 w-4 text-primary" />
-                      <div className="text-left">
-                        <p className="text-sm font-medium text-foreground">
-                          {t(
-                            "models.form.capabilities.thinking.label",
-                            "支持思考",
-                          )}
-                        </p>
-                        <Description className="text-xs text-default-500">
-                          {t(
-                            "models.form.capabilities.thinking.description",
-                            "适用于 o1 / o3 / deepseek-reasoner 等推理模型",
-                          )}
-                        </Description>
-                      </div>
-                    </div>
-                  </Switch>
-
-                  <Switch
-                    isSelected={form.capabilities.supportsVision}
-                    onChange={(selected) => {
-                      const nextCapabilities = {
-                        ...form.capabilities,
-                        supportsVision: Boolean(selected),
-                      };
-                      setForm((prev) => ({
-                        ...prev,
-                        capabilities: nextCapabilities,
-                      }));
-                    }}
-                    className="flex items-start gap-3 rounded-lg border border-default-200 px-3 py-3"
-                  >
-                    <Switch.Control className="mt-0.5 shrink-0">
-                      <Switch.Thumb />
-                    </Switch.Control>
-                    <div className="flex flex-1 items-start gap-3">
-                      <Eye className="mt-0.5 h-4 w-4 text-primary" />
-                      <div className="text-left">
-                        <p className="text-sm font-medium text-foreground">
-                          {t(
-                            "models.form.capabilities.vision.label",
-                            "支持视觉",
-                          )}
-                        </p>
-                        <Description className="text-xs text-default-500">
-                          {t(
-                            "models.form.capabilities.vision.description",
-                            "能够解析图片/截图输入，如 gpt-4o",
-                          )}
-                        </Description>
-                      </div>
-                    </div>
-                  </Switch>
+                <Fieldset.Group className="mt-3 grid gap-2 sm:grid-cols-3">
+                  {(
+                    [
+                      {
+                        key: "thinking",
+                        enabled: form.capabilities.supportsThinking,
+                        disabled: false,
+                        icon: Brain,
+                        label: t(
+                          "models.form.capabilities.thinking.label",
+                          "支持思考",
+                        ),
+                        description: t(
+                          "models.form.capabilities.thinking.description",
+                          "适用于 o1 / o3 / deepseek-reasoner 等推理模型",
+                        ),
+                        onToggle: () => {
+                          setForm((prev) => {
+                            const supportsThinking =
+                              !prev.capabilities.supportsThinking;
+                            const nextCapabilities = {
+                              ...prev.capabilities,
+                              supportsThinking,
+                            };
+                            const nextEnableTools = supportsThinking
+                              ? prev.enableToolsInThinking
+                              : false;
+                            return {
+                              ...prev,
+                              capabilities: nextCapabilities,
+                              enableToolsInThinking: nextEnableTools,
+                            };
+                          });
+                        },
+                      },
+                      {
+                        key: "vision",
+                        enabled: form.capabilities.supportsVision,
+                        disabled: false,
+                        icon: Eye,
+                        label: t(
+                          "models.form.capabilities.vision.label",
+                          "支持视觉",
+                        ),
+                        description: t(
+                          "models.form.capabilities.vision.description",
+                          "能够解析图片/截图输入，如 gpt-4o",
+                        ),
+                        onToggle: () => {
+                          setForm((prev) => ({
+                            ...prev,
+                            capabilities: {
+                              ...prev.capabilities,
+                              supportsVision: !prev.capabilities.supportsVision,
+                            },
+                          }));
+                        },
+                      },
+                      {
+                        key: "tools",
+                        enabled: form.enableToolsInThinking,
+                        disabled: !form.capabilities.supportsThinking,
+                        icon: Wrench,
+                        label: t(
+                          "models.form.enableToolsInThinking.label",
+                          "思考中允许调用工具",
+                        ),
+                        description: t(
+                          "models.form.enableToolsInThinking.description",
+                          "某些推理模型可在思考阶段直接触发工具调用",
+                        ),
+                        onToggle: () => {
+                          setForm((prev) => ({
+                            ...prev,
+                            enableToolsInThinking: !prev.enableToolsInThinking,
+                          }));
+                        },
+                      },
+                    ] as const
+                  ).map(
+                    ({
+                      key,
+                      enabled,
+                      disabled,
+                      icon: Icon,
+                      label,
+                      description,
+                      onToggle,
+                    }) => (
+                      <TooltipRoot key={key} delay={0}>
+                        <span className="inline-flex">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="model-capability-button"
+                            data-enabled={enabled ? "true" : "false"}
+                            data-disabled={disabled ? "true" : "false"}
+                            aria-pressed={enabled}
+                            isDisabled={disabled}
+                            onPress={onToggle}
+                          >
+                            <Icon className="h-4 w-4" />
+                            <span className="text-sm font-medium">{label}</span>
+                          </Button>
+                        </span>
+                        <TooltipContent placement="top">
+                          <div className="flex flex-col gap-1">
+                            <span className="text-sm font-semibold text-foreground">
+                              {enabled
+                                ? label
+                                : `${t(
+                                    "models.capabilities.disabled",
+                                    "未开启",
+                                  )} ${label}`}
+                            </span>
+                            <span className="text-xs text-default-500">
+                              {description}
+                            </span>
+                          </div>
+                        </TooltipContent>
+                      </TooltipRoot>
+                    ),
+                  )}
                 </Fieldset.Group>
-
-                <div className="mt-3 rounded-lg border border-default-200 bg-content2 px-3 py-2">
-                  <Switch
-                    isSelected={form.enableToolsInThinking}
-                    isDisabled={!form.capabilities.supportsThinking}
-                    onChange={(selected) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        enableToolsInThinking: Boolean(selected),
-                      }))
-                    }
-                    className="flex items-start gap-3 rounded-lg border border-default-200 px-3 py-3"
-                  >
-                    <Switch.Control className="mt-0.5 shrink-0">
-                      <Switch.Thumb />
-                    </Switch.Control>
-                    <div className="flex flex-1 items-start gap-3">
-                      <Wrench className="mt-0.5 h-4 w-4 text-primary" />
-                      <div className="text-left">
-                        <p className="text-sm font-medium text-foreground">
-                          {t(
-                            "models.form.enableToolsInThinking.label",
-                            "思考中允许调用工具",
-                          )}
-                        </p>
-                        <Description className="text-xs text-default-500">
-                          {t(
-                            "models.form.enableToolsInThinking.description",
-                            "某些推理模型可在思考阶段直接触发工具调用",
-                          )}
-                        </Description>
-                      </div>
-                    </div>
-                  </Switch>
-                </div>
               </Fieldset>
 
               {errors.general ? (

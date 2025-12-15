@@ -1,0 +1,35 @@
+.model-capability-button {
+  width: 100%;
+  justify-content: flex-start;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-sm);
+  border-radius: var(--radius);
+  border: 1px solid var(--border-light);
+  background: var(--surface);
+  color: var(--foreground);
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.model-capability-button[data-enabled="true"] {
+  border-color: color-mix(in oklch, var(--success) 55%, transparent);
+  background: color-mix(in oklch, var(--success) 12%, var(--surface));
+  color: var(--success);
+}
+
+.model-capability-button[data-enabled="false"] {
+  color: var(--foreground-secondary);
+}
+
+.model-capability-button[data-disabled="true"] {
+  opacity: 0.55;
+}
+
+.model-capability-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 var(--spacing-xs)
+    color-mix(in oklch, var(--border-focus) 65%, transparent);
+}

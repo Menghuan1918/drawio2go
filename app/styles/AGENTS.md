@@ -190,6 +190,7 @@ app/styles/
 
 - `components/loading.css`：全局加载与错误遮罩层样式，覆盖 Spin/空状态，统一半透明背景与文本对比度
 - `components/project-selector.css`：项目选择器样式，包含列表项悬停态、选中态、空状态占位
+- `components/settings-models.css`：设置面板（模型能力按钮等）的补充样式
 ```
 
 ### 导入顺序
