@@ -30,10 +30,17 @@ function ensureContext(
 ): ToolExecutionContext {
   const projectUuid = context?.projectUuid?.trim();
   const conversationId = context?.conversationId?.trim();
+  const chatRunId =
+    typeof context?.chatRunId === "string" ? context.chatRunId.trim() : "";
   if (!projectUuid || !conversationId) {
     throw new Error("缺少项目或会话上下文，无法执行工具");
   }
-  return { projectUuid, conversationId };
+  return {
+    projectUuid,
+    conversationId,
+    chatRunId: chatRunId || undefined,
+    abortSignal: context?.abortSignal,
+  };
 }
 
 function ensureParser(): DOMParser {
@@ -207,6 +214,10 @@ export async function executeDrawioEditBatch(
     resolvedContext.projectUuid,
     resolvedContext.conversationId,
     finalDescription,
+    {
+      signal: resolvedContext.abortSignal,
+      chatRunId: resolvedContext.chatRunId,
+    },
   )) as ReplaceXMLResult;
 
   if (!replaceResult?.success) {
@@ -232,6 +243,10 @@ export async function executeDrawioEditBatch(
         resolvedContext.projectUuid,
         resolvedContext.conversationId,
         "批量编辑失败回滚原始 XML",
+        {
+          signal: resolvedContext.abortSignal,
+          chatRunId: resolvedContext.chatRunId,
+        },
       )) as ReplaceXMLResult;
 
       if (rollbackResult?.success) {
@@ -282,6 +297,10 @@ async function fetchDiagramXml(
     resolvedContext.projectUuid,
     resolvedContext.conversationId,
     finalDescription,
+    {
+      signal: resolvedContext.abortSignal,
+      chatRunId: resolvedContext.chatRunId,
+    },
   )) as GetXMLResult;
 
   if (!response?.success || typeof response.xml !== "string") {

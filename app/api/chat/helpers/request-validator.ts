@@ -12,6 +12,7 @@ type ChatParamsOk = {
   rawConfig: unknown;
   projectUuid: string;
   conversationId: string;
+  chatRunId?: string;
   paramSources: ChatParamSources;
 };
 
@@ -49,6 +50,12 @@ export function validateAndExtractChatParams(
     typeof conversationIdRaw === "string" && conversationIdRaw.trim().length > 0
       ? conversationIdRaw.trim()
       : "";
+
+  const chatRunIdRaw = rawBody?.chatRunId;
+  const chatRunId =
+    typeof chatRunIdRaw === "string" && chatRunIdRaw.trim().length > 0
+      ? chatRunIdRaw.trim()
+      : undefined;
 
   if (!Array.isArray(messages) || !rawConfig) {
     return {
@@ -97,6 +104,7 @@ export function validateAndExtractChatParams(
     rawConfig,
     projectUuid,
     conversationId,
+    chatRunId,
     paramSources,
   };
 }

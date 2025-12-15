@@ -23,12 +23,19 @@ function requireContext(
 ): ToolExecutionContext {
   const projectUuid = context?.projectUuid?.trim();
   const conversationId = context?.conversationId?.trim();
+  const chatRunId =
+    typeof context?.chatRunId === "string" ? context.chatRunId.trim() : "";
 
   if (!projectUuid || !conversationId) {
     throw new Error("无法获取项目上下文");
   }
 
-  return { projectUuid, conversationId };
+  return {
+    projectUuid,
+    conversationId,
+    chatRunId: chatRunId || undefined,
+    abortSignal: context?.abortSignal,
+  };
 }
 
 function createDrawioReadTool(getContext: () => ToolExecutionContext) {
@@ -87,6 +94,7 @@ function createDrawioOverwriteTool(getContext: () => ToolExecutionContext) {
         context.projectUuid,
         context.conversationId,
         finalDescription,
+        { signal: context.abortSignal, chatRunId: context.chatRunId },
       )) as ReplaceXMLResult;
     },
   });

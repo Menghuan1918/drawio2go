@@ -29,9 +29,14 @@ import { DEFAULT_FIRST_VERSION, WIP_VERSION } from "@/app/lib/storage";
 import { createLogger } from "@/lib/logger";
 import { toErrorString } from "@/lib/error-handler";
 import { CLIENT_TOOL_NAMES } from "@/lib/constants/tool-names";
+import {
+  getActiveChatRun,
+  isChatRunCancelled,
+} from "@/app/lib/chat-run-registry";
 
 const logger = createLogger("Socket Client");
 const { GET_DRAWIO_XML, REPLACE_DRAWIO_XML, EXPORT_DRAWIO } = CLIENT_TOOL_NAMES;
+const TOOL_RESULT_EVENT = "tool:result";
 
 type ConnectionStatus =
   | "connecting"
@@ -80,6 +85,14 @@ export function useDrawioSocket(
   const latestSubVersionRef = useRef<string | null>(null);
   const isCreatingSnapshotRef = useRef(false);
   const joinedProjectRef = useRef<string | null>(null);
+
+  /**
+   * 已取消的工具请求 ID 集合
+   * 使用 LRU 风格的清理策略，限制最大条目数为 100
+   * 避免 tool:cancel 发送后对应的 tool:execute 从未到达导致 ID 永久留存
+   */
+  const cancelledToolRequestsRef = useRef<Set<string>>(new Set());
+  const MAX_CANCELLED_TOOL_REQUESTS = 100;
 
   const syncProjectRoom = useCallback((projectUuid: string | null) => {
     const previousProject = joinedProjectRef.current;
@@ -356,6 +369,31 @@ export function useDrawioSocket(
       }
     });
 
+    socket.on("tool:cancel", (payload) => {
+      const currentProjectUuid = projectUuidRef.current;
+      if (!currentProjectUuid) return;
+      if (payload.projectUuid !== currentProjectUuid) return;
+
+      const cancelledRequests = cancelledToolRequestsRef.current;
+      cancelledRequests.add(payload.requestId);
+
+      // LRU 清理：超出最大条目数时删除最早的条目
+      if (cancelledRequests.size > MAX_CANCELLED_TOOL_REQUESTS) {
+        const iterator = cancelledRequests.values();
+        const firstValue = iterator.next().value;
+        if (firstValue !== undefined) {
+          cancelledRequests.delete(firstValue);
+        }
+      }
+
+      logger.info("收到工具取消请求", {
+        requestId: payload.requestId,
+        toolRunId: payload.chatRunId,
+        conversationId: payload.conversationId,
+        reason: payload.reason,
+      });
+    });
+
     // 监听工具执行请求
     socket.on("tool:execute", async (request: ToolCallRequest) => {
       const currentProjectUuid = projectUuidRef.current;
@@ -392,6 +430,68 @@ export function useDrawioSocket(
           requestId: request.requestId,
           requestProject: request.projectUuid,
           currentProject: currentProjectUuid,
+        });
+        return;
+      }
+
+      if (cancelledToolRequestsRef.current.has(request.requestId)) {
+        cancelledToolRequestsRef.current.delete(request.requestId);
+        socket.emit(TOOL_RESULT_EVENT, {
+          requestId: request.requestId,
+          success: false,
+          error: "tool_cancelled",
+        });
+        logger.info("工具请求已被取消，已返回取消结果", {
+          requestId: request.requestId,
+          toolName: request.toolName,
+        });
+        return;
+      }
+
+      const chatRunIdRaw =
+        typeof request.chatRunId === "string" ? request.chatRunId.trim() : "";
+      if (!chatRunIdRaw) {
+        socket.emit(TOOL_RESULT_EVENT, {
+          requestId: request.requestId,
+          success: false,
+          error: "missing_chatRunId",
+        });
+        logger.warn("收到缺少 chatRunId 的工具请求，已拒绝执行", {
+          toolName: request.toolName,
+          requestId: request.requestId,
+          conversationId: request.conversationId,
+        });
+        return;
+      }
+
+      if (isChatRunCancelled(chatRunIdRaw)) {
+        socket.emit(TOOL_RESULT_EVENT, {
+          requestId: request.requestId,
+          success: false,
+          error: "chat_run_cancelled",
+        });
+        logger.info("收到已取消 run 的工具请求，已拒绝执行", {
+          toolName: request.toolName,
+          requestId: request.requestId,
+          conversationId: request.conversationId,
+          chatRunId: chatRunIdRaw,
+        });
+        return;
+      }
+
+      const activeRunId = getActiveChatRun(request.conversationId);
+      if (activeRunId !== chatRunIdRaw) {
+        socket.emit(TOOL_RESULT_EVENT, {
+          requestId: request.requestId,
+          success: false,
+          error: "chat_run_not_active",
+        });
+        logger.info("收到非当前活跃 run 的工具请求，已拒绝执行", {
+          toolName: request.toolName,
+          requestId: request.requestId,
+          conversationId: request.conversationId,
+          chatRunId: chatRunIdRaw,
+          activeRunId,
         });
         return;
       }
@@ -461,7 +561,7 @@ export function useDrawioSocket(
           error: resolveToolCallError(result as ToolResultLike),
         };
 
-        socket.emit("tool:result", response);
+        socket.emit(TOOL_RESULT_EVENT, response);
         logger.debug("已返回工具执行结果", {
           toolName: request.toolName,
           success: result.success,
@@ -475,7 +575,7 @@ export function useDrawioSocket(
           error: toErrorString(error),
         };
 
-        socket.emit("tool:result", response);
+        socket.emit(TOOL_RESULT_EVENT, response);
         logger.error("工具执行失败", {
           toolName: request.toolName,
           requestId: request.requestId,

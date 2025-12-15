@@ -30,10 +30,24 @@ export interface ToolCallResult {
 }
 
 /**
+ * 后端 → 前端：取消工具调用请求（best-effort）。
+ * - 可能发生在用户取消聊天/断开连接时
+ * - 前端收到后应尽量停止该 requestId 对应的执行，或在执行前直接返回取消结果
+ */
+export interface ToolCallCancel {
+  requestId: string;
+  projectUuid: string;
+  conversationId: string;
+  chatRunId?: string;
+  reason?: string;
+}
+
+/**
  * Socket.IO 服务器到客户端事件类型
  */
 export interface ServerToClientEvents {
   "tool:execute": (request: ToolCallRequest) => void;
+  "tool:cancel": (payload: ToolCallCancel) => void;
 }
 
 /**

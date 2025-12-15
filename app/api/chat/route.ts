@@ -12,6 +12,7 @@ import { createModelFromConfig } from "./helpers/model-factory";
 import { classifyError } from "./helpers/error-classifier";
 import { buildReasoningParams } from "./helpers/reasoning-utils";
 import { processImageAttachments } from "./helpers/image-utils";
+import { generateUUID } from "@/app/lib/utils";
 
 const logger = createLogger("Chat API");
 
@@ -36,9 +37,38 @@ function apiError(
 export async function POST(req: NextRequest) {
   const abortController = new AbortController();
   const { signal: abortSignal } = abortController;
+  const chatAbortControllers =
+    global.chatAbortControllers ?? (global.chatAbortControllers = new Map());
+  const cancelledChatRunIds =
+    global.cancelledChatRunIds ?? (global.cancelledChatRunIds = new Map());
+  let chatRunId: string | null = null;
+
+  /**
+   * 清理超过 5 分钟的已取消 chatRunId
+   * 避免 Map 无限增长导致内存泄漏
+   */
+  const cleanupOldCancelledRunIds = () => {
+    const now = Date.now();
+    const FIVE_MINUTES = 5 * 60 * 1000;
+    for (const [runId, timestamp] of cancelledChatRunIds.entries()) {
+      if (now - timestamp > FIVE_MINUTES) {
+        cancelledChatRunIds.delete(runId);
+      }
+    }
+  };
+
+  // 每次请求时清理旧条目
+  cleanupOldCancelledRunIds();
 
   const abortListener = () => {
     logger.info("[Chat API] 客户端请求中断，停止流式响应");
+    if (chatRunId) {
+      cancelledChatRunIds.set(chatRunId, Date.now());
+      const current = chatAbortControllers.get(chatRunId);
+      if (current === abortController) {
+        chatAbortControllers.delete(chatRunId);
+      }
+    }
     abortController.abort();
   };
 
@@ -56,16 +86,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { messages, rawConfig, projectUuid, conversationId, paramSources } =
-      validation;
+    const {
+      messages,
+      rawConfig,
+      projectUuid,
+      conversationId,
+      chatRunId: chatRunIdFromBody,
+      paramSources,
+    } = validation;
 
     const isServerEnvironment = typeof window === "undefined";
 
     const requestLogger = logger.withContext({
       projectUuid,
       conversationId,
+      chatRunId: chatRunIdFromBody,
       ...paramSources,
     });
+
+    chatRunId = chatRunIdFromBody ?? generateUUID("chat-run");
+    chatAbortControllers.set(chatRunId, abortController);
 
     let conversation;
     if (isServerEnvironment) {
@@ -106,6 +146,8 @@ export async function POST(req: NextRequest) {
     const toolContext: ToolExecutionContext = {
       projectUuid,
       conversationId,
+      chatRunId,
+      abortSignal,
     };
 
     const tools = createDrawioTools(toolContext);
@@ -130,6 +172,7 @@ export async function POST(req: NextRequest) {
       maxRounds: normalizedConfig.maxToolRounds,
       projectUuid,
       conversationId,
+      chatRunId,
     });
 
     // ==================== 图片消息处理（Milestone 3） ====================
@@ -206,5 +249,11 @@ export async function POST(req: NextRequest) {
     return apiError(classified.code, classified.message, classified.statusCode);
   } finally {
     req.signal.removeEventListener("abort", abortListener);
+    if (chatRunId) {
+      const current = chatAbortControllers.get(chatRunId);
+      if (current === abortController) {
+        chatAbortControllers.delete(chatRunId);
+      }
+    }
   }
 }

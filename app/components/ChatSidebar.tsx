@@ -28,6 +28,11 @@ import {
   fingerprintMessage,
 } from "@/app/lib/chat-session-service";
 import { generateUUID } from "@/app/lib/utils";
+import {
+  cancelChatRun,
+  clearActiveChatRun,
+  setActiveChatRun,
+} from "@/app/lib/chat-run-registry";
 import { useImageAttachments } from "@/hooks/useImageAttachments";
 import {
   convertAttachmentItemToImagePart,
@@ -177,6 +182,7 @@ export default function ChatSidebar({
 
   // ========== 引用 ==========
   const sendingSessionIdRef = useRef<string | null>(null);
+  const sendingChatRunIdRef = useRef<string | null>(null);
   const imageDataUrlCacheRef = useRef<Map<string, string>>(new Map());
   const imageDataUrlPendingRef = useRef<Map<string, Promise<string | null>>>(
     new Map(),
@@ -550,10 +556,15 @@ export default function ChatSidebar({
       } catch (error) {
         logger.error("[ChatSidebar] 保存消息失败:", error);
       } finally {
+        const runId = sendingChatRunIdRef.current;
         if (targetSessionId) {
           void updateStreamingFlag(targetSessionId, false);
+          if (runId) {
+            clearActiveChatRun(targetSessionId, runId);
+          }
         }
         sendingSessionIdRef.current = null;
+        sendingChatRunIdRef.current = null;
         releaseLock();
       }
     },
@@ -721,6 +732,31 @@ export default function ChatSidebar({
     ],
   );
 
+  const cancelChatRunOnServer = useCallback(
+    (chatRunId: string, reason: string) => {
+      const normalizedChatRunId = chatRunId.trim();
+      const normalizedReason = reason.trim() || "user_cancelled";
+      if (!normalizedChatRunId) return;
+
+      fetch("/api/chat/cancel", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          chatRunId: normalizedChatRunId,
+          reason: normalizedReason,
+        }),
+        keepalive: true,
+      }).catch((error) => {
+        logger.debug("[ChatSidebar] 取消上报失败（可忽略）", {
+          chatRunId: normalizedChatRunId,
+          reason: normalizedReason,
+          error,
+        });
+      });
+    },
+    [],
+  );
+
   useEffect(() => {
     const previousSocketStatus = previousSocketStatusRef.current;
     const socketStatusChanged = previousSocketStatus !== isSocketConnected;
@@ -732,11 +768,20 @@ export default function ChatSidebar({
       socketStopHandledRef.current = true;
       logger.warn("[ChatSidebar] Socket 断开，停止聊天请求");
 
-      stop();
-      releaseLock();
-
+      const runId = sendingChatRunIdRef.current;
       const targetConversationId =
         activeConversationId ?? sendingSessionIdRef.current;
+
+      if (runId) {
+        cancelChatRun(runId);
+        if (targetConversationId) {
+          clearActiveChatRun(targetConversationId, runId);
+        }
+        cancelChatRunOnServer(runId, "socket_disconnected");
+      }
+
+      stop();
+      releaseLock();
 
       if (targetConversationId) {
         updateStreamingFlag(targetConversationId, false).catch((error) => {
@@ -826,6 +871,7 @@ export default function ChatSidebar({
     }
   }, [
     activeConversationId,
+    cancelChatRunOnServer,
     closeAlertDialog,
     isChatStreaming,
     isI18nReady,
@@ -854,11 +900,24 @@ export default function ChatSidebar({
         logger.info("[ChatSidebar] 切换到历史视图，停止聊天请求");
       }
 
-      stop();
-      releaseLock();
-
       const targetConversationId =
         activeConversationId ?? sendingSessionIdRef.current;
+
+      const runId = sendingChatRunIdRef.current;
+      if (runId) {
+        cancelChatRun(runId);
+        if (targetConversationId) {
+          clearActiveChatRun(targetConversationId, runId);
+        }
+        cancelChatRunOnServer(
+          runId,
+          reason === "sidebar" ? "sidebar_closed" : "switch_to_history",
+        );
+        sendingChatRunIdRef.current = null;
+      }
+
+      stop();
+      releaseLock();
 
       if (targetConversationId) {
         void updateStreamingFlag(targetConversationId, false);
@@ -866,6 +925,7 @@ export default function ChatSidebar({
     },
     [
       activeConversationId,
+      cancelChatRunOnServer,
       isChatStreaming,
       releaseLock,
       stop,
@@ -906,11 +966,21 @@ export default function ChatSidebar({
         logger.warn("[ChatSidebar] 网络断开，当前无流式请求，释放聊天锁");
       }
 
-      stop();
-      releaseLock();
-
+      const runId = sendingChatRunIdRef.current;
       const targetConversationId =
         activeConversationId ?? sendingSessionIdRef.current;
+
+      if (runId) {
+        cancelChatRun(runId);
+        if (targetConversationId) {
+          clearActiveChatRun(targetConversationId, runId);
+        }
+        cancelChatRunOnServer(runId, "network_offline");
+        sendingChatRunIdRef.current = null;
+      }
+
+      stop();
+      releaseLock();
 
       if (targetConversationId) {
         updateStreamingFlag(targetConversationId, false).catch((error) => {
@@ -957,6 +1027,7 @@ export default function ChatSidebar({
     }
   }, [
     activeConversationId,
+    cancelChatRunOnServer,
     isChatStreaming,
     isOnline,
     markConversationAsCompleted,
@@ -1289,6 +1360,7 @@ export default function ChatSidebar({
     }
 
     sendingSessionIdRef.current = targetSessionId;
+    sendingChatRunIdRef.current = null;
     logger.debug("[ChatSidebar] 开始发送消息到会话:", targetSessionId);
 
     const messageId = generateUUID("msg");
@@ -1352,16 +1424,18 @@ export default function ChatSidebar({
         );
       }
 
-      await sendMessage(
-        userMessage as unknown as UseChatMessage,
-        {
-          body: {
-            llmConfig,
-            projectUuid: currentProjectId,
-            conversationId: targetSessionId,
-          },
+      const chatRunId = generateUUID("chat-run");
+      sendingChatRunIdRef.current = chatRunId;
+      setActiveChatRun(targetSessionId, chatRunId);
+
+      await sendMessage(userMessage as unknown as UseChatMessage, {
+        body: {
+          llmConfig,
+          projectUuid: currentProjectId,
+          conversationId: targetSessionId,
+          chatRunId,
         },
-      );
+      });
       lockTransferredToStream = true;
       if (hasReadyAttachments) {
         imageAttachments.clearAll();
@@ -1369,7 +1443,12 @@ export default function ChatSidebar({
       void updateStreamingFlag(targetSessionId, true);
     } catch (error) {
       logger.error("[ChatSidebar] 发送消息失败:", error);
+      const runId = sendingChatRunIdRef.current;
       sendingSessionIdRef.current = null;
+      sendingChatRunIdRef.current = null;
+      if (runId) {
+        clearActiveChatRun(targetSessionId, runId);
+      }
       if (storageForRollback) {
         try {
           await storageForRollback.deleteMessage(messageId);
@@ -1406,16 +1485,26 @@ export default function ChatSidebar({
     if (!isChatStreaming) return;
 
     logger.info("[ChatSidebar] 静默停止流式传输");
-    stop();
-
+    const runId = sendingChatRunIdRef.current;
     const targetConversationId =
       activeConversationId ?? sendingSessionIdRef.current;
+
+    if (runId) {
+      cancelChatRun(runId);
+      if (targetConversationId) {
+        clearActiveChatRun(targetConversationId, runId);
+      }
+      cancelChatRunOnServer(runId, "stop_silently");
+    }
+
+    stop();
 
     if (targetConversationId) {
       void updateStreamingFlag(targetConversationId, false);
     }
 
     sendingSessionIdRef.current = null;
+    sendingChatRunIdRef.current = null;
     releaseLock();
   }, [
     activeConversationId,
@@ -1423,19 +1512,31 @@ export default function ChatSidebar({
     releaseLock,
     stop,
     updateStreamingFlag,
+    cancelChatRunOnServer,
   ]);
 
   const handleCancel = useCallback(async () => {
     if (!isChatStreaming) return;
 
     logger.info("[ChatSidebar] 用户取消聊天");
-    stop();
 
+    const runId = sendingChatRunIdRef.current;
     const targetConversationId =
       activeConversationId ?? sendingSessionIdRef.current;
 
+    if (runId) {
+      cancelChatRun(runId);
+      if (targetConversationId) {
+        clearActiveChatRun(targetConversationId, runId);
+      }
+      cancelChatRunOnServer(runId, "user_cancelled");
+    }
+
+    stop();
+
     if (!targetConversationId) {
       sendingSessionIdRef.current = null;
+      sendingChatRunIdRef.current = null;
       return;
     }
 
@@ -1482,6 +1583,7 @@ export default function ChatSidebar({
     } finally {
       void updateStreamingFlag(targetConversationId, false);
       sendingSessionIdRef.current = null;
+      sendingChatRunIdRef.current = null;
       releaseLock();
     }
   }, [
@@ -1498,6 +1600,7 @@ export default function ChatSidebar({
     stop,
     t,
     releaseLock,
+    cancelChatRunOnServer,
   ]);
 
   const handleRetry = useCallback(() => {

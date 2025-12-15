@@ -85,7 +85,8 @@
       "Bash(grep:*)",
       "Bash(awk:*)",
       "Bash(npm run lint:*)",
-      "WebFetch(domain:sdk.vercel.ai)"
+      "WebFetch(domain:sdk.vercel.ai)",
+      "Bash(npm run type-check:*)"
     ],
     "deny": [],
     "ask": []

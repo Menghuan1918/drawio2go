@@ -40,6 +40,10 @@ declare global {
         {
           resolve: (value: unknown) => void;
           reject: (error: Error) => void;
+          projectUuid?: string;
+          conversationId?: string;
+          chatRunId?: string;
+          toolName?: string;
         }
       >
     | undefined;
@@ -47,6 +51,19 @@ declare global {
    * 统一的工具广播函数（server.js 注入），用于在广播时追加上下文日志
    */
   var emitToolExecute: ((request: ToolCallRequest) => void) | undefined;
+
+  /**
+   * Chat 运行中的 AbortController（key = chatRunId）。
+   * 用于在用户点击“取消”时，通过 /api/chat/cancel 主动中止后端请求。
+   */
+  var chatAbortControllers: Map<string, AbortController> | undefined;
+
+  /**
+   * 已取消的 chatRunId 集合（用于阻断后续工具调用）。
+   * 使用 Map 存储添加时间戳，自动清理超过 5 分钟的旧条目。
+   * key = chatRunId, value = 添加时的时间戳（毫秒）
+   */
+  var cancelledChatRunIds: Map<string, number> | undefined;
 
   /**
    * Electron API

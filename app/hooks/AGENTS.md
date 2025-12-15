@@ -116,6 +116,7 @@
 
 - 监听后端工具执行请求，自动调用 `drawio-tools.ts`
 - 通过 Socket.IO 回传执行结果/错误
+- **取消保护**: 工具请求携带 `chatRunId`，前端仅处理当前活跃 run；收到 `/api/chat/cancel` 或用户取消后会拒绝执行并回传取消结果（同时监听 `tool:cancel` best-effort 取消事件）
 - **AI 自动版本**: AI 触发 `drawio_overwrite` 时，在设置 `autoVersionOnAIEdit=true` 情况下，串行创建子版本快照后再写入 XML；内部使用 `isCreatingSnapshotRef` 防抖 + `latestMainVersionRef/latestSubVersionRef` 增量计算下一个子版本，避免每次全量拉取版本列表
 
 #### 工作流程
