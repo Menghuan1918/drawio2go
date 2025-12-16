@@ -72,6 +72,35 @@ app.prepare().then(() => {
   const getProjectMemberCount = (projectUuid) =>
     projectMembers.get(projectUuid)?.size ?? 0;
 
+  const normalizeToolErrorPart = (value) => {
+    if (value === undefined || value === null) return "";
+    if (typeof value === "string") return value.trim();
+    if (value instanceof Error) return (value.message || String(value)).trim();
+    try {
+      return JSON.stringify(value).trim();
+    } catch {
+      return String(value).trim();
+    }
+  };
+
+  const combineToolErrorParts = (errorText, messageText) => {
+    const errorPart = (errorText || "").trim();
+    const messagePart = (messageText || "").trim();
+
+    if (!errorPart && !messagePart) return "";
+    if (!errorPart) return messagePart;
+    if (!messagePart) return errorPart;
+
+    if (errorPart === messagePart) return errorPart;
+    const existingParts = errorPart
+      .split(" | ")
+      .map((part) => part.trim())
+      .filter(Boolean);
+    if (existingParts.includes(messagePart)) return errorPart;
+
+    return `${errorPart} | ${messagePart}`;
+  };
+
   const emitToolExecute = (request) => {
     const targetProject = request?.projectUuid || "(unknown-project)";
     const targetConversation =
@@ -179,17 +208,13 @@ app.prepare().then(() => {
         if (success) {
           pending.resolve(result);
         } else {
-          let errorMsg = "工具执行失败";
-          if (typeof error === "string" && error.trim()) {
-            errorMsg = error;
-          } else if (error !== undefined) {
-            try {
-              errorMsg = JSON.stringify(error);
-            } catch {
-              errorMsg = String(error);
-            }
-          }
-          pending.reject(new Error(errorMsg || "工具执行失败"));
+          const errorText = normalizeToolErrorPart(error);
+          const messageValue =
+            result && typeof result === "object" ? result.message : undefined;
+          const messageText = normalizeToolErrorPart(messageValue);
+
+          const combined = combineToolErrorParts(errorText, messageText);
+          pending.reject(new Error(combined || "工具执行失败"));
         }
         pendingRequests.delete(requestId);
       } else {
