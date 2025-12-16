@@ -36,15 +36,15 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "npm"
 
-      # Linux 依赖
+      # Linux 依赖 (Ubuntu 24.04 兼容)
       - name: Install Linux dependencies
         if: matrix.platform == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-0 libnotify-dev libgconf-2-4 libnss3 libxss1 libasound2
+          sudo apt-get install -y libgtk-3-0 libnotify-dev libnss3 libxss1 libasound2t64
 
       # macOS 签名设置（可选，如果有证书）
       - name: Setup macOS signing

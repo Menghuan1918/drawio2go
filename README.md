@@ -114,7 +114,7 @@ Go to [Releases](https://github.com/Menghuan1918/drawio2go/releases) to download
 
 Requirements:
 
-- Node.js 20.x or higher
+- Node.js 22.x or higher
 - npm
 
 Then run the following commands
