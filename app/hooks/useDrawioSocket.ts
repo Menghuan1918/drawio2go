@@ -50,11 +50,36 @@ type ToolResultLike = {
   message?: unknown;
 };
 
+function buildToolCallErrorMessage(
+  errorValue: unknown,
+  messageValue: unknown,
+): string | undefined {
+  const errorText =
+    errorValue === undefined || errorValue === null
+      ? ""
+      : toErrorString(errorValue).trim();
+  const messageText =
+    messageValue === undefined || messageValue === null
+      ? ""
+      : toErrorString(messageValue).trim();
+
+  if (!errorText && !messageText) return undefined;
+  if (!errorText) return messageText;
+  if (!messageText) return errorText;
+
+  if (errorText === messageText) return errorText;
+  const existingParts = errorText
+    .split(" | ")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (existingParts.includes(messageText)) return errorText;
+
+  return `${errorText} | ${messageText}`;
+}
+
 function resolveToolCallError(result: ToolResultLike): string | undefined {
   if (result.success) return undefined;
-  if (result.error) return toErrorString(result.error);
-  if (result.message) return toErrorString(result.message);
-  return undefined;
+  return buildToolCallErrorMessage(result.error, result.message);
 }
 
 /**

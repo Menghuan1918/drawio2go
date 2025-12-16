@@ -380,12 +380,14 @@ export function ModelEditDialog({
           }),
         });
       } else {
+        const statusCode = response.status;
+        const errorMessage =
+          data?.error ??
+          data?.message ??
+          t("models.test.error", "测试失败，请检查配置是否正确");
         push({
           variant: "danger",
-          description:
-            data?.error ??
-            data?.message ??
-            t("models.test.error", "测试失败，请检查配置是否正确"),
+          description: `HTTP ${statusCode}: ${errorMessage}`,
         });
       }
     } catch (error) {

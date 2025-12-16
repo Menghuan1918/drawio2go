@@ -1,6 +1,6 @@
 {
   "name": "drawio2go",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Electron + Next.js DrawIO Application",
   "main": "electron/main.js",
   "scripts": {

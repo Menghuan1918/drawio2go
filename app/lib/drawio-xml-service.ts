@@ -11,6 +11,7 @@ import type {
 } from "@/app/types/drawio-tools";
 import type { GetXMLResult, ReplaceXMLResult } from "@/app/types/drawio-tools";
 import { createLogger } from "@/lib/logger";
+import { toErrorString } from "@/lib/error-handler";
 import type { ToolExecutionContext } from "@/app/types/socket";
 import type {
   DrawioEditBatchRequest,
@@ -24,6 +25,37 @@ const { DRAWIO_READ } = AI_TOOL_NAMES;
 const { GET_DRAWIO_XML, REPLACE_DRAWIO_XML } = CLIENT_TOOL_NAMES;
 
 type InsertPosition = "append_child" | "prepend_child" | "before" | "after";
+
+/**
+ * Merge error and message fields from tool call results
+ * When both exist, combines them with " | " separator
+ */
+function buildToolErrorMessage(
+  errorValue: unknown,
+  messageValue: unknown,
+): string | undefined {
+  const errorText =
+    errorValue === undefined || errorValue === null
+      ? ""
+      : toErrorString(errorValue).trim();
+  const messageText =
+    messageValue === undefined || messageValue === null
+      ? ""
+      : toErrorString(messageValue).trim();
+
+  if (!errorText && !messageText) return undefined;
+  if (!errorText) return messageText;
+  if (!messageText) return errorText;
+
+  if (errorText === messageText) return errorText;
+  const existingParts = errorText
+    .split(" | ")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (existingParts.includes(messageText)) return errorText;
+
+  return `${errorText} | ${messageText}`;
+}
 
 function ensureContext(
   context: ToolExecutionContext | undefined,
@@ -245,10 +277,10 @@ export async function executeDrawioEditBatch(
     const alreadyRolledBack = replaceResult?.error === "drawio_syntax_error";
 
     if (alreadyRolledBack) {
-      throw new Error(
-        replaceResult?.message ||
-          "Batch edit failed: DrawIO reported syntax error. Automatically rolled back to previous state.",
-      );
+      const errorMessage =
+        buildToolErrorMessage(replaceResult?.error, replaceResult?.message) ||
+        "Batch edit failed: DrawIO reported syntax error. Automatically rolled back to previous state.";
+      throw new Error(errorMessage);
     }
 
     let rollbackSucceeded = false;
@@ -274,9 +306,10 @@ export async function executeDrawioEditBatch(
         );
       } else {
         rollbackErrorMessage =
-          rollbackResult?.error ||
-          rollbackResult?.message ||
-          "Unknown rollback failure reason";
+          buildToolErrorMessage(
+            rollbackResult?.error,
+            rollbackResult?.message,
+          ) || "Unknown rollback failure reason";
         logger.error("Rollback to original XML failed", { rollbackResult });
       }
     } catch (rollbackError) {
@@ -288,8 +321,7 @@ export async function executeDrawioEditBatch(
     }
 
     const originalError =
-      replaceResult?.error ||
-      replaceResult?.message ||
+      buildToolErrorMessage(replaceResult?.error, replaceResult?.message) ||
       "Frontend XML replacement failed (unknown reason)";
 
     const errorMessage = rollbackSucceeded

@@ -88,7 +88,8 @@
       "WebFetch(domain:sdk.vercel.ai)",
       "Bash(npm run type-check:*)",
       "Bash(node scripts/prepare-electron.js:*)",
-      "mcp__codexmcp__codex"
+      "mcp__codexmcp__codex",
+      "Bash(npx asar:*)"
     ],
     "deny": [],
     "ask": []
