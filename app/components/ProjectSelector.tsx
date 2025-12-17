@@ -1,6 +1,13 @@
 "use client";
 
-import type { ComponentProps, PointerEvent, ReactNode } from "react";
+import type {
+  ComponentProps,
+  KeyboardEvent as ReactKeyboardEvent,
+  MouseEvent as ReactMouseEvent,
+  PointerEvent,
+  PointerEvent as ReactPointerEvent,
+  ReactNode,
+} from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Card,
@@ -24,7 +31,7 @@ import ConfirmDialog from "@/app/components/common/ConfirmDialog";
 import { DEFAULT_PROJECT_UUID } from "@/app/lib/storage";
 
 // 虚拟滚动阈值 - 项目数量超过此值时启用虚拟滚动
-const VIRTUAL_SCROLL_THRESHOLD = 30;
+const VIRTUAL_SCROLL_THRESHOLD = 4;
 // 估计每个项目卡片的高度
 const ESTIMATED_ITEM_HEIGHT = 72;
 
@@ -79,10 +86,24 @@ function PressableIconButton({
   className,
   children,
 }: PressableIconButtonProps) {
-  const { pressProps } = usePress({
-    isDisabled,
-    onPress,
-  });
+  const handleClick = (event: ReactMouseEvent) => {
+    event.stopPropagation();
+    if (!isDisabled) {
+      onPress();
+    }
+  };
+
+  const handlePointerDown = (event: ReactPointerEvent) => {
+    event.stopPropagation();
+  };
+
+  const handleKeyDown = (event: ReactKeyboardEvent) => {
+    event.stopPropagation();
+    if (!isDisabled && (event.key === "Enter" || event.key === " ")) {
+      event.preventDefault();
+      onPress();
+    }
+  };
 
   return (
     <button
@@ -90,10 +111,9 @@ function PressableIconButton({
       aria-label={ariaLabel}
       disabled={isDisabled}
       className={className}
-      {...pressProps}
-      onPointerDownCapture={(event) => event.stopPropagation()}
-      onClickCapture={(event) => event.stopPropagation()}
-      onKeyDownCapture={(event) => event.stopPropagation()}
+      onClick={handleClick}
+      onPointerDown={handlePointerDown}
+      onKeyDown={handleKeyDown}
     >
       {children}
     </button>

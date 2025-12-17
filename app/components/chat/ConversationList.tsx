@@ -12,7 +12,7 @@ import {
 import { useAppTranslation } from "@/app/i18n/hooks";
 
 // 虚拟滚动阈值 - 会话数量超过此值时启用虚拟滚动
-const VIRTUAL_SCROLL_THRESHOLD = 30;
+const VIRTUAL_SCROLL_THRESHOLD = 5;
 // 估计每个卡片的高度
 const ESTIMATED_ITEM_HEIGHT = 72;
 
