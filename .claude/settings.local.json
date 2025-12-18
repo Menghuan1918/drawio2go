@@ -92,7 +92,8 @@
       "Bash(npx asar:*)",
       "Bash(npm exec tsc:*)",
       "Bash(test:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(pnpm run lint:ts:*)"
     ],
     "deny": [],
     "ask": []

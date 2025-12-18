@@ -343,14 +343,16 @@ async function executeToolCall(options: {
       abortController.signal,
     );
 
-    await addToolResult({
+    // AI SDK 5.0: 不要在 onToolCall 中 await addToolResult，否则会死锁
+    // https://ai-sdk.dev/docs/migration-guides/migration-guide-5-0
+    void addToolResult({
       tool: toolName,
       toolCallId,
       output,
     });
   } catch (error) {
     if (isAbortError(error)) {
-      await addToolResult({
+      void addToolResult({
         state: "output-error",
         tool: toolName,
         toolCallId,
@@ -362,7 +364,7 @@ async function executeToolCall(options: {
     const errorText = toErrorMessage(error);
     setToolError(error instanceof Error ? error : new Error(errorText));
 
-    await addToolResult({
+    void addToolResult({
       state: "output-error",
       tool: toolName,
       toolCallId,
@@ -886,7 +888,9 @@ export default function ChatSidebar({
     id: activeConversationId || "default",
     messages: initialMessages as unknown as UseChatMessage[],
     transport: chatTransport,
-    onToolCall: async ({ toolCall }) => {
+    // AI SDK 5.0: onToolCall 中不要 await addToolResult，否则会死锁
+    // https://ai-sdk.dev/docs/migration-guides/migration-guide-5-0
+    onToolCall: ({ toolCall }) => {
       toolExecutionQueueRef.current = toolExecutionQueueRef.current
         .then(async () => {
           await executeToolCall({
@@ -902,7 +906,7 @@ export default function ChatSidebar({
           logger.error("[ChatSidebar] 工具队列执行失败", { error });
         });
 
-      await toolExecutionQueueRef.current;
+      // 不要 await，直接返回让 AI SDK 继续处理
     },
     sendAutomaticallyWhen: ({ messages: currentMessages }) =>
       lastAssistantMessageIsCompleteWithToolCalls({
