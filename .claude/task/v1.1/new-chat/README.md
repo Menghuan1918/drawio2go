@@ -23,15 +23,15 @@
 
 ## 里程碑
 
-| #   | 文件                             | 说明                    |
-| --- | -------------------------------- | ----------------------- |
-| 1   | `milestone-1-bff-proxy.md`       | 创建 BFF 纯代理端点     |
-| 2   | `milestone-2-frontend-tools.md`  | 前端工具定义和执行器    |
-| 3   | `milestone-3-chat-hook.md`       | 重构聊天 Hook           |
-| 4   | `milestone-4-remove-socketio.md` | 删除 Socket.IO 相关代码 |
-| 5   | `milestone-5-simplify-server.md` | 简化服务器              |
-| 6   | `milestone-6-electron.md`        | 更新 Electron           |
-| 7   | `milestone-7-page.md`            | 更新主页面              |
+| #   | 文件                              | 说明                 |
+| --- | --------------------------------- | -------------------- |
+| 1   | `milestone-1-bff-proxy.md`        | 创建 BFF 纯代理端点  |
+| 2   | `milestone-2-frontend-tools.md`   | 前端工具定义和执行器 |
+| 3   | `milestone-3-chat-hook.md`        | 创建新聊天 Hook      |
+| 4   | `milestone-4-switch-hook.md`      | 切换到新 Hook        |
+| 5   | `milestone-5-cleanup-frontend.md` | 清理前端旧代码       |
+| 6   | `milestone-6-simplify-backend.md` | 简化后端             |
+| 7   | `milestone-7-electron.md`         | 更新 Electron        |
 
 ## 预期收益
 
