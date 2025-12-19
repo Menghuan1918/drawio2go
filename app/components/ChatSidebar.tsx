@@ -918,6 +918,9 @@ export default function ChatSidebar({
         messages: finishedMessages,
       });
 
+      // 记录解析后的真实会话 ID，用于正确更新流式状态
+      let resolvedConversationId: string | null = null;
+
       try {
         if (!targetSessionId) {
           logger.error("[ChatSidebar] onFinish: 没有记录的目标会话ID");
@@ -931,6 +934,9 @@ export default function ChatSidebar({
             forceTitleUpdate: true,
             resolveConversationId,
             onConversationResolved: (resolvedId) => {
+              resolvedConversationId = resolvedId;
+              // 同步更新 ref，确保后续操作使用正确的 ID
+              sendingSessionIdRef.current = resolvedId;
               setActiveConversationId(resolvedId);
             },
           },
@@ -939,7 +945,9 @@ export default function ChatSidebar({
         logger.error("[ChatSidebar] 保存消息失败:", error);
       } finally {
         if (!targetSessionId || !shouldContinue) {
-          if (targetSessionId) void updateStreamingFlag(targetSessionId, false);
+          // 优先使用解析后的真实 ID，回落到原始 ID
+          const idToUpdate = resolvedConversationId ?? targetSessionId;
+          if (idToUpdate) void updateStreamingFlag(idToUpdate, false);
           sendingSessionIdRef.current = null;
           releaseLock();
         }
@@ -1368,6 +1376,15 @@ export default function ChatSidebar({
       if (pageUnloadHandledRef.current) return;
       pageUnloadHandledRef.current = true;
 
+      // 只有在有正在进行的发送操作时才需要处理
+      // sendingSessionIdRef.current 为 null 说明当前没有流式请求
+      const sendingSessionId = sendingSessionIdRef.current;
+      if (!sendingSessionId) {
+        // 没有正在进行的流式请求，只需要释放锁
+        releaseLock();
+        return;
+      }
+
       logger.warn("[ChatSidebar] 页面即将卸载，停止聊天请求");
 
       // 1) 立即中断正在进行的流式请求
@@ -1377,8 +1394,7 @@ export default function ChatSidebar({
       releaseLock();
 
       const targetConversationId =
-        activeConversationId ?? sendingSessionIdRef.current;
-      if (!targetConversationId) return;
+        activeConversationId ?? sendingSessionId;
 
       // 3) 同步标记流式结束，避免卸载时遗留 streaming 状态
       updateStreamingFlag(targetConversationId, false, { syncOnly: true });
