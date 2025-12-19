@@ -29,6 +29,8 @@
 - **utils.ts**: 通用工具函数（debounce 防抖函数，支持 flush/cancel 方法；runStorageTask、withTimeout）
 - **logger.ts**: 轻量日志工厂（`createLogger(componentName)`），自动加组件前缀并支持 debug/info/warn/error 级别过滤
 - **error-handler.ts**: 通用错误处理工具（AppError + i18n 翻译 + API/Toast 友好消息）
+- **drainable-tool-queue.ts**: 可等待清空的工具执行队列，确保 onFinish 等待所有工具完成后再保存消息和释放锁
+- **chat-run-state-machine.ts**: 聊天运行状态机，统一管理会话生命周期状态，避免 ref 竞态条件
 
 ### svg-export-utils.ts
 
@@ -306,6 +308,134 @@ logger.error("save:failed", err);
 - 日志 key 采用 `模块:动作` 命名，便于过滤（如 `autosave:debounce`）
 - 传递结构化对象而非拼接字符串，方便后续接入日志收集
 - 生产环境关闭 `debug`，保留 `info` 以上；高频路径使用防抖/采样避免噪声
+
+### drainable-tool-queue.ts - 可等待工具队列
+
+可等待清空的工具执行队列，确保 onFinish 等待所有工具完成后再保存消息和释放锁。
+
+**核心功能**：
+
+- 串行执行工具任务，保持执行顺序
+- 提供 `drain()` 方法阻塞等待所有任务完成
+- 支持多个调用者同时等待队列清空
+- 单个任务失败不影响队列继续执行
+- 带超时保护（默认 60 秒），防止永久阻塞
+
+**主要 API**：
+
+```typescript
+class DrainableToolQueue {
+  // 添加工具任务到队列
+  enqueue(task: () => Promise<void>): void;
+
+  // 等待队列清空（核心功能）
+  async drain(timeout?: number): Promise<void>;
+
+  // 获取待执行任务数
+  getPendingCount(): number;
+}
+```
+
+**使用示例**：
+
+```typescript
+import { DrainableToolQueue } from "@/lib/drainable-tool-queue";
+
+const toolQueue = new DrainableToolQueue();
+
+// 添加工具任务
+toolQueue.enqueue(async () => {
+  await executeToolCall(toolCall);
+});
+
+// 等待所有工具完成
+await toolQueue.drain();
+```
+
+**用途**：在 ChatSidebar 的 onFinish 回调中，等待所有工具执行完成后再保存消息和释放锁，解决工具队列与 onFinish 不同步的问题。
+
+### chat-run-state-machine.ts - 聊天状态机
+
+状态机管理聊天会话生命周期，避免使用 ref 导致的竞态条件。
+
+**状态定义**：
+
+- `idle`: 空闲，无活动请求
+- `preparing`: 准备中（获取锁、验证输入）
+- `streaming`: 流式响应中
+- `tools-pending`: 工具执行中（流式已完成，等待工具）
+- `finalizing`: 最终化（保存消息、释放锁）
+- `cancelled`: 已取消
+- `errored`: 出错
+
+**状态转换路径**：
+
+```
+idle → preparing → streaming → finalizing → idle
+                       ↓
+                  tools-pending → finalizing → idle
+```
+
+**主要 API**：
+
+```typescript
+class ChatRunStateMachine {
+  // 获取当前状态
+  getState(): ChatRunState;
+
+  // 初始化上下文
+  initContext(conversationId: string): void;
+
+  // 获取当前上下文
+  getContext(): ChatRunContext | null;
+
+  // 清理上下文
+  clearContext(): void;
+
+  // 状态转换
+  transition(event: ChatRunEvent): void;
+
+  // 订阅状态变化
+  subscribe(listener: (state, context) => void): () => void;
+}
+```
+
+**上下文结构**：
+
+```typescript
+interface ChatRunContext {
+  conversationId: string; // 目标会话 ID（替代 sendingSessionIdRef）
+  lockAcquired: boolean; // 锁是否已获取
+  abortController: AbortController | null;
+  pendingToolCount: number;
+  lastMessages: ChatUIMessage[];
+}
+```
+
+**使用示例**：
+
+```typescript
+import { ChatRunStateMachine } from "@/lib/chat-run-state-machine";
+
+const stateMachine = new ChatRunStateMachine();
+
+// 初始化上下文
+stateMachine.initContext(conversationId);
+const ctx = stateMachine.getContext()!;
+ctx.lockAcquired = true;
+
+// 获取会话 ID（替代 sendingSessionIdRef.current）
+const conversationId = ctx.conversationId;
+
+// 状态转换
+stateMachine.transition("submit");
+stateMachine.transition("lock-acquired");
+
+// 清理
+stateMachine.clearContext();
+```
+
+**用途**：替代 ChatSidebar 中的 `sendingSessionIdRef`，统一管理会话 ID 和生命周期，消除多处清空 ref 导致的竞态问题。
 
 ## 工具链工作流
 

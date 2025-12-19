@@ -48,6 +48,8 @@ import {
   fingerprintMessage,
 } from "@/app/lib/chat-session-service";
 import { generateUUID } from "@/app/lib/utils";
+import { DrainableToolQueue } from "@/app/lib/drainable-tool-queue";
+import { ChatRunStateMachine } from "@/app/lib/chat-run-state-machine";
 import { useImageAttachments } from "@/hooks/useImageAttachments";
 import {
   convertAttachmentItemToImagePart,
@@ -68,6 +70,7 @@ import { TOOL_TIMEOUT_CONFIG } from "@/lib/constants/tool-config";
 import { AI_TOOL_NAMES } from "@/lib/constants/tool-names";
 
 const logger = createLogger("ChatSidebar");
+type UseChatMessage = UIMessage<MessageMetadata>;
 
 const hasImageParts = (msg: unknown): boolean => {
   if (!msg || typeof msg !== "object") return false;
@@ -79,6 +82,21 @@ const hasImageParts = (msg: unknown): boolean => {
       part !== null &&
       (part as { type?: unknown }).type === "image",
   );
+};
+
+const hasToolPartsInLastAssistant = (messages: UseChatMessage[]): boolean => {
+  const last = messages[messages.length - 1];
+  if (!last || last.role !== "assistant") return false;
+  const parts = (last as { parts?: unknown }).parts;
+  if (!Array.isArray(parts)) return false;
+  return parts.some((part) => {
+    if (!part || typeof part !== "object") return false;
+    const type = (part as { type?: unknown }).type;
+    return (
+      typeof type === "string" &&
+      (type === "dynamic-tool" || type.startsWith("tool-"))
+    );
+  });
 };
 
 const runWithConcurrency = async <T, R>(
@@ -391,8 +409,6 @@ export default function ChatSidebar({
   currentProjectId,
   editorRef,
 }: ChatSidebarProps) {
-  type UseChatMessage = UIMessage<MessageMetadata>;
-
   const [input, setInput] = useState("");
   const [toolError, setToolError] = useState<Error | null>(null);
   const [expandedToolCalls, setExpandedToolCalls] = useState<
@@ -464,7 +480,6 @@ export default function ChatSidebar({
   );
 
   // ========== 引用 ==========
-  const sendingSessionIdRef = useRef<string | null>(null);
   const imageDataUrlCacheRef = useRef<Map<string, string>>(new Map());
   const imageDataUrlPendingRef = useRef<Map<string, Promise<string | null>>>(
     new Map(),
@@ -476,6 +491,7 @@ export default function ChatSidebar({
   const wasOfflineRef = useRef(false);
   const previousOnlineStatusRef = useRef<boolean | null>(null);
   const reasoningTimersRef = useRef<Map<string, number>>(new Map());
+  const finishReasonRef = useRef<string | null>(null);
 
   // ========== 派生状态 ==========
   const fallbackModelName = useMemo(
@@ -644,9 +660,15 @@ export default function ChatSidebar({
   }, [chatService, resolveConversationId, setActiveConversationId]);
 
   // ========== useChat 集成 ==========
-  // NOTE(Milestone 4): ChatSidebar 目前仍是“自管理”模式（内部 useChat + 存储/会话控制器）。
-  // 如需复用聊天状态/动作，建议抽出 Provider/Context 注入，避免出现“双消息源 / 双流式状态 / 双取消逻辑”的竞态问题。
-  const toolExecutionQueueRef = useRef<Promise<void>>(Promise.resolve());
+  // NOTE(Milestone 4): ChatSidebar 目前仍是"自管理"模式（内部 useChat + 存储/会话控制器）。
+  // 如需复用聊天状态/动作，建议抽出 Provider/Context 注入，避免出现"双消息源 / 双流式状态 / 双取消逻辑"的竞态问题。
+
+  // 工具执行队列：可等待清空的队列，确保 onFinish 等待工具完成
+  const toolQueue = useRef(new DrainableToolQueue());
+
+  // 聊天状态机：统一管理会话生命周期，避免 ref 竞态
+  const stateMachine = useRef(new ChatRunStateMachine());
+
   const activeRequestAbortRef = useRef<AbortController | null>(null);
   const activeToolAbortRef = useRef<AbortController | null>(null);
   const currentToolCallIdRef = useRef<string | null>(null);
@@ -876,66 +898,106 @@ export default function ChatSidebar({
     // AI SDK 5.0: onToolCall 中不要 await addToolResult，否则会死锁
     // https://ai-sdk.dev/docs/migration-guides/migration-guide-5-0
     onToolCall: ({ toolCall }) => {
-      toolExecutionQueueRef.current = toolExecutionQueueRef.current
-        .then(async () => {
-          await executeToolCall({
-            toolCall,
-            toolsRef: frontendToolsRef,
-            addToolResult,
-            setToolError,
-            currentToolCallIdRef,
-            activeToolAbortRef,
-          });
-        })
-        .catch((error) => {
-          logger.error("[ChatSidebar] 工具队列执行失败", { error });
+      // 使用新的可等待队列，替代 Promise 链
+      toolQueue.current.enqueue(async () => {
+        await executeToolCall({
+          toolCall,
+          toolsRef: frontendToolsRef,
+          addToolResult,
+          setToolError,
+          currentToolCallIdRef,
+          activeToolAbortRef,
         });
+      });
 
       // 不要 await，直接返回让 AI SDK 继续处理
     },
     sendAutomaticallyWhen: ({ messages: currentMessages }) =>
       lastAssistantMessageIsCompleteWithToolCalls({
         messages: currentMessages,
-      }),
-    onFinish: async ({ messages: finishedMessages }) => {
-      const targetSessionId = sendingSessionIdRef.current;
-      const shouldContinue = lastAssistantMessageIsCompleteWithToolCalls({
-        messages: finishedMessages,
-      });
-
-      // 记录解析后的真实会话 ID，用于正确更新流式状态
-      let resolvedConversationId: string | null = null;
+      }) ||
+      (finishReasonRef.current === "tool-calls" &&
+        hasToolPartsInLastAssistant(currentMessages)),
+    onFinish: async ({
+      messages: finishedMessages,
+      finishReason,
+      isAbort,
+      isError,
+    }) => {
+      // 使用状态机获取上下文，替代 sendingSessionIdRef
+      const ctx = stateMachine.current.getContext();
+      if (!ctx) {
+        logger.error("[ChatSidebar] onFinish: 没有状态机上下文");
+        return;
+      }
 
       try {
-        if (!targetSessionId) {
-          logger.error("[ChatSidebar] onFinish: 没有记录的目标会话ID");
+        finishReasonRef.current =
+          !isAbort && !isError && finishReason ? finishReason : null;
+        // ⭐ 核心修复：等待工具队列清空
+        // 确保所有工具执行完成后才保存消息和释放锁
+        logger.info("[ChatSidebar] onFinish: 等待工具队列清空");
+        await toolQueue.current.drain();
+        logger.info("[ChatSidebar] onFinish: 工具队列已清空");
+
+        const shouldContinue =
+          lastAssistantMessageIsCompleteWithToolCalls({
+            messages: finishedMessages,
+          }) ||
+          (finishReason === "tool-calls" &&
+            hasToolPartsInLastAssistant(finishedMessages));
+
+        if (shouldContinue) {
+          // 工具执行完成，需继续流式（sendAutomaticallyWhen 会自动触发）
+          logger.info("[ChatSidebar] onFinish: 工具需要继续，等待下一轮");
           return;
         }
 
+        // 进入最终化状态
+        logger.info("[ChatSidebar] onFinish: 开始最终化会话");
+
+        // 记录解析后的真实会话 ID，用于正确更新流式状态
+        let resolvedConversationId: string | null = null;
+
         await chatService.saveNow(
-          targetSessionId,
+          ctx.conversationId,
           finishedMessages as unknown as ChatUIMessage[],
           {
             forceTitleUpdate: true,
             resolveConversationId,
             onConversationResolved: (resolvedId) => {
               resolvedConversationId = resolvedId;
-              // 同步更新 ref，确保后续操作使用正确的 ID
-              sendingSessionIdRef.current = resolvedId;
+              // 更新上下文中的 conversationId
+              ctx.conversationId = resolvedId;
               setActiveConversationId(resolvedId);
             },
           },
         );
-      } catch (error) {
-        logger.error("[ChatSidebar] 保存消息失败:", error);
-      } finally {
-        if (!targetSessionId || !shouldContinue) {
-          // 优先使用解析后的真实 ID，回落到原始 ID
-          const idToUpdate = resolvedConversationId ?? targetSessionId;
-          if (idToUpdate) void updateStreamingFlag(idToUpdate, false);
-          sendingSessionIdRef.current = null;
+
+        // 优先使用解析后的真实 ID，回落到原始 ID
+        const finalId = resolvedConversationId ?? ctx.conversationId;
+
+        // 更新流式状态为完成
+        await updateStreamingFlag(finalId, false);
+
+        // 释放锁
+        if (ctx.lockAcquired) {
           releaseLock();
         }
+
+        // 清理上下文
+        stateMachine.current.clearContext();
+        logger.info("[ChatSidebar] onFinish: 会话已最终化");
+      } catch (error) {
+        logger.error("[ChatSidebar] onFinish: 发生错误", { error });
+
+        // 错误处理：确保锁被释放
+        if (ctx.lockAcquired) {
+          releaseLock();
+        }
+
+        // 清理上下文
+        stateMachine.current.clearContext();
       }
     },
   });
@@ -1126,14 +1188,20 @@ export default function ChatSidebar({
         logger.info("[ChatSidebar] 切换到历史视图，停止聊天请求");
       }
 
-      const targetConversationId =
-        activeConversationId ?? sendingSessionIdRef.current;
+      // 使用状态机获取上下文
+      const ctx = stateMachine.current.getContext();
+      const targetConversationId = activeConversationId ?? ctx?.conversationId;
 
       stop();
       releaseLock();
 
       if (targetConversationId) {
         void updateStreamingFlag(targetConversationId, false);
+      }
+
+      // 清理状态机上下文
+      if (ctx) {
+        stateMachine.current.clearContext();
       }
     },
     [
@@ -1173,8 +1241,9 @@ export default function ChatSidebar({
         logger.warn("[ChatSidebar] 网络断开，当前无流式请求，释放聊天锁");
       }
 
-      const targetConversationId =
-        activeConversationId ?? sendingSessionIdRef.current;
+      // 使用状态机获取上下文
+      const ctx = stateMachine.current.getContext();
+      const targetConversationId = activeConversationId ?? ctx?.conversationId;
 
       stop();
       releaseLock();
@@ -1361,16 +1430,17 @@ export default function ChatSidebar({
       if (pageUnloadHandledRef.current) return;
       pageUnloadHandledRef.current = true;
 
-      // 只有在有正在进行的发送操作时才需要处理
-      // sendingSessionIdRef.current 为 null 说明当前没有流式请求
-      const sendingSessionId = sendingSessionIdRef.current;
-      if (!sendingSessionId) {
+      // 使用状态机获取上下文
+      const ctx = stateMachine.current.getContext();
+      if (!ctx) {
         // 没有正在进行的流式请求，只需要释放锁
         releaseLock();
         return;
       }
 
-      logger.warn("[ChatSidebar] 页面即将卸载，停止聊天请求");
+      logger.warn("[ChatSidebar] 页面即将卸载，停止聊天请求", {
+        conversationId: ctx.conversationId,
+      });
 
       // 1) 立即中断正在进行的流式请求
       stop();
@@ -1378,7 +1448,7 @@ export default function ChatSidebar({
       // 2) 释放聊天锁，避免遗留占用
       releaseLock();
 
-      const targetConversationId = activeConversationId ?? sendingSessionId;
+      const targetConversationId = activeConversationId ?? ctx.conversationId;
 
       // 3) 同步标记流式结束，避免卸载时遗留 streaming 状态
       updateStreamingFlag(targetConversationId, false, { syncOnly: true });
@@ -1386,6 +1456,9 @@ export default function ChatSidebar({
 
       // 4) 刷新待保存队列，确保 debounce 队列立即写入
       chatService.flushPending(targetConversationId);
+
+      // 5) 清理状态机上下文
+      stateMachine.current.clearContext();
     };
 
     window.addEventListener("beforeunload", handlePageUnload);
@@ -1406,8 +1479,10 @@ export default function ChatSidebar({
 
   useEffect(
     () => () => {
-      if (sendingSessionIdRef.current) {
-        sendingSessionIdRef.current = null;
+      // 组件卸载时清理状态机和释放锁
+      const ctx = stateMachine.current.getContext();
+      if (ctx) {
+        stateMachine.current.clearContext();
         releaseLock();
       }
     },
@@ -1472,6 +1547,8 @@ export default function ChatSidebar({
 
     const targetSessionId = activeConversationId;
     if (!targetSessionId) {
+      // 获取锁失败，释放锁
+      releaseLock();
       showNotice(
         t("chat:messages.conversationNotReady", "对话尚未就绪，请稍后重试。"),
         "warning",
@@ -1479,11 +1556,16 @@ export default function ChatSidebar({
       return;
     }
 
-    sendingSessionIdRef.current = targetSessionId;
+    // 初始化状态机上下文
+    stateMachine.current.initContext(targetSessionId);
+    const ctx = stateMachine.current.getContext()!;
+    ctx.lockAcquired = true;
+
     logger.debug("[ChatSidebar] 开始发送消息到会话:", targetSessionId);
 
     const messageId = generateUUID("msg");
     const createdAt = Date.now();
+    finishReasonRef.current = null;
 
     const imageParts = hasReadyAttachments
       ? await Promise.all(
@@ -1557,7 +1639,10 @@ export default function ChatSidebar({
       void updateStreamingFlag(targetSessionId, true);
     } catch (error) {
       logger.error("[ChatSidebar] 发送消息失败:", error);
-      sendingSessionIdRef.current = null;
+
+      // 使用状态机清理上下文
+      stateMachine.current.clearContext();
+
       if (storageForRollback) {
         try {
           await storageForRollback.deleteMessage(messageId);
@@ -1576,6 +1661,12 @@ export default function ChatSidebar({
       );
     } finally {
       if (!lockTransferredToStream) {
+        // 如果锁没有转移到流式响应，清理状态机并释放锁
+        const ctx = stateMachine.current.getContext();
+        if (ctx) {
+          void updateStreamingFlag(ctx.conversationId, false);
+          stateMachine.current.clearContext();
+        }
         releaseLock();
       }
     }
@@ -1594,8 +1685,10 @@ export default function ChatSidebar({
     if (!isChatStreaming) return;
 
     logger.info("[ChatSidebar] 静默停止流式传输");
-    const targetConversationId =
-      activeConversationId ?? sendingSessionIdRef.current;
+
+    // 使用状态机获取上下文
+    const ctx = stateMachine.current.getContext();
+    const targetConversationId = activeConversationId ?? ctx?.conversationId;
 
     stop();
 
@@ -1603,7 +1696,11 @@ export default function ChatSidebar({
       void updateStreamingFlag(targetConversationId, false);
     }
 
-    sendingSessionIdRef.current = null;
+    // 清理状态机上下文
+    if (ctx) {
+      stateMachine.current.clearContext();
+    }
+
     releaseLock();
   }, [
     activeConversationId,
@@ -1616,32 +1713,45 @@ export default function ChatSidebar({
   const handleCancel = useCallback(async () => {
     if (!isChatStreaming) return;
 
-    logger.info("[ChatSidebar] 用户取消聊天");
-
-    const targetConversationId =
-      activeConversationId ?? sendingSessionIdRef.current;
-
-    stop();
-
-    if (!targetConversationId) {
-      sendingSessionIdRef.current = null;
-      releaseLock();
+    // 使用状态机获取上下文
+    const ctx = stateMachine.current.getContext();
+    if (!ctx) {
+      logger.warn("[ChatSidebar] handleCancel: 没有状态机上下文");
       return;
     }
 
+    logger.info("[ChatSidebar] 用户取消聊天", {
+      conversationId: ctx.conversationId,
+    });
+
+    // 中止请求
+    stop();
+
     try {
-      await updateStreamingFlag(targetConversationId, false);
-    } finally {
-      sendingSessionIdRef.current = null;
+      // 等待工具队列清空（确保工具不会继续执行）
+      logger.info("[ChatSidebar] handleCancel: 等待工具队列清空");
+      await toolQueue.current.drain();
+      logger.info("[ChatSidebar] handleCancel: 工具队列已清空");
+    } catch (error) {
+      logger.warn("[ChatSidebar] handleCancel: 工具队列清空失败", { error });
+    }
+
+    // 释放锁
+    if (ctx.lockAcquired) {
       releaseLock();
     }
-  }, [
-    activeConversationId,
-    isChatStreaming,
-    updateStreamingFlag,
-    stop,
-    releaseLock,
-  ]);
+
+    // 更新流式状态
+    try {
+      await updateStreamingFlag(ctx.conversationId, false);
+    } catch (error) {
+      logger.error("[ChatSidebar] handleCancel: 更新流式状态失败", { error });
+    }
+
+    // 清理上下文
+    stateMachine.current.clearContext();
+    logger.info("[ChatSidebar] handleCancel: 聊天已取消");
+  }, [isChatStreaming, stop, releaseLock, updateStreamingFlag]);
 
   const handleRetry = useCallback(() => {
     if (!lastMessageIsUser) return;
@@ -1885,8 +1995,9 @@ export default function ChatSidebar({
   useEffect(
     () => () => {
       const streaming = status === "submitted" || status === "streaming";
-      const targetConversationId =
-        activeConversationId ?? sendingSessionIdRef.current;
+      // 使用状态机获取上下文
+      const ctx = stateMachine.current.getContext();
+      const targetConversationId = activeConversationId ?? ctx?.conversationId;
       if (!streaming || !targetConversationId) return;
 
       void updateStreamingFlag(targetConversationId, false);
