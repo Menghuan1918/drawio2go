@@ -7,9 +7,15 @@ import EmptyState from "./EmptyState";
 import MessageItem from "./MessageItem";
 
 const SCROLL_BOTTOM_THRESHOLD = 50;
-const ACTIVE_TOOL_STATES = new Set(["input-streaming", "input-available", "call"]);
+const ACTIVE_TOOL_STATES = new Set([
+  "input-streaming",
+  "input-available",
+  "call",
+]);
 
-function getLastAssistantMessage(messages: ChatUIMessage[]): ChatUIMessage | null {
+function getLastAssistantMessage(
+  messages: ChatUIMessage[],
+): ChatUIMessage | null {
   for (let i = messages.length - 1; i >= 0; i--) {
     const message = messages[i];
     if (message?.role === "assistant") return message;

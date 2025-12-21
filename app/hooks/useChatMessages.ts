@@ -84,6 +84,12 @@ export interface UseChatMessagesOptions {
   messages: ChatUIMessage[];
 
   /**
+   * 消息元数据补全函数
+   * - 确保每条消息都有完整的 metadata（modelName, createdAt）
+   */
+  ensureMessageMetadata: (message: ChatUIMessage) => ChatUIMessage;
+
+  /**
    * 会话 ID 解析函数
    * - 将 temp-xxx 转换为真实 ID
    */
@@ -155,6 +161,7 @@ export function useChatMessages(
     conversationMessages,
     setMessages,
     messages,
+    ensureMessageMetadata,
     resolveConversationId,
   } = options;
 
@@ -254,10 +261,13 @@ export function useChatMessages(
   /**
    * 展示用消息列表（过滤系统消息）
    * - 系统消息不展示在 UI 中
+   * - 应用 ensureMessageMetadata 确保每条消息都有完整的 metadata
    */
   const displayMessages = useMemo(() => {
-    return messages.filter((msg) => msg.role !== "system");
-  }, [messages]);
+    return messages
+      .filter((msg) => msg.role !== "system")
+      .map(ensureMessageMetadata);
+  }, [messages, ensureMessageMetadata]);
 
   // ========== 流式状态管理 ========== //
 

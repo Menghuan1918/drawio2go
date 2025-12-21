@@ -416,7 +416,7 @@ export default function ChatSidebar({
 }: ChatSidebarProps) {
   // ========== 基础状态 ==========
   const [input, setInput] = useState("");
-  const [isCanvasContextEnabled, setIsCanvasContextEnabled] = useState(false);
+  const [isCanvasContextEnabled, setIsCanvasContextEnabled] = useState(true);
   const isCanvasContextEnabledRef = useRef(false);
   const [expandedToolCalls, setExpandedToolCalls] = useState<
     Record<string, boolean>
@@ -998,17 +998,21 @@ export default function ChatSidebar({
           llmConfigRef.current ??
           DEFAULT_LLM_CONFIG;
 
+        // 确保每次请求都包含 conversationId 和 projectUuid
+        // 这对于工具调用后的自动请求尤其重要,因为 useChat 不会保留原始 body
         return {
           body: {
             ...bodyRest,
             config,
             tools: toolSchemas,
             messages: requestMessages,
+            conversationId: activeConversationId,
+            projectUuid: resolvedProjectUuid,
           },
         };
       },
     });
-  }, [frontendTools, selectionRef]);
+  }, [frontendTools, selectionRef, activeConversationId, resolvedProjectUuid]);
 
   // ========== useChat 集成 ==========
   const {
@@ -1356,6 +1360,7 @@ export default function ChatSidebar({
       );
     },
     messages: messages as unknown as ChatUIMessage[],
+    ensureMessageMetadata,
     resolveConversationId,
   });
 

@@ -30,7 +30,7 @@ describe("toErrorString", () => {
     err1.cause = err2;
     err2.cause = err1; // 形成循环
     expect(toErrorString(err1)).toBe(
-      "error1\nCaused by: error2\nCaused by: [Circular]"
+      "error1\nCaused by: error2\nCaused by: [Circular]",
     );
   });
 });
