@@ -9,6 +9,7 @@ const net = require("net");
 const SQLiteManager = require("./storage/sqlite-manager");
 const mcpServer = require("./mcp/mcp-server");
 const { getRandomAvailablePort } = require("./mcp/mcp-port-utils");
+const { toErrorString } = require("./utils/to-error-string");
 
 let mainWindow;
 let storageManager = null;
@@ -493,7 +494,10 @@ app.whenReady().then(async () => {
     initMcpToolBridge();
   } catch (error) {
     console.error("[Electron] 启动失败:", error);
-    dialog.showErrorBox("启动失败", `无法启动应用服务器: ${error.message}`);
+    dialog.showErrorBox(
+      "启动失败",
+      `无法启动应用服务器: ${toErrorString(error)}`,
+    );
     app.quit();
   }
 });
@@ -611,7 +615,7 @@ ipcMain.handle("save-diagram", async (event, xml, defaultPath) => {
     console.error("保存文件错误:", error);
     return {
       success: false,
-      message: error.message,
+      message: toErrorString(error),
     };
   }
 });
@@ -644,7 +648,7 @@ ipcMain.handle("load-diagram", async () => {
     console.error("加载文件错误:", error);
     return {
       success: false,
-      message: error.message,
+      message: toErrorString(error),
     };
   }
 });
@@ -922,7 +926,7 @@ ipcMain.handle("write-file", async (event, filePath, data) => {
     return { success: true };
   } catch (error) {
     console.error("写入文件错误:", error);
-    return { success: false, error: error.message };
+    return { success: false, error: toErrorString(error) };
   }
 });
 
@@ -1107,7 +1111,7 @@ ipcMain.handle("enable-selection-watcher", async () => {
     console.error("启用 DrawIO 选区监听失败:", error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : "执行脚本失败",
+      message: toErrorString(error) || "执行脚本失败",
     };
   }
 });

@@ -2,6 +2,7 @@ import { ErrorCodes } from "@/app/errors/error-codes";
 import i18n from "@/app/i18n/client";
 import { MAX_SVG_BLOB_BYTES } from "./constants";
 import { buildPageMetadataFromXml } from "./page-metadata";
+import { toErrorString } from "../error-handler";
 
 export type BinaryLike =
   | Blob
@@ -44,7 +45,7 @@ export function parsePageNamesJson(
       `[${ErrorCodes.STORAGE_INVALID_PAGE_NAMES}] ${i18n.t(
         "errors:storage.invalidPageNames",
         {
-          message: error instanceof Error ? error.message : String(error),
+          message: toErrorString(error),
         },
       )}`,
     );

@@ -2,6 +2,7 @@ import { inflateRaw } from "pako";
 import { ErrorCodes, type ErrorCode } from "@/app/errors/error-codes";
 import type { XMLValidationResult } from "@/app/types/drawio-tools";
 import { getDomParser } from "./dom-parser-cache";
+import { toErrorString } from "./error-handler";
 
 const DATA_URI_PREFIX = "data:image/svg+xml;base64,";
 const DIAGRAM_TAG_REGEX = /<diagram\b([^>]*)>([\s\S]*?)<\/diagram>/gi;
@@ -38,7 +39,7 @@ export function validateXMLFormat(xml: string): XMLValidationResult {
   } catch (error) {
     return {
       valid: false,
-      error: error instanceof Error ? error.message : "XML 解析异常",
+      error: toErrorString(error) || "XML 解析异常",
     };
   }
 }
@@ -73,7 +74,7 @@ export function normalizeDiagramXml(payload: string): string {
     try {
       resolvedXml = decodeBase64(base64Content);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = toErrorString(error);
       throw buildXmlError(
         ErrorCodes.XML_DECODE_FAILED,
         `Failed to decode Base64 XML: ${message}`,
@@ -85,7 +86,7 @@ export function normalizeDiagramXml(payload: string): string {
     try {
       decoded = decodeBase64(trimmed);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = toErrorString(error);
       throw buildXmlError(
         ErrorCodes.XML_DECODE_FAILED,
         `Failed to decode Base64 XML: ${message}`,

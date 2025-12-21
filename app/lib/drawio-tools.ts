@@ -22,7 +22,7 @@ import {
   type XmlContext,
 } from "./storage/writers";
 import { createLogger } from "@/lib/logger";
-import { toErrorString } from "@/lib/error-handler";
+import { toErrorString } from "./error-handler";
 import type { RefObject } from "react";
 import type { DrawioEditorRef } from "@/app/components/DrawioEditorNative";
 
@@ -130,7 +130,7 @@ export async function getDrawioXML(): Promise<GetXMLResult> {
     logger.error("读取 XML 失败", { error });
     return {
       success: false,
-      error: error instanceof Error ? error.message : "读取数据失败",
+      error: toErrorString(error) || "读取数据失败",
     };
   }
 }
@@ -348,7 +348,7 @@ export async function replaceDrawioXML(
     return {
       success: false,
       message: "操作失败",
-      error: error instanceof Error ? error.message : "写入数据失败",
+      error: toErrorString(error) || "写入数据失败",
     };
   } finally {
     _drawioXmlSnapshot = null;
@@ -555,9 +555,7 @@ function compareXML(
   } catch (error) {
     return {
       isConsistent: normalize(xml1) === normalize(xml2),
-      details: `DOM 比较失败: ${
-        error instanceof Error ? error.message : String(error)
-      }`,
+      details: `DOM 比较失败: ${toErrorString(error)}`,
     };
   }
 }

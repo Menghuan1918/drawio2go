@@ -4,6 +4,7 @@ import { AI_TOOL_NAMES } from "@/lib/constants/tool-names";
 import { createLogger } from "@/lib/logger";
 
 import { normalizeDiagramXml, validateXMLFormat } from "./drawio-xml-utils";
+import { toErrorString } from "./error-handler";
 import {
   drawioEditBatchInputSchema,
   drawioOverwriteInputSchema,
@@ -32,7 +33,7 @@ export interface FrontendToolContext {
     xml: string,
     options?: { description?: string },
   ) => Promise<{ success: boolean; error?: string }>;
-  onVersionSnapshot?: (description: string) => void;
+  onVersionSnapshot?: (description: string) => Promise<void>;
 }
 
 function ensureDomParser(): DOMParser {
@@ -145,7 +146,7 @@ function evaluateXPath(document: Document, expression: string): XPathResult {
       null,
     );
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
+    const errorMsg = toErrorString(error);
     throw new Error(`Invalid XPath expression: "${expression}". ${errorMsg}`);
   }
 }
@@ -170,7 +171,7 @@ function selectNodes(document: Document, expression: string): Node[] {
     }
     return nodes;
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
+    const errorMsg = toErrorString(error);
     throw new Error(`Invalid XPath expression: "${expression}". ${errorMsg}`);
   }
 }
@@ -734,7 +735,7 @@ async function executeDrawioEditBatchFrontend(
     try {
       applyOperation(document, operation);
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : "Unknown error";
+      const errorMsg = toErrorString(error) || "Unknown error";
       const locatorInfo = operation.id
         ? `id="${operation.id}"`
         : `xpath="${operation.xpath}"`;
@@ -750,7 +751,7 @@ async function executeDrawioEditBatchFrontend(
   const updatedXml = serializer.serializeToString(document);
 
   const finalDescription = description?.trim() || "Batch edit diagram";
-  context.onVersionSnapshot?.(finalDescription);
+  await context.onVersionSnapshot?.(finalDescription);
 
   const replaceResult = await context.replaceDrawioXML(updatedXml, {
     description: finalDescription,
@@ -803,7 +804,7 @@ async function executeDrawioOverwriteFrontend(
   }
 
   const finalDescription = description?.trim() || "Overwrite entire diagram";
-  context.onVersionSnapshot?.(finalDescription);
+  await context.onVersionSnapshot?.(finalDescription);
 
   const result = await context.replaceDrawioXML(drawio_xml, {
     description: finalDescription,

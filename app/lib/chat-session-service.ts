@@ -10,6 +10,7 @@ import type {
   ToolInvocationState,
 } from "@/app/types/chat";
 import { createLogger, type Logger } from "@/lib/logger";
+import { toErrorString } from "./error-handler";
 
 const logger = createLogger("chat-session-service");
 
@@ -674,7 +675,7 @@ async function migrateConversationCaches(
   } catch (error) {
     return {
       resolvedId: originalId,
-      error: error instanceof Error ? error.message : "保存前校验会话失败",
+      error: toErrorString(error) || "保存前校验会话失败",
     };
   }
 }
@@ -750,7 +751,7 @@ async function persistWithRetry(
       logger.error("保存消息失败", { conversationId, attempt, error });
 
       if (attempt >= maxRetries) {
-        const message = error instanceof Error ? error.message : "消息保存失败";
+        const message = toErrorString(error) || "消息保存失败";
         return { success: false, error: message };
       }
 

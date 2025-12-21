@@ -56,6 +56,7 @@ import type { McpConfig, McpToolRequest } from "@/app/types/mcp";
 import { McpExposureOverlay } from "@/app/components/mcp";
 import { useImageAttachments } from "@/hooks/useImageAttachments";
 import { fileToDataUrl } from "@/lib/image-message-utils";
+import { toErrorString } from "@/lib/error-handler";
 
 import ChatHistoryView from "./chat/ChatHistoryView";
 import ChatShell from "./chat/ChatShell";
@@ -686,92 +687,77 @@ export default function ChatSidebar({
 
   // ========== 前端工具配置 ==========
   const currentToolCallIdRef = useRef<string | null>(null);
-  const autoVersionSnapshotQueueRef = useRef<Promise<void>>(Promise.resolve());
 
-  const enqueueAutoVersionSnapshot = useCallback(
-    (description: string) => {
+  /**
+   * 创建自动版本快照（同步阻塞）
+   * 在 AI 工具执行前调用，等待版本快照（含 SVG 导出）完成后再执行工具
+   */
+  const createAutoVersionSnapshot = useCallback(
+    async (description: string): Promise<void> => {
       const normalizedDescription = description?.trim() ?? "";
       const projectUuid = resolvedProjectUuid;
-      const xmlSnapshotPromise = createDrawioXmlSnapshot(editorRef);
 
-      autoVersionSnapshotQueueRef.current = autoVersionSnapshotQueueRef.current
-        .catch(() => undefined)
-        .then(async () => {
-          try {
-            const raw = await getSetting("version.autoVersionOnAIEdit");
-            if (!isEnabledSetting(raw)) return;
+      // 检查设置是否启用自动版本
+      const raw = await getSetting("version.autoVersionOnAIEdit");
+      if (!isEnabledSetting(raw)) return;
 
-            let versions = await getAllXMLVersions(projectUuid);
-            let parentVersion = pickLatestMainVersion(versions);
-            if (!parentVersion) {
-              const shouldCreateDefault = !versions.some(
-                (version) => version.semantic_version === DEFAULT_FIRST_VERSION,
-              );
+      // 预先捕获 XML 快照
+      const xmlSnapshot = await createDrawioXmlSnapshot(editorRef);
 
-              if (shouldCreateDefault) {
-                await createHistoricalVersion(
-                  projectUuid,
-                  DEFAULT_FIRST_VERSION,
-                  normalizedDescription || undefined,
-                  undefined,
-                  {
-                    xmlSnapshotPromise,
-                    skipSvgExport: true,
-                  },
-                );
-              }
+      let versions = await getAllXMLVersions(projectUuid);
+      let parentVersion = pickLatestMainVersion(versions);
 
-              versions = await getAllXMLVersions(projectUuid);
-              parentVersion = pickLatestMainVersion(versions);
-            }
+      // 如果没有主版本，先创建默认版本
+      if (!parentVersion) {
+        const shouldCreateDefault = !versions.some(
+          (version) => version.semantic_version === DEFAULT_FIRST_VERSION,
+        );
 
-            if (!parentVersion) {
-              // 极端降级：仍然没有主版本（创建失败或竞态），保持“降级不阻塞”策略
-              throw new Error(t("toasts.autoVersionSnapshotMissingParent"));
-            }
+        if (shouldCreateDefault) {
+          await createHistoricalVersion(
+            projectUuid,
+            DEFAULT_FIRST_VERSION,
+            normalizedDescription || undefined,
+            editorRef, // 传入 editorRef 用于 SVG 导出
+            {
+              xmlSnapshot, // 使用预捕获的 XML
+            },
+          );
+        }
 
-            const historicalVersions = versions.filter(
-              (version) => version.semantic_version !== WIP_VERSION,
-            );
-            const nextSubVersion = getNextSubVersion(
-              historicalVersions,
-              parentVersion,
-            );
+        versions = await getAllXMLVersions(projectUuid);
+        parentVersion = pickLatestMainVersion(versions);
+      }
 
-            await createHistoricalVersion(
-              projectUuid,
-              nextSubVersion,
-              normalizedDescription || undefined,
-              undefined,
-              {
-                xmlSnapshotPromise,
-                skipSvgExport: true,
-              },
-            );
-          } catch (error) {
-            const message =
-              extractErrorMessage(error) ??
-              (error instanceof Error ? error.message : String(error)) ??
-              t("toasts.unknownError");
-            showNotice(
-              t("toasts.autoVersionSnapshotFailed", { error: message }),
-              "warning",
-            );
-            logger.warn(
-              "[ChatSidebar] AI 自动版本快照失败（已降级，不阻塞 AI 编辑）",
-              { error, projectUuid, description: normalizedDescription },
-            );
-          }
-        });
+      if (!parentVersion) {
+        throw new Error(t("toasts.autoVersionSnapshotMissingParent"));
+      }
+
+      // 计算子版本号并创建版本
+      const historicalVersions = versions.filter(
+        (version) => version.semantic_version !== WIP_VERSION,
+      );
+      const nextSubVersion = getNextSubVersion(
+        historicalVersions,
+        parentVersion,
+      );
+
+      await createHistoricalVersion(
+        projectUuid,
+        nextSubVersion,
+        normalizedDescription || undefined,
+        editorRef, // 传入 editorRef 用于 SVG 导出
+        {
+          xmlSnapshot, // 使用预捕获的 XML
+        },
+      );
     },
     [
       createHistoricalVersion,
       editorRef,
-      extractErrorMessage,
       getAllXMLVersions,
       getSetting,
       resolvedProjectUuid,
-      showNotice,
       t,
     ],
   );
@@ -785,11 +771,32 @@ export default function ChatSidebar({
           description: ctxOptions?.description,
         });
       },
-      onVersionSnapshot: (description) => {
-        enqueueAutoVersionSnapshot(description);
+      onVersionSnapshot: async (description) => {
+        try {
+          await createAutoVersionSnapshot(description);
+        } catch (error) {
+          // 降级处理：快照失败仅警告，不阻止工具执行
+          const message =
+            extractErrorMessage(error) ??
+            (toErrorString(error) || t("toasts.unknownError"));
+          showNotice(
+            t("toasts.autoVersionSnapshotFailed", { error: message }),
+            "warning",
+          );
+          logger.warn(
+            "[ChatSidebar] AI 自动版本快照失败（已降级，不阻塞 AI 编辑）",
+            { error, description },
+          );
+        }
       },
     };
-  }, [editorRef, enqueueAutoVersionSnapshot]);
+  }, [
+    editorRef,
+    createAutoVersionSnapshot,
+    extractErrorMessage,
+    showNotice,
+    t,
+  ]);
 
   const frontendTools = useMemo(
     () => createFrontendDrawioTools(frontendToolContext),
@@ -1180,9 +1187,7 @@ export default function ChatSidebar({
           });
         } catch (error) {
           const message =
-            extractErrorMessage(error) ??
-            (error instanceof Error ? error.message : String(error)) ??
-            "未知错误";
+            extractErrorMessage(error) ?? (toErrorString(error) || "未知错误");
           api.sendToolResponse(request.requestId, {
             success: false,
             error: message,

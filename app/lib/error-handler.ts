@@ -73,32 +73,107 @@ function resolveI18nKeyFromCode(code: ErrorCode): string {
  * @returns 规范化的错误字符串
  */
 export function toErrorString(error: unknown): string {
-  if (typeof error === "string") {
-    return error;
-  }
-  if (error instanceof Error) {
-    return error.message;
-  }
-  if (error && typeof error === "object") {
-    if (
-      "message" in error &&
-      typeof (error as { message?: unknown }).message === "string"
-    ) {
-      return (error as { message: string }).message;
+  const seen = new WeakSet<object>();
+
+  const inner = (value: unknown): string => {
+    if (typeof value === "string") {
+      return value;
     }
-    if (
-      "error" in error &&
-      typeof (error as { error?: unknown }).error === "string"
-    ) {
-      return (error as { error: string }).error;
+
+    const formatErrorLike = (err: {
+      name?: unknown;
+      message?: unknown;
+      stack?: unknown;
+      cause?: unknown;
+    }): string => {
+      const name = typeof err.name === "string" ? err.name : "";
+      const message = typeof err.message === "string" ? err.message : "";
+      const stack = typeof err.stack === "string" ? err.stack : "";
+      const cause = err.cause;
+
+      if (message) {
+        if (cause !== undefined) {
+          return `${message}\nCaused by: ${inner(cause)}`;
+        }
+        return message;
+      }
+
+      if (stack) {
+        return stack;
+      }
+
+      if (name) {
+        return name;
+      }
+
+      if (cause !== undefined) {
+        return `Caused by: ${inner(cause)}`;
+      }
+
+      return "[Unknown error]";
+    };
+
+    // 1) Error 对象优先
+    if (value instanceof Error) {
+      return formatErrorLike(value);
     }
-    try {
-      return JSON.stringify(error);
-    } catch {
-      return String(error);
+
+    if (value && typeof value === "object") {
+      if (seen.has(value)) {
+        return "[Circular]";
+      }
+
+      seen.add(value);
+      try {
+        const obj = value as Record<string, unknown>;
+
+        // 2) 对象有 message 字符串
+        if (typeof obj.message === "string") {
+          return obj.message;
+        }
+
+        // 3) 对象有 error 字符串
+        if (typeof obj.error === "string") {
+          return obj.error;
+        }
+
+        // 4) 其他对象：优先 JSON.stringify，但处理 Error/空对象/不可序列化场景
+        let json: string;
+        try {
+          json = JSON.stringify(value);
+        } catch {
+          return String(value);
+        }
+
+        if (json === "{}") {
+          const errorLike =
+            typeof obj.name === "string" ||
+            typeof obj.stack === "string" ||
+            "cause" in obj;
+
+          if (errorLike) {
+            return formatErrorLike(obj);
+          }
+
+          const tag = Object.prototype.toString.call(value);
+          const isPlainObject = tag === "[object Object]";
+          if (isPlainObject && Object.keys(obj).length === 0) {
+            return "[Empty object]";
+          }
+
+          return String(value);
+        }
+
+        return json;
+      } finally {
+        seen.delete(value);
+      }
     }
-  }
-  return String(error);
+
+    return String(value);
+  };
+
+  return inner(error);
 }
 
 /**

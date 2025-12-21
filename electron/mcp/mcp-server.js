@@ -10,6 +10,7 @@ const { McpServer } = require("@modelcontextprotocol/sdk/server/mcp.js");
 const {
   StreamableHTTPServerTransport,
 } = require("@modelcontextprotocol/sdk/server/streamableHttp.js");
+const { toErrorString } = require("../utils/to-error-string");
 
 /**
  * @typedef {"all" | "vertices" | "edges"} DrawioReadFilter
@@ -290,7 +291,7 @@ function registerDrawioTools(server) {
 
         return { content: [{ type: "text", text: xml }] };
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
+        const message = toErrorString(err);
         return {
           isError: true,
           content: [{ type: "text", text: message }],
@@ -313,7 +314,7 @@ function registerDrawioTools(server) {
           content: [{ type: "text", text: JSON.stringify(result) }],
         };
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
+        const message = toErrorString(err);
         return {
           isError: true,
           content: [{ type: "text", text: JSON.stringify({ error: message }) }],
@@ -336,7 +337,7 @@ function registerDrawioTools(server) {
           content: [{ type: "text", text: JSON.stringify(result) }],
         };
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
+        const message = toErrorString(err);
         return {
           isError: true,
           content: [{ type: "text", text: JSON.stringify({ error: message }) }],
@@ -455,7 +456,7 @@ async function start(host, port) {
 
       await transport.handleRequest(req, res, req.body);
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      const message = toErrorString(err);
       sendJsonRpcError(res, 500, -32000, message);
     }
   });
@@ -474,7 +475,7 @@ async function start(host, port) {
       }
       await transport.handleRequest(req, res);
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      const message = toErrorString(err);
       sendJsonRpcError(res, 500, -32000, message);
     }
   });
@@ -493,7 +494,7 @@ async function start(host, port) {
       }
       await transport.handleRequest(req, res);
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      const message = toErrorString(err);
       sendJsonRpcError(res, 500, -32000, message);
     }
   });
