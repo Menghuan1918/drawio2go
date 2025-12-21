@@ -9,11 +9,10 @@ import {
 import { SquareMousePointer } from "lucide-react";
 import { useAppTranslation } from "@/app/i18n/hooks";
 
-export interface CanvasContextButtonProps
-  extends Omit<
-    ButtonProps,
-    "children" | "variant" | "aria-label" | "aria-pressed" | "onPress"
-  > {
+export interface CanvasContextButtonProps extends Omit<
+  ButtonProps,
+  "children" | "variant" | "aria-label" | "aria-pressed" | "onPress"
+> {
   enabled: boolean;
   onPress?: () => void;
 }
@@ -46,4 +45,3 @@ export default function CanvasContextButton({
     </TooltipRoot>
   );
 }
-

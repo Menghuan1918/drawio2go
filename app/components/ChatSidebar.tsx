@@ -239,7 +239,8 @@ function injectPrefixIntoLastUserMessage(options: {
   };
 
   const parts = Array.isArray(target.parts) ? target.parts : null;
-  const originalContent = typeof target.content === "string" ? target.content : "";
+  const originalContent =
+    typeof target.content === "string" ? target.content : "";
 
   const mergeText = (text: string) => (text ? `${prefix}\n${text}` : prefix);
 
@@ -255,7 +256,8 @@ function injectPrefixIntoLastUserMessage(options: {
 
     if (firstTextIndex >= 0) {
       const textPart = parts[firstTextIndex] as { text?: unknown };
-      const originalText = typeof textPart.text === "string" ? textPart.text : "";
+      const originalText =
+        typeof textPart.text === "string" ? textPart.text : "";
 
       const nextParts = parts.map((part, index) => {
         if (index !== firstTextIndex) return part;

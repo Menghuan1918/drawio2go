@@ -144,23 +144,20 @@ export function McpConfigDialog({
     }
   }, []);
 
-  const handlePortModeChange = useCallback(
-    (value: Selection | Key | null) => {
-      const selection = normalizeSelection(value);
-      const key = selection ? extractSingleKey(selection) : null;
-      if (key !== "manual" && key !== "random") return;
+  const handlePortModeChange = useCallback((value: Selection | Key | null) => {
+    const selection = normalizeSelection(value);
+    const key = selection ? extractSingleKey(selection) : null;
+    if (key !== "manual" && key !== "random") return;
 
-      const nextMode = key as PortMode;
-      setPortMode(nextMode);
-      setErrors((prev) => {
-        if (!prev.port) return prev;
-        const next = { ...prev };
-        delete next.port;
-        return next;
-      });
-    },
-    [],
-  );
+    const nextMode = key as PortMode;
+    setPortMode(nextMode);
+    setErrors((prev) => {
+      if (!prev.port) return prev;
+      const next = { ...prev };
+      delete next.port;
+      return next;
+    });
+  }, []);
 
   const isFormValid = useMemo(() => {
     if (!canUseMcp) return false;
