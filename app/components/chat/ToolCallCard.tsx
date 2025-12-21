@@ -49,7 +49,9 @@ export default function ToolCallCard({
 
   // 判断是否为进行中状态（正在调用或等待执行）
   const isInProgress =
-    part.state === "input-streaming" || part.state === "input-available";
+    part.state === "input-streaming" ||
+    part.state === "input-available" ||
+    part.state === "call";
 
   // 通用复制处理函数
   const handleCopy = async (

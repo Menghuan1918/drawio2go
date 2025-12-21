@@ -3,11 +3,13 @@
 import {
   type ReactNode,
   type FormEvent,
+  type Key,
   useCallback,
   useEffect,
   useMemo,
   useState,
 } from "react";
+import type { Selection } from "react-aria-components";
 import {
   Alert,
   Button,
@@ -17,8 +19,8 @@ import {
   FieldError,
   Input,
   Label,
-  Radio,
-  RadioGroup,
+  ListBox,
+  Select,
   Spinner,
   Surface,
   TextField,
@@ -26,6 +28,7 @@ import {
 
 import type { McpConfig, McpHost } from "@/app/types/mcp";
 import { useOperationToast } from "@/app/hooks/useOperationToast";
+import { extractSingleKey, normalizeSelection } from "@/app/lib/select-utils";
 
 /**
  * MCP 配置弹窗（Popover/Dropdown）Props
@@ -154,9 +157,21 @@ export function McpConfigDialog({
     }
   }, [extractErrorMessage, handlePortChange, isBusy, pushErrorToast]);
 
+  const handleHostChange = useCallback((value: Selection | Key | null) => {
+    const selection = normalizeSelection(value);
+    const key = selection ? extractSingleKey(selection) : null;
+    if (key === "127.0.0.1" || key === "0.0.0.0") {
+      setHost(key as McpHost);
+    }
+  }, []);
+
   const handlePortModeChange = useCallback(
-    (value: string) => {
-      const nextMode = value === "random" ? "random" : "manual";
+    (value: Selection | Key | null) => {
+      const selection = normalizeSelection(value);
+      const key = selection ? extractSingleKey(selection) : null;
+      if (key !== "manual" && key !== "random") return;
+
+      const nextMode = key as PortMode;
       setPortMode(nextMode);
 
       if (nextMode === "random") {
@@ -246,35 +261,44 @@ export function McpConfigDialog({
             ) : null}
 
             <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-              <RadioGroup
-                value={host}
-                orientation="horizontal"
-                onChange={(value) => setHost(value as McpHost)}
+              <Select
+                className="w-full"
+                selectedKey={host}
+                onSelectionChange={handleHostChange}
                 isDisabled={!canUseMcp || isBusy}
               >
                 <Label>监听地址</Label>
+                <Select.Trigger className="mt-2 w-full">
+                  <Select.Value />
+                  <Select.Indicator />
+                </Select.Trigger>
+                <Select.Popover>
+                  <ListBox>
+                    <ListBox.Item id="127.0.0.1" textValue="127.0.0.1（本地）">
+                      <div className="flex min-w-0 flex-col">
+                        <span className="truncate">127.0.0.1（本地）</span>
+                        <Description className="text-xs text-default-500">
+                          仅本机可访问，安全性更高
+                        </Description>
+                      </div>
+                      <ListBox.ItemIndicator />
+                    </ListBox.Item>
+
+                    <ListBox.Item id="0.0.0.0" textValue="0.0.0.0（局域网）">
+                      <div className="flex min-w-0 flex-col">
+                        <span className="truncate">0.0.0.0（局域网）</span>
+                        <Description className="text-xs text-default-500">
+                          局域网设备可访问
+                        </Description>
+                      </div>
+                      <ListBox.ItemIndicator />
+                    </ListBox.Item>
+                  </ListBox>
+                </Select.Popover>
                 <Description className="mt-2">
                   选择 MCP 服务绑定的 IP 地址。
                 </Description>
-
-                <Radio value="127.0.0.1">
-                  <Radio.Content>
-                    <Label>127.0.0.1（本地）</Label>
-                    <Description className="text-xs text-default-500">
-                      仅本机可访问，安全性更高
-                    </Description>
-                  </Radio.Content>
-                </Radio>
-
-                <Radio value="0.0.0.0">
-                  <Radio.Content>
-                    <Label>0.0.0.0（局域网）</Label>
-                    <Description className="text-xs text-default-500">
-                      局域网设备可访问
-                    </Description>
-                  </Radio.Content>
-                </Radio>
-              </RadioGroup>
+              </Select>
 
               {host === "0.0.0.0" ? (
                 <Alert status="warning">
@@ -286,35 +310,43 @@ export function McpConfigDialog({
                 </Alert>
               ) : null}
 
-              <RadioGroup
-                value={portMode}
-                orientation="horizontal"
-                onChange={handlePortModeChange}
+              <Select
+                className="w-full"
+                selectedKey={portMode}
+                onSelectionChange={handlePortModeChange}
                 isDisabled={!canUseMcp || isBusy}
               >
                 <Label>端口模式</Label>
+                <Select.Trigger className="mt-2 w-full">
+                  <Select.Value />
+                  <Select.Indicator />
+                </Select.Trigger>
+                <Select.Popover>
+                  <ListBox>
+                    <ListBox.Item id="manual" textValue="指定">
+                      <div className="flex min-w-0 flex-col">
+                        <span className="truncate">指定</span>
+                        <Description className="text-xs text-default-500">
+                          手动输入端口
+                        </Description>
+                      </div>
+                      <ListBox.ItemIndicator />
+                    </ListBox.Item>
+                    <ListBox.Item id="random" textValue="随机">
+                      <div className="flex min-w-0 flex-col">
+                        <span className="truncate">随机</span>
+                        <Description className="text-xs text-default-500">
+                          自动选择可用端口
+                        </Description>
+                      </div>
+                      <ListBox.ItemIndicator />
+                    </ListBox.Item>
+                  </ListBox>
+                </Select.Popover>
                 <Description className="mt-2">
                   选择“随机端口”会自动选择 8000-9000 范围内的可用端口。
                 </Description>
-
-                <Radio value="manual">
-                  <Radio.Content>
-                    <Label>指定</Label>
-                    <Description className="text-xs text-default-500">
-                      手动输入端口
-                    </Description>
-                  </Radio.Content>
-                </Radio>
-
-                <Radio value="random">
-                  <Radio.Content>
-                    <Label>随机</Label>
-                    <Description className="text-xs text-default-500">
-                      自动选择可用端口
-                    </Description>
-                  </Radio.Content>
-                </Radio>
-              </RadioGroup>
+              </Select>
 
               <TextField
                 isRequired

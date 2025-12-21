@@ -7,6 +7,61 @@ import EmptyState from "./EmptyState";
 import MessageItem from "./MessageItem";
 
 const SCROLL_BOTTOM_THRESHOLD = 50;
+const ACTIVE_TOOL_STATES = new Set([
+  "input-streaming",
+  "input-available",
+  "call",
+]);
+
+const getLastAssistantMessage = (
+  messages: ChatUIMessage[],
+): ChatUIMessage | undefined => {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const message = messages[i];
+    if (message?.role === "assistant") return message;
+  }
+  return undefined;
+};
+
+// 检测最后一条 assistant 消息的最后一个 part 是否为「活动的工具调用」
+const isLastPartActiveToolCall = (messages: ChatUIMessage[]): boolean => {
+  const lastAssistantMsg = getLastAssistantMessage(messages);
+  if (!lastAssistantMsg?.parts?.length) return false;
+
+  const lastPart = lastAssistantMsg.parts[lastAssistantMsg.parts.length - 1];
+  const type = (lastPart as { type?: unknown }).type;
+
+  const isToolPart =
+    (typeof type === "string" && type.startsWith("tool-")) ||
+    type === "dynamic-tool";
+
+  if (!isToolPart) return false;
+
+  const state = (lastPart as { state?: unknown }).state;
+  return typeof state === "string" && ACTIVE_TOOL_STATES.has(state);
+};
+
+const shouldSuppressPlaceholderByExistingIndicator = (
+  messages: ChatUIMessage[],
+): boolean => {
+  const lastAssistantMsg = getLastAssistantMessage(messages);
+  if (!lastAssistantMsg?.parts?.length) return false;
+
+  const lastPart = lastAssistantMsg.parts[lastAssistantMsg.parts.length - 1];
+  const type = (lastPart as { type?: unknown }).type;
+
+  // 1) 最后一个区域是活动工具调用：ToolCallCard 自己有扫描动画
+  if (isLastPartActiveToolCall(messages)) return true;
+
+  // 2) 最后一个区域是 text：MessageContent 会在末尾渲染 TypingIndicator
+  if (type === "text") return true;
+
+  // 3) 最后一个区域是 reasoning 且 streaming：ThinkingBlock 自带旋转图标
+  const state = (lastPart as { state?: unknown }).state;
+  if (type === "reasoning" && state === "streaming") return true;
+
+  return false;
+};
 
 interface MessageListProps {
   messages: ChatUIMessage[];
@@ -91,7 +146,13 @@ export default function MessageList({
   // 检查是否正在流式传输且需要显示临时AI消息
   const isStreaming = status === "submitted" || status === "streaming";
   const lastMessage = messages[messages.length - 1];
-  const shouldShowPlaceholderAI = isStreaming && lastMessage?.role === "user";
+
+  // 如果正在流式输出：且（最后一条是 user 或 最后一条是 assistant 但没有任何可见的进行中指示）则显示呼吸球
+  const shouldShowTypingIndicator =
+    isStreaming &&
+    (lastMessage?.role === "user" ||
+      (lastMessage?.role === "assistant" &&
+        !shouldSuppressPlaceholderByExistingIndicator(messages)));
 
   // 识别当前正在流式生成的消息
   const getCurrentStreamingMessageId = () => {
@@ -137,7 +198,7 @@ export default function MessageList({
         />
       ))}
       {/* 流式传输时显示临时AI消息（带打字指示器） */}
-      {shouldShowPlaceholderAI && (
+      {shouldShowTypingIndicator && (
         <MessageItem
           key="temp-ai-placeholder"
           message={placeholderAIMessage}
