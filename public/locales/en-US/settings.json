@@ -239,7 +239,11 @@
       "error": "Test failed. Please check your configuration.",
       "networkError": "Network error. Please check your configuration.",
       "missingModelName": "Please enter a model name first.",
-      "missingProvider": "Provider configuration not found. Please save the provider first."
+      "missingProvider": "Provider configuration not found. Please save the provider first.",
+      "missingConfig": "Missing required config: apiUrl and modelName",
+      "requestFailed": "Test request failed. Please check your configuration.",
+      "functionCallUnsupported": "Model connectivity OK, but function call / tools not supported (please switch to a model or provider that supports tool calls).",
+      "toolCallFailed": "Model responded, but failed to complete the test tool call flow (may not support function call / toolChoice)."
     },
     "save": {
       "createSuccess": "Provider \"{{name}}\" created",

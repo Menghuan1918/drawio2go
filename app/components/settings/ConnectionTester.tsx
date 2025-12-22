@@ -51,9 +51,14 @@ export default function ConnectionTester({ config }: ConnectionTesterProps) {
           message: t("connectionTest.success", { response: data.response }),
         });
       } else {
+        // 如果是 i18n key（以 models.test. 开头），则翻译；否则直接显示
+        const rawError = data.error ?? "models.test.error";
+        const translatedError = rawError.startsWith("models.test.")
+          ? t(rawError)
+          : rawError;
         setResult({
           success: false,
-          message: t("connectionTest.error", { error: data.error }),
+          message: t("connectionTest.error", { error: translatedError }),
         });
       }
     } catch (error: unknown) {

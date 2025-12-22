@@ -239,7 +239,11 @@
       "error": "测试失败，请检查配置是否正确",
       "networkError": "网络错误，请检查配置",
       "missingModelName": "请先填写模型名称",
-      "missingProvider": "未找到对应的供应商配置，请先保存供应商"
+      "missingProvider": "未找到对应的供应商配置，请先保存供应商",
+      "missingConfig": "缺少必要的配置参数：apiUrl 和 modelName",
+      "requestFailed": "测试请求失败，请检查配置是否正确",
+      "functionCallUnsupported": "模型连通性正常，但不支持 function call / tools（请更换支持工具调用的模型或 provider）",
+      "toolCallFailed": "模型已响应，但未成功完成 test 工具调用流程（可能不支持 function call / toolChoice）"
     },
     "save": {
       "createSuccess": "供应商“{{name}}”已创建",

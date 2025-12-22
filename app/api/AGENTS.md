@@ -103,7 +103,7 @@ interface TestRequest {
 
 #### 测试逻辑
 
-向 LLM 发送固定的简单请求（要求返回 "ok"），验证配置是否有效。
+向 LLM 发送携带 `test` 工具的请求，并使用 `toolChoice: { type: "tool", toolName: "test" }` 强制模型调用该工具；工具 `execute` 返回 `{ ok: true }`，用于同时验证连通性与 function call（tools）能力。
 
 ---
 

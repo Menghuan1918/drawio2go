@@ -11,7 +11,7 @@ import { createDeepSeek } from "@ai-sdk/deepseek";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { generateText } from "ai";
+import { generateText, jsonSchema, tool } from "ai";
 import { NextRequest, NextResponse } from "next/server";
 import { createLogger } from "@/lib/logger";
 import { APICallError } from "@ai-sdk/provider";
@@ -63,11 +63,29 @@ function buildErrorMessage(error: unknown) {
       }
     }
 
-    return parts.join(" | ") || "测试请求失败，请检查配置是否正确";
+    return parts.join(" | ") || "models.test.requestFailed";
   }
 
   if (error instanceof Error && error.message) return error.message;
-  return "测试请求失败，请检查配置是否正确";
+  return "models.test.requestFailed";
+}
+
+function isFunctionCallUnsupportedError(error: unknown) {
+  if (!APICallError.isInstance(error)) return false;
+
+  const message = buildErrorMessage(error).toLowerCase();
+  return (
+    message.includes("tool_choice") ||
+    message.includes("tool choice") ||
+    message.includes("tools are not supported") ||
+    message.includes("tool is not supported") ||
+    message.includes("does not support tools") ||
+    message.includes("function calling") ||
+    message.includes("functions are not supported") ||
+    message.includes("does not support functions") ||
+    message.includes("unsupported tool") ||
+    message.includes("unsupported tools")
+  );
 }
 
 export async function POST(req: NextRequest) {
@@ -83,7 +101,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!normalizedConfig.apiUrl || !normalizedConfig.modelName) {
-      return apiError(400, "缺少必要的配置参数：apiUrl 和 modelName");
+      return apiError(400, "models.test.missingConfig");
     }
 
     // 根据 providerType 选择合适的 provider
@@ -125,24 +143,75 @@ export async function POST(req: NextRequest) {
       model = compatibleProvider(normalizedConfig.modelName);
     }
 
-    const result = await generateText({
-      model,
-      messages: [
+    const result = await (async () => {
+      try {
+        return await generateText({
+          model,
+          tools: {
+            test: tool({
+              description: "Test connectivity and tool-calling capability.",
+              inputSchema: jsonSchema({
+                type: "object",
+                properties: {},
+                additionalProperties: false,
+              }),
+              execute: async () => ({ ok: true }),
+            }),
+          },
+          toolChoice: { type: "tool", toolName: "test" },
+          messages: [
+            {
+              role: "system",
+              content: "This is a test request. You MUST call the `test` tool.",
+            },
+            { role: "user", content: "Run test tool now." },
+          ],
+          temperature: normalizedConfig.temperature,
+        });
+      } catch (error: unknown) {
+        if (isFunctionCallUnsupportedError(error)) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: "models.test.functionCallUnsupported",
+              provider: normalizedConfig.providerType,
+            },
+            { status: 200 },
+          );
+        }
+        throw error;
+      }
+    })();
+
+    if (result instanceof NextResponse) return result;
+
+    const toolCall = result.toolCalls.find(
+      (call) => call.type === "tool-call" && call.toolName === "test",
+    );
+    const toolResult = result.toolResults.find(
+      (item) => item.type === "tool-result" && item.toolName === "test",
+    );
+
+    const ok =
+      Boolean(toolCall) &&
+      Boolean(toolResult) &&
+      (toolResult as { output?: unknown }).output != null &&
+      (toolResult as { output?: { ok?: boolean } }).output?.ok === true;
+
+    if (!ok) {
+      return NextResponse.json(
         {
-          role: "system",
-          content: "This is a test req, you only need to say word 'ok'",
+          success: false,
+          error: "models.test.toolCallFailed",
+          provider: normalizedConfig.providerType,
         },
-        {
-          role: "user",
-          content: "test",
-        },
-      ],
-      temperature: normalizedConfig.temperature,
-    });
+        { status: 200 },
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      response: result.text,
+      response: JSON.stringify((toolResult as { output?: unknown }).output),
       provider: normalizedConfig.providerType,
     });
   } catch (error: unknown) {

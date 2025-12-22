@@ -381,10 +381,11 @@ export function ModelEditDialog({
         });
       } else {
         const statusCode = response.status;
-        const errorMessage =
-          data?.error ??
-          data?.message ??
-          t("models.test.error", "测试失败，请检查配置是否正确");
+        const rawError = data?.error ?? data?.message ?? "models.test.error";
+        // 如果是 i18n key（以 models.test. 开头），则翻译；否则直接显示
+        const errorMessage = rawError.startsWith("models.test.")
+          ? t(rawError)
+          : rawError;
         push({
           variant: "danger",
           description: `HTTP ${statusCode}: ${errorMessage}`,
