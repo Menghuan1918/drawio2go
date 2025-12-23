@@ -90,6 +90,10 @@ export function McpConfigDialog({
   const [portMode, setPortMode] = useState<PortMode>(DEFAULT_PORT_MODE);
   const [errors, setErrors] = useState<FormErrors>({});
 
+  // Select 受控状态（用于延时关闭）
+  const [isHostSelectOpen, setIsHostSelectOpen] = useState(false);
+  const [isPortModeSelectOpen, setIsPortModeSelectOpen] = useState(false);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const canUseMcp = useMemo(() => (isOpen ? isElectronEnv() : true), [isOpen]);
@@ -145,26 +149,38 @@ export function McpConfigDialog({
   );
 
   const handleHostChange = useCallback((value: Selection | Key | null) => {
-    const selection = normalizeSelection(value);
-    const key = selection ? extractSingleKey(selection) : null;
-    if (key === "127.0.0.1" || key === "0.0.0.0") {
-      setHost(key as McpHost);
-    }
+    // 先关闭 Select
+    setIsHostSelectOpen(false);
+
+    // 延迟执行，让 Select 有时间完成关闭动画
+    setTimeout(() => {
+      const selection = normalizeSelection(value);
+      const key = selection ? extractSingleKey(selection) : null;
+      if (key === "127.0.0.1" || key === "0.0.0.0") {
+        setHost(key as McpHost);
+      }
+    }, 150);
   }, []);
 
   const handlePortModeChange = useCallback((value: Selection | Key | null) => {
-    const selection = normalizeSelection(value);
-    const key = selection ? extractSingleKey(selection) : null;
-    if (key !== "manual" && key !== "random") return;
+    // 先关闭 Select
+    setIsPortModeSelectOpen(false);
 
-    const nextMode = key as PortMode;
-    setPortMode(nextMode);
-    setErrors((prev) => {
-      if (!prev.port) return prev;
-      const next = { ...prev };
-      delete next.port;
-      return next;
-    });
+    // 延迟执行，让 Select 有时间完成关闭动画
+    setTimeout(() => {
+      const selection = normalizeSelection(value);
+      const key = selection ? extractSingleKey(selection) : null;
+      if (key !== "manual" && key !== "random") return;
+
+      const nextMode = key as PortMode;
+      setPortMode(nextMode);
+      setErrors((prev) => {
+        if (!prev.port) return prev;
+        const next = { ...prev };
+        delete next.port;
+        return next;
+      });
+    }, 150);
   }, []);
 
   const isFormValid = useMemo(() => {
@@ -240,6 +256,12 @@ export function McpConfigDialog({
     [submit],
   );
 
+  const shouldCloseOnInteractOutside = useCallback((element: Element) => {
+    if (!(element instanceof HTMLElement)) return true;
+    if (element.closest('[data-trigger="Select"]')) return false;
+    return true;
+  }, []);
+
   return (
     <Dropdown
       isOpen={isOpen}
@@ -252,6 +274,7 @@ export function McpConfigDialog({
       <Dropdown.Popover
         placement="top end"
         className="z-[80] min-w-[320px] max-w-[420px] p-0"
+        shouldCloseOnInteractOutside={shouldCloseOnInteractOutside}
       >
         <Surface className="w-full rounded-[var(--radius-lg)] bg-content1 p-4 shadow-[var(--shadow-4)] outline-none">
           <div
@@ -284,6 +307,8 @@ export function McpConfigDialog({
                 selectedKey={host}
                 onSelectionChange={handleHostChange}
                 isDisabled={!canUseMcp || isBusy}
+                isOpen={isHostSelectOpen}
+                onOpenChange={setIsHostSelectOpen}
               >
                 <Label>{t("dialog.host.label")}</Label>
                 <Select.Trigger className="mt-2 w-full">
@@ -328,6 +353,8 @@ export function McpConfigDialog({
                 selectedKey={portMode}
                 onSelectionChange={handlePortModeChange}
                 isDisabled={!canUseMcp || isBusy}
+                isOpen={isPortModeSelectOpen}
+                onOpenChange={setIsPortModeSelectOpen}
               >
                 <Label>{t("dialog.portMode.label")}</Label>
                 <Select.Trigger className="mt-2 w-full">

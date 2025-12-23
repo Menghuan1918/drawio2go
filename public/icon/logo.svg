@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="546" height="352" viewBox="0 0 546 352">
+    <defs>
+        <linearGradient id="mainTheme" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#5EB5E0"/>
+            <stop offset="100%" stop-color="#3388BB"/>
+        </linearGradient>
+        <linearGradient id="arrowTheme" x1="0" y1="1" x2="1" y2="0">
+            <stop offset="0%" stop-color="#2A7BAA"/>
+            <stop offset="50%" stop-color="#3388BB"/>
+            <stop offset="100%" stop-color="#6FD2FF"/>
+        </linearGradient>
+        <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
+            <feOffset dx="0" dy="3" result="offsetblur"/>
+            <feComponentTransfer>
+                <feFuncA type="linear" slope="0.2"/>
+            </feComponentTransfer>
+            <feMerge>
+                <feMergeNode/>
+                <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+        </filter>
+        <filter id="strongShadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="6"/>
+            <feOffset dx="0" dy="6" result="offsetblur"/>
+            <feComponentTransfer>
+                <feFuncA type="linear" slope="0.3"/>
+            </feComponentTransfer>
+            <feMerge>
+                <feMergeNode/>
+                <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+        </filter>
+        <linearGradient id="edgeHighlight" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.3"/>
+            <stop offset="10%" stop-color="#FFFFFF" stop-opacity="0.1"/>
+            <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+        </linearGradient>
+        <path id="arrowPath" d="M139 151 H372 V71 L528 174 L372 284 V198 H139 Z"/>
+    </defs>
+    <path d="M86 108 V90 Q86 78 98 78 H202" fill="none" stroke="#3388BB" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
+    <path d="M86 247 V265 Q86 277 98 277 H160" fill="none" stroke="#3388BB" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
+    <g filter="url(#softShadow)">
+        <rect x="16" y="121" width="117" height="109" rx="12" ry="12" fill="url(#mainTheme)"/>
+        <circle cx="274" cy="74" r="56" fill="url(#mainTheme)"/>
+        <rect x="178" y="235" width="148" height="81" rx="12" ry="12" fill="url(#mainTheme)"/>
+    </g>
+    <g filter="url(#strongShadow)">
+        <use href="#arrowPath" fill="url(#arrowTheme)"/>
+        <use href="#arrowPath" fill="url(#edgeHighlight)" style="mix-blend-mode: screen;"/>
+    </g>
+</svg>

@@ -1,15 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Button,
-  Dropdown,
-  Label,
-  TooltipContent,
-  TooltipRoot,
-  TooltipTrigger,
-  type ButtonProps,
-} from "@heroui/react";
+import { Button, Dropdown, Label, type ButtonProps } from "@heroui/react";
 import { Layers } from "lucide-react";
 import { useAppTranslation } from "@/app/i18n/hooks";
 import type { DrawioPageInfo } from "@/app/lib/storage/page-metadata";
@@ -140,47 +132,22 @@ export default function PageSelectorButton({
         void openWithRefresh();
       }}
     >
-      <TooltipRoot delay={0} isDisabled={isOpen}>
-        {isDisabled ? (
-          <TooltipTrigger className="inline-flex" aria-disabled="true">
-            <Button
-              type="button"
-              size="sm"
-              variant={buttonVariant}
-              className="page-selector-button"
-              aria-label={t("pageSelector.ariaLabel")}
-              isDisabled={isDisabled}
-              isIconOnly={isIconOnly}
-            >
-              <span className="inline-flex items-center gap-2">
-                <Layers size={16} aria-hidden />
-                <span className="page-selector-button__label">
-                  {buttonLabel}
-                </span>
-              </span>
-            </Button>
-          </TooltipTrigger>
-        ) : (
-          <Button
-            type="button"
-            size="sm"
-            variant={buttonVariant}
-            className="page-selector-button"
-            aria-label={t("pageSelector.ariaLabel")}
-            isDisabled={isDisabled}
-            isIconOnly={isIconOnly}
-          >
-            <span className="inline-flex items-center gap-2">
-              <Layers size={16} aria-hidden />
-              <span className="page-selector-button__label">{buttonLabel}</span>
-            </span>
-          </Button>
-        )}
-        <TooltipContent placement="top">
-          <p>{tooltip}</p>
-        </TooltipContent>
-      </TooltipRoot>
+      <Button
+        type="button"
+        size="sm"
+        variant={buttonVariant}
+        className="page-selector-button"
+        aria-label={t("pageSelector.ariaLabel")}
+        isDisabled={isDisabled}
+        isIconOnly={isIconOnly}
+      >
+        <span className="inline-flex items-center gap-2">
+          <Layers size={16} aria-hidden />
+          <span className="page-selector-button__label">{buttonLabel}</span>
+        </span>
+      </Button>
       <Dropdown.Popover placement="top start" className="min-w-[220px]">
+        <div className="page-selector-hint">{tooltip}</div>
         <div className="px-2 pt-2">
           <Button
             type="button"

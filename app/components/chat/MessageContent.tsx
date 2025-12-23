@@ -106,7 +106,6 @@ export default function MessageContent({
             message.id,
             index,
             normalizedPart.toolCallId,
-            normalizedPart.state,
           );
           const isExpanded = expandedToolCalls[expansionKey] ?? false;
 

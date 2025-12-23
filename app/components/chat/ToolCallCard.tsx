@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Copy, Check } from "lucide-react";
 import { usePress } from "@react-aria/interactions";
 import { type ToolMessagePart } from "./constants/toolConstants";
@@ -13,6 +13,50 @@ import { useAppTranslation } from "@/app/i18n/hooks";
 import { createLogger } from "@/lib/logger";
 import { isToolErrorResult } from "@/app/types/tool-errors";
 import { formatToolErrorDetailsToText } from "@/app/lib/tool-error-format";
+
+/** streaming 阶段 JSON 解析的节流间隔（毫秒） */
+const JSON_THROTTLE_INTERVAL = 1000;
+
+/**
+ * 节流 JSON 格式化 hook
+ * 在 streaming 阶段每秒只执行一次 JSON.stringify，非 streaming 阶段使用 useMemo 直接计算
+ *
+ * 修复：使用 useMemo 替代 useEffect+setState 模式，避免因 value 对象引用变化
+ * 导致的无限循环更新（Maximum update depth exceeded）
+ */
+function useThrottledJson(value: unknown, isStreaming: boolean): string {
+  // streaming 阶段需要定时更新，所以使用 state
+  const [streamingJson, setStreamingJson] = useState("");
+  // 缓存最新的 value 引用（避免闭包问题）
+  const latestValueRef = useRef<unknown>(value);
+  latestValueRef.current = value;
+
+  // 非 streaming 阶段：直接用 useMemo 计算，无需 state 更新
+  // 这样即使 value 对象引用变化但内容相同，也不会触发重渲染
+  // 优化：isStreaming 为 true 时跳过计算，避免每帧执行 JSON.stringify
+  const memoizedJson = useMemo(() => {
+    if (isStreaming) return "";
+    return value !== undefined ? JSON.stringify(value, null, 2) : "";
+  }, [value, isStreaming]);
+
+  // streaming 阶段：定时更新
+  useEffect(() => {
+    if (!isStreaming) return;
+
+    // 立即执行一次
+    const format = () => {
+      const v = latestValueRef.current;
+      setStreamingJson(v !== undefined ? JSON.stringify(v, null, 2) : "");
+    };
+    format();
+
+    const timerId = setInterval(format, JSON_THROTTLE_INTERVAL);
+    return () => clearInterval(timerId);
+  }, [isStreaming]);
+
+  // streaming 时使用节流的 state，非 streaming 时使用 memoized 值
+  return isStreaming ? streamingJson : memoizedJson;
+}
 
 const logger = createLogger("ToolCallCard");
 
@@ -70,6 +114,15 @@ export default function ToolCallCard({
     effectiveState === "input-streaming" ||
     effectiveState === "input-available";
 
+  // 节流 JSON 解析（优化 streaming 阶段性能）
+  const isInputStreaming = effectiveState === "input-streaming";
+  const throttledInputJson = useThrottledJson(part.input, isInputStreaming);
+
+  // 优化：memoize output JSON，避免不必要的重计算
+  const outputJson = useMemo(() => {
+    return showOutput ? JSON.stringify(part.output, null, 2) : "";
+  }, [showOutput, part.output]);
+
   // 通用复制处理函数
   const handleCopy = async (
     text: string,
@@ -91,7 +144,7 @@ export default function ToolCallCard({
 
   // 复制输出结果
   const handleCopyOutput = () =>
-    handleCopy(JSON.stringify(part.output, null, 2), setCopiedOutput, "output");
+    handleCopy(outputJson, setCopiedOutput, "output");
 
   // 复制错误信息
   const handleCopyError = () => {
@@ -215,9 +268,7 @@ export default function ToolCallCard({
                   {copiedInput ? <Check size={14} /> : <Copy size={14} />}
                 </button>
               </div>
-              <pre className="tool-call-json">
-                {JSON.stringify(part.input, null, 2)}
-              </pre>
+              <pre className="tool-call-json">{throttledInputJson}</pre>
             </div>
           )}
 
@@ -242,9 +293,7 @@ export default function ToolCallCard({
                   {copiedOutput ? <Check size={14} /> : <Copy size={14} />}
                 </button>
               </div>
-              <pre className="tool-call-json">
-                {JSON.stringify(part.output, null, 2)}
-              </pre>
+              <pre className="tool-call-json">{outputJson}</pre>
             </div>
           )}
         </div>

@@ -409,6 +409,13 @@
 }
 
 /* Page selector (Milestone M3) */
+.page-selector-hint {
+  padding: 0.5rem 0.75rem;
+  font-size: var(--font-size-xs, 0.75rem);
+  color: var(--text-secondary);
+  line-height: 1.3;
+}
+
 .page-selector-button {
   flex-shrink: 0;
 }

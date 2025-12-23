@@ -85,13 +85,18 @@ export const getToolStatusMeta = (
 
 /**
  * 生成工具调用卡片的展开键
+ *
+ * 修复：移除 state 参数，使用稳定的 key
+ * 之前的实现将 state 包含在 key 中，导致工具状态变化时（如 input-streaming → input-available）
+ * key 也随之变化，造成：
+ * 1. React 认为是不同的组件，销毁旧组件并创建新组件
+ * 2. expandedToolCalls 中的展开状态丢失
+ * 3. 组件频繁卸载/挂载可能触发 useEffect 循环
  */
 export const getToolExpansionKey = (
   messageId: string,
   index: number,
   toolCallId?: string,
-  state?: string,
 ): string => {
-  const baseKey = toolCallId ? String(toolCallId) : `${messageId}-${index}`;
-  return state ? `${baseKey}-${state}` : baseKey;
+  return toolCallId ? String(toolCallId) : `${messageId}-${index}`;
 };
