@@ -12,6 +12,7 @@ import {
 import { useAppTranslation } from "@/app/i18n/hooks";
 import { createLogger } from "@/lib/logger";
 import { isToolErrorResult } from "@/app/types/tool-errors";
+import { formatToolErrorDetailsToText } from "@/app/lib/tool-error-format";
 
 const logger = createLogger("ToolCallCard");
 
@@ -27,60 +28,10 @@ const I18N_KEYS = {
   result: "toolCalls.result",
 } as const;
 
-function formatZodValidationDetails(details: Record<string, unknown>): string {
-  const issuesRaw = (details as { issues?: unknown }).issues;
-  const issues = Array.isArray(issuesRaw)
-    ? (issuesRaw as Array<Record<string, unknown>>)
-    : [];
-
-  if (issues.length === 0) {
-    return JSON.stringify(details, null, 2);
-  }
-
-  return issues
-    .map((issue) => {
-      const path = Array.isArray(issue.path)
-        ? (issue.path as Array<string | number>).map(String).join(".")
-        : "";
-      const label = path ? path : "(root)";
-      const msg =
-        typeof issue.message === "string"
-          ? issue.message
-          : JSON.stringify(issue);
-      return `- ${label}: ${msg}`;
-    })
-    .join("\n");
-}
-
-function formatXmlParseDetails(
-  details: Record<string, unknown>,
-): string | null {
-  const formatted =
-    typeof (details as { formatted?: unknown }).formatted === "string"
-      ? ((details as { formatted?: string }).formatted as string)
-      : null;
-  return formatted || null;
-}
-
-function formatToolErrorDetails(errorDetails: unknown): string | null {
-  if (errorDetails == null) return null;
-
-  if (typeof errorDetails !== "object") {
-    return JSON.stringify(errorDetails, null, 2);
-  }
-
-  const details = errorDetails as Record<string, unknown>;
-  const kind = typeof details.kind === "string" ? details.kind : "";
-
-  if (kind === "zod_validation") {
-    return formatZodValidationDetails(details);
-  }
-
-  if (kind === "xml_parse") {
-    return formatXmlParseDetails(details) ?? JSON.stringify(details, null, 2);
-  }
-
-  return JSON.stringify(details, null, 2);
+function extractErrorSummary(rawMessage: string): string {
+  const firstBlock = rawMessage.split("\n\n")[0] ?? rawMessage;
+  const firstLine = firstBlock.split("\n")[0] ?? firstBlock;
+  return firstLine.trim() || rawMessage;
 }
 
 interface ToolCallCardProps {
@@ -107,11 +58,12 @@ export default function ToolCallCard({
   const showInput = part.input !== undefined;
   const showOutput = part.output !== undefined;
 
-  const errorSummary =
+  const rawErrorMessage =
     part.errorText ?? toolErrorResult?.message ?? t(I18N_KEYS.error);
+  const errorSummary = extractErrorSummary(rawErrorMessage);
   const errorDetails =
     part.errorDetails ?? toolErrorResult?.errorDetails ?? undefined;
-  const errorDetailsText = formatToolErrorDetails(errorDetails);
+  const errorDetailsText = formatToolErrorDetailsToText(errorDetails);
 
   // 判断是否为进行中状态（正在调用或等待执行）
   const isInProgress =

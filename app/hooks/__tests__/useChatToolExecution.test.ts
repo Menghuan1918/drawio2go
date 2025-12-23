@@ -9,7 +9,7 @@ import {
 } from "@/app/lib/frontend-tools";
 
 describe("useChatToolExecution（错误结构）", () => {
-  it("Zod 输入校验失败：返回 output-error，且 output 携带字段级 issues", async () => {
+  it("Zod 输入校验失败：output 不包含 errorDetails，详情拼接到 message/errorText，且 payload.errorDetails 保留", async () => {
     const addToolResult = vi.fn(async (_args: unknown) => {});
 
     const frontendTools: Record<string, Tool> = {
@@ -47,13 +47,16 @@ describe("useChatToolExecution（错误结构）", () => {
     expect(output.success).toBe(false);
     expect(output.error).toBe("zod_validation");
     expect(String(output.message)).toContain("工具输入校验失败");
+    expect(String(output.message)).toContain("\n\n");
+    expect(String(payload.errorText)).toContain("\n\n");
+    expect("errorDetails" in output).toBe(false);
 
-    const details = output.errorDetails as Record<string, unknown>;
+    const details = payload.errorDetails as Record<string, unknown>;
     expect(details.kind).toBe("zod_validation");
     expect(Array.isArray(details.issues)).toBe(true);
   });
 
-  it("工具 execute 返回 ToolErrorResult：保持 state=output-error 且保留 output", async () => {
+  it("工具 execute 返回 ToolErrorResult：output 不包含 errorDetails，详情拼接到 message/errorText，且 payload.errorDetails 保留", async () => {
     const addToolResult = vi.fn(async (_args: unknown) => {});
 
     const frontendTools: Record<string, Tool> = {
@@ -94,10 +97,16 @@ describe("useChatToolExecution（错误结构）", () => {
     const output = payload.output as Record<string, unknown>;
     expect(output.success).toBe(false);
     expect(output.error).toBe("xpath_error");
-    expect(output.message).toBe("Invalid XPath");
+    expect(String(output.message)).toContain("Invalid XPath");
+    expect(String(output.message)).toContain("Expression:");
+    expect(String(payload.errorText)).toContain("Expression:");
+    expect("errorDetails" in output).toBe(false);
+
+    const details = payload.errorDetails as Record<string, unknown>;
+    expect(details.kind).toBe("xpath_error");
   });
 
-  it("XML 解析错误：output.errorDetails.kind=xml_parse 且包含 formatted/定位信息", async () => {
+  it("XML 解析错误：output 不包含 errorDetails，详情拼接到 message/errorText，且 payload.errorDetails.kind=xml_parse", async () => {
     const addToolResult = vi.fn(async (_args: unknown) => {});
 
     const ctx: FrontendToolContext = {
@@ -134,8 +143,12 @@ describe("useChatToolExecution（错误结构）", () => {
     const output = payload.output as Record<string, unknown>;
     expect(output.success).toBe(false);
 
-    const details = output.errorDetails as Record<string, unknown>;
+    expect("errorDetails" in output).toBe(false);
+
+    const details = payload.errorDetails as Record<string, unknown>;
     expect(details.kind).toBe("xml_parse");
     expect(typeof details.formatted).toBe("string");
+    expect(String(output.message)).toContain(String(details.formatted));
+    expect(String(payload.errorText)).toContain(String(details.formatted));
   });
 });

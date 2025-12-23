@@ -33,7 +33,10 @@ import {
   useChatLifecycle,
   usePageSelection,
 } from "@/app/hooks";
-import type { AddToolResultFn } from "@/app/hooks/useChatToolExecution";
+import {
+  isFatalToolError,
+  type AddToolResultFn,
+} from "@/app/hooks/useChatToolExecution";
 import { useAlertDialog } from "@/app/components/alert";
 import { useI18n } from "@/app/i18n/hooks";
 import {
@@ -1145,20 +1148,18 @@ export default function ChatSidebar({
           !isAbort && !isError && finishReason === "tool-calls";
 
         if (shouldContinue) {
-          if (toolExecution.toolError) {
-            const toolErrorMessage =
-              extractErrorMessage(toolExecution.toolError) ??
-              toolExecution.toolError.message ??
-              "工具执行失败";
+          if (
+            toolExecution.toolError &&
+            isFatalToolError(toolExecution.toolError)
+          ) {
             logger.error(
-              "[ChatSidebar] onFinish: shouldContinue 但检测到工具错误，转入错误恢复流程",
+              "[ChatSidebar] onFinish: shouldContinue 但检测到致命工具错误，停止继续轮次",
               {
                 toolError: toolExecution.toolError,
-                toolErrorMessage,
                 finishReason,
               },
             );
-            throw new Error(`工具执行失败: ${toolErrorMessage}`);
+            return;
           }
 
           // 工具轮次也要落盘：避免多轮工具调用中间过程丢失（崩溃/刷新会丢）
@@ -1632,6 +1633,7 @@ export default function ChatSidebar({
 
   useEffect(() => {
     if (!toolExecution.toolError) return;
+    if (!isFatalToolError(toolExecution.toolError)) return;
     if (lastHandledToolErrorRef.current === toolExecution.toolError) return;
     lastHandledToolErrorRef.current = toolExecution.toolError;
 
