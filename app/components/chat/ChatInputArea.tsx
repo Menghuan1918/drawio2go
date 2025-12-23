@@ -365,7 +365,6 @@ export default function ChatInputArea({
           isChatStreaming={isChatStreaming}
           canSendNewMessage={canSendNewMessage}
           lastMessageIsUser={lastMessageIsUser}
-          isOnline={isOnline}
           onCancel={onCancel}
           onNewChat={onNewChat}
           onHistory={onHistory}

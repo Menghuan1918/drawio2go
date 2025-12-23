@@ -23,7 +23,6 @@ interface ChatInputActionsProps {
   isChatStreaming: boolean;
   canSendNewMessage: boolean;
   lastMessageIsUser: boolean;
-  isOnline: boolean;
   isCompact?: boolean;
   onCancel?: () => void;
   onNewChat: () => void;
@@ -46,7 +45,6 @@ export default function ChatInputActions({
   isChatStreaming,
   canSendNewMessage,
   lastMessageIsUser,
-  isOnline,
   isCompact,
   onCancel,
   onNewChat,

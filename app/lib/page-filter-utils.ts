@@ -204,7 +204,6 @@ function collectDiagramIds(
   return { success: true, ids, map };
 }
 
-// TODO: 有选中页面时注入页面ID
 function validateIncomingIdsMatchTargets(
   incomingIds: string[],
   targetIds: string[],
