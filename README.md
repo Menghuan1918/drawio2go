@@ -1,28 +1,26 @@
+<img width="250px" src="public/icon/logo.svg" align="left"/>
+
 # DrawIO2Go
 
-<p align="center">
-  <strong>AI-Powered, Human-AI Collaboration</strong>
-</p>
+<strong>AI-Powered, Human-AI Collaboration</strong>
+
+![Electron](https://img.shields.io/badge/Electron-38.x-47848F?logo=electron&logoColor=white)
+![Nextjs](https://img.shields.io/badge/Next.js-15-black?logo=next.js&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![Windows](https://img.shields.io/badge/-Windows-blue?logo=windows&logoColor=white)
+![MacOS](https://img.shields.io/badge/-macOS-black?&logo=apple&logoColor=white)
+![Linux](https://img.shields.io/badge/-Linux-yellow?logo=linux&logoColor=white)
 
 <p align="center">
   <a href="./README_zh-CN.md">简体中文</a> | English
 </p>
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Electron-38.x-47848F?logo=electron&logoColor=white" alt="Electron">
-  <img src="https://img.shields.io/badge/Next.js-15-black?logo=next.js&logoColor=white" alt="Next.js">
-  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black" alt="React">
-  <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white" alt="TypeScript">
-  <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License">
-</p>
-
 ---
 
-A modern DrawIO editor application dedicated to building better **human-AI collaborative** modeling tools with AI assistance. User-centered, not seeking simple replacement, but exploring how to best complement each other with AI. Provides out-of-the-box applications (Windows/Linux/Mac OS) or deployment as a web page.
+A modern DrawIO editor application dedicated to building better **human-AI collaborative** modeling tools with AI assistance. User-centered, enhancing human-machine efficiency, exploring how to best complement each other with AI. Provides out-of-the-box applications (Windows/Linux/Mac OS) or deployment as a web page.
 
-<div align="center">
-<img alt="image" src="https://github.com/user-attachments/assets/4ede9b64-dfe0-4aa7-be5c-4440ca520db7" width="60%" />
-</div>
+https://github.com/user-attachments/assets/40fe5c3b-0f37-4fbf-b6ac-60b8734f2d14
+
 <div align="center">
 <table width="100%">
   <tr>
@@ -34,34 +32,34 @@ A modern DrawIO editor application dedicated to building better **human-AI colla
     </td>
     <td width="33.33%" valign="top" align="center">
       <h3>AI-Powered Modification</h3>
-      <p>XPath-based precise deletion, modification, and query tool, effective and token-saving</p>
+      <p>XPath-based precise deletion, modification, and query tool, effective and token-saving*</p>
       <img src="https://github.com/user-attachments/assets/db4c17b7-49f9-407d-a046-227092e70708" alt="Demo" width="60%" />
       <br />
     </td>
     <td width="33.33%" valign="top" align="center">
       <h3>MCP Service</h3>
-      <p>Start an MCP service with version management to connect with other applications</p>
-      <img src="https://github.com/user-attachments/assets/2109487f-b597-41b6-881a-8ac69a3d787c" alt="MCP" />
+      <p>Start an MCP service with <b>canvas content version management</b> to connect with other applications</p>
+      <img src="https://github.com/user-attachments/assets/ad6c9e0c-8f71-4776-8522-73ebf89bf813" alt="MCP" />
       <br />
     </td>
   </tr>
   <tr>
     <td width="33.33%" valign="top" align="center">
-      <h3>Multi-Vendor Management</h3>
-      <p>Supports multiple LLM vendors / multiple model switching*</p>
-      <img src="https://github.com/user-attachments/assets/eeda8d0e-0d80-45c6-a51b-104724bf2094" alt="Multi-Vendor Control" width="50%" />
+      <h3>Multi-Page Editing</h3>
+      <p>Supports multi-page drawio editing, let AI only edit the parts you want to modify</p>
+      <img src="https://github.com/user-attachments/assets/b999be6b-b41e-4f73-8059-7cd26dafdd8b" alt="pages" width="90%" />
       <br />
     </td>
     <td width="33.33%" valign="top" align="center">
       <h3>Version Comparison</h3>
       <p>Easily compare / rollback differences between different modified versions</p>
-      <img src="https://github.com/user-attachments/assets/b264ee8f-dedd-429d-8501-fb02efe12b44" alt="Comparison Page" width="100%" />
+      <img src="https://github.com/user-attachments/assets/149b0247-f6ae-48bd-a8e3-70dce2a3622e" alt="Comparison Page" width="100%" />
       <br />
       <br />
     </td>
     <td width="33.33%" valign="top" align="center">
       <h3>Canvas Context</h3>
-      <p>No longer need to describe "the few xxx on the far right", simply drag-select with the mouse, automatically parsing elements as context**</p>
+      <p>No longer need to describe "the few xxx on the far right", simply drag-select with the mouse, the conversation will automatically parse canvas elements into context**</p>
       <img src="https://github.com/user-attachments/assets/07ec5631-21bc-4a11-853a-62058061c49f" alt="Context" width="100%" />
       <br />
       <br />
@@ -69,9 +67,9 @@ A modern DrawIO editor application dedicated to building better **human-AI colla
   </tr>
 </table>
 </div>
-<sub>* Currently supports Openai/Deepseek/Anthropic/Gemini formats</sub>
+<sub>* Currently LLM API supports Openai/Deepseek/Anthropic/Gemini formats</sub>
 <br />
-<sub>** Limited by Web API restrictions, mouse selection perception is not available in the web. But Web still has compressed canvas content context injection functionality.</sub>
+<sub>** Limited by Web API restrictions, mouse selection perception is not available on the web. But Web still has basic compressed canvas content context injection functionality</sub>
 <br />
 <br />
 
@@ -82,35 +80,31 @@ Here are some actual demos and their prompts:
   <tr>
     <td width="50%" valign="top" align="center">
       <h3>U-net Architecture Diagram</h3>
-      <p>Draw a U-net network</p>
+      <p><b>glm-4.6</b> - Draw a U-net network</p>
       <img src="https://github.com/user-attachments/assets/5fae95e9-573c-4ced-8841-7b27dd8cc97b" alt="unet" width="100%" />
       <br />
-      <sub>Drawn using glm-4.6</sub>
       <br />
     </td>
     <td width="50%" valign="top" align="center">
       <h3>Image to DrawIO</h3>
-      <p>Pass in an image generated by gemini-3-pro-image and ask it to replicate</p>
+      <p><b>claude-sonnet-4.5</b> - Pass in an image generated by gemini-3-pro-image and ask it to replicate</p>
       <img src="https://github.com/user-attachments/assets/1b5be219-0dc6-48c8-abdc-f0a2946bf148" alt="image" width="100%" />
       <br />
-      <sub>Drawn using claude-sonnet-4.5, image conversation support is still in beta</sub>
     </td>
   </tr>
     <tr>
     <td width="50%" valign="top" align="center">
       <h3>UML Architecture Diagram</h3>
-      <p>Draw a classic front-end and back-end web application UML architecture diagram</p>
-      <img src="https://github.com/user-attachments/assets/2c15fd37-4f8f-4a65-9ade-52176ae487e1" alt="UML" width="100%" />
+      <p><b>glm-4.7</b> - Draw a classic front-end and back-end web application UML architecture diagram</p>
+      <img src="https://github.com/user-attachments/assets/738ef6a9-a703-49d8-b26e-5438130106d1" alt="UML" width="100%" />
       <br />
-      <sub>Drawn using glm-4.6</sub>
       <br />
     </td>
     <td width="50%" valign="top" align="center">
       <h3>Pure Element Drawing</h3>
-      <p>Draw a laptop</p>
-      <img src="https://github.com/user-attachments/assets/719e33e3-b7bc-4e0c-bae1-28896b63e23d" alt="Demo" width="80%" />
+      <p><b>gemini-3-pro-preview</b> - Draw a laptop</p>
+      <img src="https://github.com/user-attachments/assets/f330468b-c52a-416a-9198-4e2e9b22539c" alt="Demo" width="80%" />
       <br />
-      <sub>Drawn using claude-sonnet-4.5</sub>
       <br />
     </td>
   </tr>
@@ -150,18 +144,24 @@ npm run dev
 Open [http://localhost:3000](http://localhost:3000) in your browser
 
 > [!IMPORTANT]
-> Please note that there is currently no authentication mechanism for the web version. Do not deploy it to the public internet (LLM keys are stored in the browser, but DrawIO tool callbacks are not authenticated, others may be able to obtain DrawIO tool call information)
+> Please note that multi-user web deployment is not yet adapted (although theoretically there should be no issues, it has not been tested)
 
-## Known Issues / Upcoming Features
+## Known Issues
 
-- [ ] Support for passing selected elements from canvas to AI in Electron
+- [x] In web version, conversations may not be cancellable
+- [x] Some specific errors from drawio tools cannot be captured currently
+- [x] Conversation saving currently has some issues, may cause historical conversation loading exceptions
+- [ ] Some UI display issues exist
+
+## Upcoming Features
+
+- [x] Support for passing selected elements from canvas to AI in Electron
+- [ ] Multi-page drawio support
 - [ ] Full image/file conversation support
-- [ ] Conversation saving currently has some issues, may cause historical conversation loading exceptions
-- [ ] Support for exporting projects to files
-- [ ] In web version, conversations may not be cancellable
 - [ ] Support for custom DrawIO widget URL
 - [ ] Direct export to png/svg
 - [ ] Add more LLM API support
+- [ ] Support for exporting projects to files
 
 ## Project Structure
 
