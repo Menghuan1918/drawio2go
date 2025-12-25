@@ -420,7 +420,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const modelMessages = convertToModelMessages(converted.messages);
+    const modelMessages = await convertToModelMessages(converted.messages);
     const toolSet = toToolSet(validation.tools);
 
     logger.info("收到 AI 代理请求", {
