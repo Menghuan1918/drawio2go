@@ -10,6 +10,7 @@
 - JSON 必须保持有效格式，`promptFragment` 多行用 `\n` 表示换行。
 - `id` 必须唯一且稳定，避免影响已存储的用户选择。
 - 配套更新 `skill-elements.ts` 的类型与工具函数。
+- 变更注意：如变更 `id`（破坏性），需同步更新 UI 国际化键与缩略图资源路径（`public/images/skill-themes/{id}.svg`）。
 
 ## 文件索引
 

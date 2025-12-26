@@ -1,7 +1,7 @@
 import type { SkillKnowledgeId } from "@/app/types/chat";
 import rawConfig from "./skill-elements.json";
 
-export type SkillThemeId = "modern" | "academic" | "classic" | "custom";
+export type SkillThemeId = "modern" | "academic" | "minimal" | "custom";
 export type { SkillKnowledgeId };
 
 export type SkillThemeConfig = {

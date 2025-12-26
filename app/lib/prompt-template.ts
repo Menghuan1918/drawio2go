@@ -36,6 +36,7 @@ export function buildThemePrompt(skillSettings: SkillSettings): string {
   if (!theme) {
     return "";
   }
+
   if (theme.id === "custom") {
     const customPrompt = skillSettings.customThemePrompt?.trim();
     return customPrompt && customPrompt.length > 0

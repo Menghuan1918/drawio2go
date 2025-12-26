@@ -134,10 +134,10 @@
     },
     "theme": {
       "label": "Style",
-      "description": "Choose an overall diagram style",
+      "description": "Choose an overall diagram style (follows your palette)",
       "modern": "Modern",
       "academic": "Academic",
-      "classic": "Classic",
+      "minimal": "Minimal",
       "custom": "Custom",
       "unknown": "Unknown style"
     },
@@ -148,7 +148,7 @@
     },
     "custom": {
       "title": "Custom style",
-      "placeholder": "Describe the style you want, e.g. blue tech, minimal lines, soft palette.",
+      "placeholder": "Describe the style you want: tone (cool/warm/neutral), saturation & contrast, line weight, corner radius, connector style (orthogonal/curved/arrows), layout density, typography/annotation style. If you provide a primary color or palette, it will be followed.",
       "save": "Save",
       "cancel": "Cancel"
     },
