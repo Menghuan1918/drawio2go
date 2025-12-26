@@ -274,7 +274,7 @@ export function HistoryModal() {
 
 ### 工具常量 (`constants/toolConstants.ts`)
 
-- `TOOL_LABEL_KEYS` - 工具名称映射（支持 drawio_read、drawio_edit_batch、drawio_overwrite）
+- `TOOL_LABEL_KEYS` - 工具名称映射（支持 drawio_read、drawio_edit_batch；历史消息可能仍包含 drawio_overwrite）
 - `TOOL_STATUS_META` - 工具状态元数据定义（包含 Icon、labelKey、tone）
 - `ToolMessagePart` - 工具消息部分的类型定义
 

@@ -2,7 +2,7 @@ import { z } from "zod";
 
 /**
  * Unified Zod Schema definitions for DrawIO AI tool parameters.
- * Single source of truth for drawio_read / drawio_edit_batch / drawio_overwrite validation.
+ * Single source of truth for drawio_read / drawio_edit_batch validation.
  */
 
 export const operationSchema = z
@@ -66,7 +66,7 @@ Example: <mxCell id="x" style="ellipse;fillColor=#fff" vertex="1" parent="1"><mx
         "If true, skip this operation when target not found instead of failing. Default: false (fail on no match)",
       ),
   })
-  .describe("Single atomic operation for drawio_edit_batch")
+  .describe("Single operation for drawio_edit_batch")
   .superRefine((operation, ctx) => {
     const ensureNonEmptyIfProvided = (
       value: string | undefined,
@@ -228,7 +228,7 @@ export const drawioEditBatchInputSchema = z
       .array(operationSchema)
       .min(1, "operations must contain at least one operation")
       .describe(
-        "Array of atomic operations to execute in order. All succeed or all rollback",
+        "Array of operations to execute in order. Execution stops at the first failed/blocked operation",
       ),
     description: z
       .string()
@@ -238,23 +238,6 @@ export const drawioEditBatchInputSchema = z
       ),
   })
   .describe("Input for drawio_edit_batch: batch edit request body");
-
-export const drawioOverwriteInputSchema = z
-  .object({
-    drawio_xml: z
-      .string()
-      .min(1, "drawio_xml cannot be empty")
-      .describe(
-        "Complete DrawIO XML string. Must be valid XML with mxGraphModel root structure",
-      ),
-    description: z
-      .string()
-      .optional()
-      .describe(
-        "Optional description of this overwrite for logging. Example: 'Apply new template'",
-      ),
-  })
-  .describe("Input for drawio_overwrite: complete diagram replacement");
 
 // --------- Type exports (single source of truth) ---------
 /**
@@ -270,7 +253,3 @@ export type DrawioReadInput = z.infer<typeof drawioReadInputSchema>;
  * Batch edit input type (operations array wrapper).
  */
 export type DrawioEditBatchRequest = z.infer<typeof drawioEditBatchInputSchema>;
-/**
- * Overwrite XML input type.
- */
-export type DrawioOverwriteInput = z.infer<typeof drawioOverwriteInputSchema>;

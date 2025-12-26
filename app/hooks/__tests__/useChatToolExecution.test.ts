@@ -110,7 +110,10 @@ describe("useChatToolExecution（错误结构）", () => {
     const addToolResult = vi.fn(async (_args: unknown) => {});
 
     const ctx: FrontendToolContext = {
-      getDrawioXML: vi.fn(async () => "<mxfile></mxfile>"),
+      getDrawioXML: vi.fn(
+        async () =>
+          "<mxfile><diagram><mxGraphModel><root></root></mxGraphModel></diagram></mxfile>",
+      ),
       replaceDrawioXML: vi.fn(async () => ({ success: true })),
       onVersionSnapshot: vi.fn(async () => {}),
       getPageFilterContext: () => ({
@@ -132,8 +135,18 @@ describe("useChatToolExecution（错误结构）", () => {
     await act(async () => {
       await result.current.executeToolCall({
         toolCallId: "call-xml",
-        toolName: AI_TOOL_NAMES.DRAWIO_OVERWRITE,
-        input: { drawio_xml: "<mxfile><diagram></mxfile>", description: "bad" },
+        toolName: AI_TOOL_NAMES.DRAWIO_EDIT_BATCH,
+        input: {
+          operations: [
+            {
+              type: "insert_element",
+              xpath: "/mxfile/diagram/mxGraphModel/root",
+              position: "append_child",
+              new_xml: "<mxCell>",
+            },
+          ],
+          description: "bad",
+        },
       });
     });
 

@@ -58,7 +58,19 @@ export interface ToolDrawioOperationErrorDetails extends ToolErrorDetailsBase {
   kind: "drawio_operation";
   operationIndex: number;
   operationsTotal: number;
+  /**
+   * 已成功应用的操作数量（在遇到失败/阻塞时用于提示“已执行到哪里”）。
+   *
+   * - 兼容旧实现：该字段可选
+   */
+  operationsApplied?: number;
   operationType: string;
+  /**
+   * 失败的原始操作对象（便于调试/复制）。
+   *
+   * - 该字段可能包含较大的 new_xml 片段，因此保持可选
+   */
+  operation?: Record<string, unknown>;
   locator: {
     id?: string;
     xpath?: string;

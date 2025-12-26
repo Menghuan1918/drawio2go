@@ -63,12 +63,6 @@ const { toErrorString } = require("../utils/to-error-string");
  */
 
 /**
- * @typedef {object} DrawioOverwriteArgs
- * @property {string} drawio_xml 新的完整 XML 内容（必需）
- * @property {string} description 操作描述
- */
-
-/**
  * 工具执行桥（里程碑 2 实现）。
  *
  * 注意：当前文件位于主进程侧，不直接依赖 Electron API，
@@ -258,13 +252,6 @@ function registerDrawioTools(server) {
     })
     .strict();
 
-  const overwriteSchema = z
-    .object({
-      drawio_xml: z.string().min(1),
-      description: z.string().min(1),
-    })
-    .strict();
-
   server.registerTool(
     "drawio_read",
     {
@@ -310,29 +297,6 @@ function registerDrawioTools(server) {
     async (args) => {
       try {
         const result = await executeInRenderer("drawio_edit_batch", args);
-        return {
-          content: [{ type: "text", text: JSON.stringify(result) }],
-        };
-      } catch (err) {
-        const message = toErrorString(err);
-        return {
-          isError: true,
-          content: [{ type: "text", text: JSON.stringify({ error: message }) }],
-        };
-      }
-    },
-  );
-
-  server.registerTool(
-    "drawio_overwrite",
-    {
-      description: "Override the entire DrawIO diagram XML content",
-      inputSchema: overwriteSchema,
-    },
-    /** @param {DrawioOverwriteArgs} args */
-    async (args) => {
-      try {
-        const result = await executeInRenderer("drawio_overwrite", args);
         return {
           content: [{ type: "text", text: JSON.stringify(result) }],
         };

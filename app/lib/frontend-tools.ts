@@ -5,23 +5,20 @@ import { createLogger } from "@/lib/logger";
 import { XMLSerializer as XmldomSerializer } from "@xmldom/xmldom";
 import * as xpath from "xpath";
 
-import { normalizeDiagramXml, validateXMLFormat } from "./drawio-xml-utils";
+import { normalizeDiagramXml } from "./drawio-xml-utils";
 import { toErrorString } from "./error-handler";
-import { formatXmlParseError, tryParseXmlWithLocator } from "./xml-parse-utils";
+import { tryParseXmlWithLocator } from "./xml-parse-utils";
 import {
   filterNodesByPages,
   isGlobalNode,
   isNodeInAllowedPages,
-  mergePartialPagesXml,
   validatePageIds,
 } from "./page-filter-utils";
 import {
   drawioEditBatchInputSchema,
-  drawioOverwriteInputSchema,
   drawioReadInputSchema,
   type DrawioEditBatchRequest,
   type DrawioEditOperation,
-  type DrawioOverwriteInput,
   type DrawioReadInput,
 } from "./schemas/drawio-tool-schemas";
 import type {
@@ -29,7 +26,6 @@ import type {
   DrawioListResult,
   DrawioQueryResult,
   DrawioReadResult,
-  ReplaceXMLResult,
 } from "@/app/types/drawio-tools";
 import type {
   ToolDrawioOperationErrorDetails,
@@ -42,7 +38,7 @@ import type {
 } from "@/app/types/tool-errors";
 
 const logger = createLogger("Frontend DrawIO Tools");
-const { DRAWIO_READ, DRAWIO_EDIT_BATCH, DRAWIO_OVERWRITE } = AI_TOOL_NAMES;
+const { DRAWIO_READ, DRAWIO_EDIT_BATCH } = AI_TOOL_NAMES;
 const xmlSerializer = new XmldomSerializer();
 
 type InsertPosition = "append_child" | "prepend_child" | "before" | "after";
@@ -161,9 +157,13 @@ function getAllowedPageIdsOrNull(
 function normalizeIds(id?: string | string[]): string[] {
   if (!id) return [];
   const ids = Array.isArray(id) ? id : [id];
-  return ids
-    .map((value) => value?.trim())
-    .filter((value): value is string => Boolean(value));
+  const unique = new Set<string>();
+  for (const value of ids) {
+    const trimmed = value?.trim();
+    if (!trimmed) continue;
+    unique.add(trimmed);
+  }
+  return Array.from(unique);
 }
 
 function collectAttributes(element: Element): Record<string, string> {
@@ -187,6 +187,22 @@ function buildLocatorLabel(locator: { xpath?: string; id?: string }): string {
   return "no locator provided";
 }
 
+function buildXPathStringLiteral(value: string): string {
+  if (!value.includes("'")) {
+    return `'${value}'`;
+  }
+
+  if (!value.includes(`"`)) {
+    return `"${value}"`;
+  }
+
+  const parts = value.split("'");
+  const singleQuoteLiteral = `"'"`;
+  const separator = `, ${singleQuoteLiteral}, `;
+  const concatParts = parts.map((part) => `'${part}'`).join(separator);
+  return `concat(${concatParts})`;
+}
+
 /**
  * Resolve id or xpath to a standardized XPath expression.
  * - Prioritizes id if both provided
@@ -195,17 +211,7 @@ function buildLocatorLabel(locator: { xpath?: string; id?: string }): string {
 function resolveLocator(locator: { xpath?: string; id?: string }): string {
   if (locator.id && locator.id.trim() !== "") {
     const id = locator.id.trim();
-
-    if (!id.includes("'")) {
-      return `//mxCell[@id='${id}']`;
-    }
-    if (!id.includes(`"`)) {
-      return `//mxCell[@id="${id}"]`;
-    }
-
-    const parts = id.split("'");
-    const concatParts = parts.map((part) => `'${part}'`).join(', "\"\'\", ');
-    return `//mxCell[@id=concat(${concatParts})]`;
+    return `//mxCell[@id=${buildXPathStringLiteral(id)}]`;
   }
 
   if (locator.xpath && locator.xpath.trim() !== "") {
@@ -408,6 +414,173 @@ function convertNodeToResult(node: Node): DrawioQueryResult | null {
   }
 }
 
+function stripInvalidXmlChars(value: string): string {
+  let changed = false;
+  const chars: string[] = [];
+
+  for (let i = 0; i < value.length; i += 1) {
+    const ch = value[i] ?? "";
+    const code = value.charCodeAt(i);
+
+    // XML 1.0 allowlist (subset): tab/newline/CR + visible ASCII/Unicode.
+    const isAllowed =
+      code === 0x09 || code === 0x0a || code === 0x0d || code >= 0x20;
+
+    if (!isAllowed) {
+      changed = true;
+      continue;
+    }
+
+    chars.push(ch);
+  }
+
+  return changed ? chars.join("") : value;
+}
+
+function escapeBareAmpersands(value: string): string {
+  return value.replace(
+    /&(?!#\d+;|#x[0-9a-fA-F]+;|(?:amp|lt|gt|apos|quot);)/g,
+    "&amp;",
+  );
+}
+
+function maybeDecodeEscapedXmlMarkup(value: string): string {
+  const trimmed = value.trim();
+  if (trimmed.includes("<")) return value;
+  if (!trimmed.includes("&lt;")) return value;
+
+  // 注：此处仅尝试恢复“标签层”的转义（&lt;mxCell ...&gt;），不解码 &amp;，避免生成非法 XML。
+  return trimmed
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#34;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#x22;/gi, '"')
+    .replace(/&#x27;/gi, "'");
+}
+
+function normalizeXmlFragmentForParsing(value: string): {
+  xml: string;
+  appliedFixes: string[];
+} {
+  const appliedFixes: string[] = [];
+  let xml = value;
+
+  const decoded = maybeDecodeEscapedXmlMarkup(xml);
+  if (decoded !== xml) {
+    appliedFixes.push("decode_escaped_markup");
+    xml = decoded;
+  }
+
+  const stripped = stripInvalidXmlChars(xml);
+  if (stripped !== xml) {
+    appliedFixes.push("strip_control_chars");
+    xml = stripped;
+  }
+
+  const escaped = escapeBareAmpersands(xml);
+  if (escaped !== xml) {
+    appliedFixes.push("escape_bare_ampersands");
+    xml = escaped;
+  }
+
+  return { xml, appliedFixes };
+}
+
+function isMxCellElement(node: Node): node is Element {
+  return (
+    node.nodeType === node.ELEMENT_NODE &&
+    (node as Element).tagName === "mxCell"
+  );
+}
+
+function collectEdgesConnectedToVertex(
+  document: Document,
+  vertexId: string,
+  nodeSelectionOptions?: NodeSelectionOptions,
+): Node[] {
+  const idLiteral = buildXPathStringLiteral(vertexId);
+  const edgesXpath = `//mxCell[@edge='1' and (@source=${idLiteral} or @target=${idLiteral})]`;
+  return selectNodes(document, edgesXpath, nodeSelectionOptions);
+}
+
+function collectVerticesConnectedToEdge(
+  document: Document,
+  edge: Element,
+  nodeSelectionOptions?: NodeSelectionOptions,
+): Node[] {
+  const sourceId = edge.getAttribute("source")?.trim();
+  const targetId = edge.getAttribute("target")?.trim();
+  const linked = [sourceId, targetId].filter((value): value is string =>
+    Boolean(value),
+  );
+
+  const nodes: Node[] = [];
+  for (const linkedId of linked) {
+    const linkedXpath = `//mxCell[@id=${buildXPathStringLiteral(linkedId)}]`;
+    nodes.push(...selectNodes(document, linkedXpath, nodeSelectionOptions));
+  }
+  return nodes;
+}
+
+type PushUniqueFn = (node: Node) => void;
+
+function appendRelatedNodesForVertex(args: {
+  document: Document;
+  vertexId: string;
+  nodeSelectionOptions?: NodeSelectionOptions;
+  pushUnique: PushUniqueFn;
+}): void {
+  const edgeNodes = collectEdgesConnectedToVertex(
+    args.document,
+    args.vertexId,
+    args.nodeSelectionOptions,
+  );
+
+  for (const edgeNode of edgeNodes) {
+    args.pushUnique(edgeNode);
+  }
+
+  const otherEndpointIds = new Set<string>();
+  for (const edgeNode of edgeNodes) {
+    if (!isMxCellElement(edgeNode)) continue;
+    const sourceId = edgeNode.getAttribute("source")?.trim();
+    const targetId = edgeNode.getAttribute("target")?.trim();
+    if (sourceId && sourceId !== args.vertexId) otherEndpointIds.add(sourceId);
+    if (targetId && targetId !== args.vertexId) otherEndpointIds.add(targetId);
+  }
+
+  for (const otherId of otherEndpointIds) {
+    const otherXpath = `//mxCell[@id=${buildXPathStringLiteral(otherId)}]`;
+    const otherNodes = selectNodes(
+      args.document,
+      otherXpath,
+      args.nodeSelectionOptions,
+    );
+    for (const otherNode of otherNodes) {
+      args.pushUnique(otherNode);
+    }
+  }
+}
+
+function appendRelatedNodesForEdge(args: {
+  document: Document;
+  edge: Element;
+  nodeSelectionOptions?: NodeSelectionOptions;
+  pushUnique: PushUniqueFn;
+}): void {
+  const linkedNodes = collectVerticesConnectedToEdge(
+    args.document,
+    args.edge,
+    args.nodeSelectionOptions,
+  );
+  for (const linkedNode of linkedNodes) {
+    args.pushUnique(linkedNode);
+  }
+}
+
 function executeQueryById(
   document: Document,
   id: string | string[],
@@ -415,13 +588,46 @@ function executeQueryById(
 ): DrawioQueryResult[] {
   const ids = normalizeIds(id);
   const results: DrawioQueryResult[] = [];
+  const seenXpaths = new Set<string>();
+
+  const pushUnique = (node: Node) => {
+    const converted = convertNodeToResult(node);
+    if (!converted) return;
+    const key =
+      typeof converted.matched_xpath === "string" && converted.matched_xpath
+        ? converted.matched_xpath
+        : JSON.stringify(converted);
+    if (seenXpaths.has(key)) return;
+    seenXpaths.add(key);
+    results.push(converted);
+  };
 
   for (const currentId of ids) {
     const resolvedXpath = resolveLocator({ id: currentId });
     const nodes = selectNodes(document, resolvedXpath, nodeSelectionOptions);
     for (const node of nodes) {
-      const converted = convertNodeToResult(node);
-      if (converted) results.push(converted);
+      pushUnique(node);
+
+      if (!isMxCellElement(node)) continue;
+
+      if (node.getAttribute("vertex") === "1") {
+        appendRelatedNodesForVertex({
+          document,
+          vertexId: currentId,
+          nodeSelectionOptions,
+          pushUnique,
+        });
+        continue;
+      }
+
+      if (node.getAttribute("edge") === "1") {
+        appendRelatedNodesForEdge({
+          document,
+          edge: node,
+          nodeSelectionOptions,
+          pushUnique,
+        });
+      }
     }
   }
 
@@ -530,7 +736,25 @@ function executeQueryByXpath(
 }
 
 function createElementFromXml(document: Document, xml: string): Element {
-  const parsed = tryParseXmlWithLocator(xml, "text/xml");
+  const firstAttempt = tryParseXmlWithLocator(xml, "text/xml");
+
+  const parsed = firstAttempt.success
+    ? firstAttempt
+    : (() => {
+        const normalized = normalizeXmlFragmentForParsing(xml);
+        if (!normalized.appliedFixes.length) return firstAttempt;
+
+        const recovered = tryParseXmlWithLocator(normalized.xml, "text/xml");
+        if (recovered.success) return recovered;
+
+        return {
+          ...recovered,
+          recoveryAttempted: true,
+          recoveryApplied: normalized.appliedFixes,
+          originalFormatted: firstAttempt.formatted,
+        };
+      })();
+
   if (!parsed.success) {
     const err = new Error(
       `Failed to parse new_xml.\n${parsed.formatted}\nEnsure the XML fragment is well-formed.`,
@@ -544,6 +768,21 @@ function createElementFromXml(document: Document, xml: string): Element {
         location: parsed.location,
         formatted: parsed.formatted,
         stage: "new_xml",
+        recoveryAttempted:
+          typeof (parsed as { recoveryAttempted?: unknown })
+            .recoveryAttempted === "boolean"
+            ? (parsed as { recoveryAttempted?: boolean }).recoveryAttempted
+            : undefined,
+        recoveryApplied: Array.isArray(
+          (parsed as { recoveryApplied?: unknown }).recoveryApplied,
+        )
+          ? (parsed as { recoveryApplied?: string[] }).recoveryApplied
+          : undefined,
+        originalFormatted:
+          typeof (parsed as { originalFormatted?: unknown })
+            .originalFormatted === "string"
+            ? (parsed as { originalFormatted?: string }).originalFormatted
+            : undefined,
       };
     throw err;
   }
@@ -914,6 +1153,70 @@ async function executeDrawioReadFrontend(
   }
 }
 
+async function writeBackXmlWithRollback(params: {
+  context: FrontendToolContext;
+  updatedXml: string;
+  originalXml: string;
+  description: string;
+  rollbackDescription: string;
+}): Promise<void> {
+  const replaceResult = await params.context.replaceDrawioXML(
+    params.updatedXml,
+    {
+      description: params.description,
+    },
+  );
+
+  if (replaceResult?.success) return;
+
+  logger.error("Batch edit write-back failed", { replaceResult });
+
+  let rollbackSucceeded = false;
+  let rollbackErrorMessage: string | undefined;
+
+  try {
+    const rollbackResult = await params.context.replaceDrawioXML(
+      params.originalXml,
+      {
+        description: params.rollbackDescription,
+      },
+    );
+    rollbackSucceeded = Boolean(rollbackResult?.success);
+    if (!rollbackSucceeded) {
+      rollbackErrorMessage =
+        (rollbackResult as { error?: string } | undefined)?.error ||
+        "Unknown rollback failure reason";
+    }
+  } catch (rollbackError) {
+    rollbackErrorMessage =
+      rollbackError instanceof Error
+        ? rollbackError.message
+        : String(rollbackError);
+  }
+
+  const originalError =
+    (replaceResult as { error?: string } | undefined)?.error ||
+    "Frontend XML replacement failed (unknown reason)";
+
+  const errorMessage = rollbackSucceeded
+    ? `Batch edit write-back failed: ${originalError}. Successfully rolled back to previous state.`
+    : `Batch edit write-back failed: ${originalError}. Rollback also failed: ${rollbackErrorMessage ?? "unknown reason"}. Diagram may be in inconsistent state.`;
+
+  const err = new Error(errorMessage);
+  const details: ToolReplaceXmlErrorDetails = {
+    kind: "replace_xml",
+    error: originalError,
+    message: errorMessage,
+    isRollback: false,
+    rollbackSucceeded,
+    rollbackErrorMessage,
+  };
+  (err as Error & { errorCode?: string }).errorCode = "replace_xml";
+  (err as Error & { errorDetails?: ToolReplaceXmlErrorDetails }).errorDetails =
+    details;
+  throw err;
+}
+
 async function executeDrawioEditBatchFrontend(
   request: DrawioEditBatchRequest & { description?: string },
   context: FrontendToolContext,
@@ -931,203 +1234,89 @@ async function executeDrawioEditBatchFrontend(
     const nodeSelectionOptions: NodeSelectionOptions | undefined =
       allowedPageIds ? { allowedPageIds, rejectGlobalNodes: true } : undefined;
 
+    let operationsApplied = 0;
+    let failure: {
+      index: number;
+      operation: DrawioEditOperation;
+      error: string;
+    } | null = null;
+
     for (let index = 0; index < operations.length; index++) {
       const operation = operations[index];
       try {
         applyOperation(document, operation, nodeSelectionOptions);
+        operationsApplied += 1;
       } catch (innerError) {
-        const errorMsg = toErrorString(innerError) || "Unknown error";
-        const details: ToolDrawioOperationErrorDetails = {
-          kind: "drawio_operation",
-          operationIndex: index,
-          operationsTotal: operations.length,
-          operationType: operation.type,
-          locator: {
-            id: typeof operation.id === "string" ? operation.id : undefined,
-            xpath:
-              typeof operation.xpath === "string" ? operation.xpath : undefined,
-          },
-          allowNoMatch: Boolean(operation.allow_no_match),
-          error: errorMsg,
+        failure = {
+          index,
+          operation,
+          error: toErrorString(innerError) || "Unknown error",
         };
-
-        const err = new Error(
-          `Operation ${index + 1}/${operations.length} failed (${operation.type}): ${errorMsg}. ` +
-            `Locator: ${buildLocatorLabel({ xpath: operation.xpath, id: operation.id })}. ` +
-            `All changes have been rolled back.`,
-        );
-        (err as Error & { errorCode?: string }).errorCode = "drawio_operation";
-        (
-          err as Error & { errorDetails?: ToolDrawioOperationErrorDetails }
-        ).errorDetails = details;
-        throw err;
+        break;
       }
     }
-
-    const updatedXml = xmlSerializer.serializeToString(document);
 
     const finalDescription = description?.trim() || "Batch edit diagram";
-    await context.onVersionSnapshot?.(finalDescription);
 
-    const replaceResult = await context.replaceDrawioXML(updatedXml, {
-      description: finalDescription,
-    });
+    if (failure) {
+      const details: ToolDrawioOperationErrorDetails = {
+        kind: "drawio_operation",
+        operationIndex: failure.index,
+        operationsTotal: operations.length,
+        operationType: failure.operation.type,
+        operation: failure.operation as unknown as Record<string, unknown>,
+        locator: {
+          id:
+            typeof failure.operation.id === "string"
+              ? failure.operation.id
+              : undefined,
+          xpath:
+            typeof failure.operation.xpath === "string"
+              ? failure.operation.xpath
+              : undefined,
+        },
+        allowNoMatch: Boolean(failure.operation.allow_no_match),
+        operationsApplied,
+        error: failure.error,
+      };
 
-    if (!replaceResult?.success) {
-      logger.error("Batch edit write-back failed", { replaceResult });
+      if (operationsApplied > 0) {
+        const updatedXml = xmlSerializer.serializeToString(document);
 
-      let rollbackSucceeded = false;
-      let rollbackErrorMessage: string | undefined;
-
-      try {
-        const rollbackResult = await context.replaceDrawioXML(originalXml, {
-          description: "Rollback after batch edit failure",
+        await context.onVersionSnapshot?.(finalDescription);
+        await writeBackXmlWithRollback({
+          context,
+          updatedXml,
+          originalXml,
+          description: finalDescription,
+          rollbackDescription: "Rollback after batch edit write-back failure",
         });
-        rollbackSucceeded = Boolean(rollbackResult?.success);
-        if (!rollbackSucceeded) {
-          rollbackErrorMessage =
-            (rollbackResult as { error?: string } | undefined)?.error ||
-            "Unknown rollback failure reason";
-        }
-      } catch (rollbackError) {
-        rollbackErrorMessage =
-          rollbackError instanceof Error
-            ? rollbackError.message
-            : String(rollbackError);
       }
-
-      const originalError =
-        (replaceResult as { error?: string } | undefined)?.error ||
-        "Frontend XML replacement failed (unknown reason)";
-
-      const errorMessage = rollbackSucceeded
-        ? `Batch edit failed: ${originalError}. Successfully rolled back to previous state.`
-        : `Batch edit failed: ${originalError}. Rollback also failed: ${rollbackErrorMessage ?? "unknown reason"}. Diagram may be in inconsistent state.`;
-
-      const err = new Error(errorMessage);
-      const details: ToolReplaceXmlErrorDetails = {
-        kind: "replace_xml",
-        error: originalError,
-        message: errorMessage,
-        isRollback: false,
-        rollbackSucceeded,
-        rollbackErrorMessage,
-      };
-      (err as Error & { errorCode?: string }).errorCode = "replace_xml";
-      (
-        err as Error & { errorDetails?: ToolReplaceXmlErrorDetails }
-      ).errorDetails = details;
-      throw err;
-    }
-
-    return { success: true, operations_applied: operations.length };
-  } catch (error) {
-    return normalizeUnknownToToolErrorResult(error);
-  }
-}
-
-async function executeDrawioOverwriteFrontend(
-  input: DrawioOverwriteInput,
-  context: FrontendToolContext,
-): Promise<ReplaceXMLResult> {
-  try {
-    const { drawio_xml, description } = input;
-    const validation = validateXMLFormat(drawio_xml);
-    if (!validation.valid) {
-      const err = new Error(
-        formatXmlParseError({
-          error: validation.error,
-          location: validation.location,
-        }),
-      );
-      (err as Error & { errorCode?: string }).errorCode = "xml_parse";
-      (
-        err as Error & { errorDetails?: ToolXmlParseErrorDetails }
-      ).errorDetails = {
-        kind: "xml_parse",
-        error: validation.error,
-        location: validation.location,
-        formatted: formatXmlParseError({
-          error: validation.error,
-          location: validation.location,
-        }),
-        stage: "drawio_overwrite",
-      };
-      throw err;
-    }
-
-    const finalDescription = description?.trim() || "Overwrite entire diagram";
-    const filterContext = context.getPageFilterContext?.() ?? null;
-    const selectedPageIds =
-      filterContext && !filterContext.isMcpContext
-        ? (filterContext.selectedPageIds ?? [])
-        : [];
-
-    const shouldMergePartialPages = selectedPageIds.length > 0;
-    let finalXmlToWrite = drawio_xml;
-    if (shouldMergePartialPages) {
-      const originalXml = await fetchCurrentDiagramXml(context);
-      const pageValidation = validatePageIds(originalXml, selectedPageIds);
-      if (!pageValidation.valid) {
-        const err = new Error(
-          `页面过滤失败：检测到不存在的页面 ID：${pageValidation.invalidIds.join(", ")}`,
-        );
-        (err as Error & { errorCode?: string }).errorCode = "page_filter";
-        (
-          err as Error & { errorDetails?: ToolPageFilterErrorDetails }
-        ).errorDetails = {
-          kind: "page_filter",
-          selectedPageIds,
-          invalidPageIds: pageValidation.invalidIds,
-        };
-        throw err;
-      }
-
-      const merged = mergePartialPagesXml(
-        originalXml,
-        drawio_xml,
-        selectedPageIds,
-      );
-      if (!merged.success) {
-        const err = new Error(`部分页面覆盖失败：${merged.error}`);
-        (err as Error & { errorCode?: string }).errorCode = "page_filter";
-        (err as Error & { errorDetails?: ToolErrorDetails }).errorDetails = {
-          kind: "page_filter",
-          selectedPageIds,
-          reason: merged.error,
-        };
-        throw err;
-      }
-
-      finalXmlToWrite = merged.xml;
-    }
-
-    await context.onVersionSnapshot?.(finalDescription);
-
-    const result = await context.replaceDrawioXML(finalXmlToWrite, {
-      description: finalDescription,
-    });
-
-    if (!result.success) {
-      const details: ToolReplaceXmlErrorDetails = {
-        kind: "replace_xml",
-        error:
-          (result as { error?: string } | undefined)?.error || "replace_failed",
-        message: (result as { error?: string } | undefined)?.error,
-      };
 
       return buildToolErrorResult({
-        error: details.error || "replace_failed",
-        message: "操作失败",
+        error: "drawio_operation",
+        message:
+          operationsApplied > 0
+            ? `Stopped at operation ${failure.index + 1}/${operations.length} (${failure.operation.type}): ${failure.error}. ` +
+              `Applied ${operationsApplied}/${operations.length} operation(s) before stopping.`
+            : `Operation ${failure.index + 1}/${operations.length} failed (${failure.operation.type}): ${failure.error}.`,
         errorDetails: details,
       });
     }
 
-    return {
-      success: true,
-      message: "XML 已替换",
-      xml: finalXmlToWrite,
-    };
+    const updatedXml = xmlSerializer.serializeToString(document);
+
+    await context.onVersionSnapshot?.(finalDescription);
+
+    await writeBackXmlWithRollback({
+      context,
+      updatedXml,
+      originalXml,
+      description: finalDescription,
+      rollbackDescription: "Rollback after batch edit failure",
+    });
+
+    return { success: true, operations_applied: operations.length };
   } catch (error) {
     return normalizeUnknownToToolErrorResult(error);
   }
@@ -1143,6 +1332,9 @@ function createDrawioReadTool(context: FrontendToolContext) {
    - Returns: id, type, attributes, matched_xpath for each cell
 2. **id mode**: Query by mxCell ID (fastest for known elements)
    - Accepts single string or array of strings
+   - Also returns directly related elements:
+     - id = vertex (shape): connected edges + the opposite endpoint cells
+     - id = edge (connector): source/target endpoint cells
    - Example: \`{ "id": "node-1" }\` or \`{ "id": ["node-1", "node-2"] }\`
 3. **xpath mode**: XPath expression for complex queries
    - Example: \`{ "xpath": "//mxCell[@vertex='1']" }\`
@@ -1166,7 +1358,12 @@ function createDrawioReadTool(context: FrontendToolContext) {
 
 function createDrawioEditBatchTool(context: FrontendToolContext) {
   return tool({
-    description: `Batch edit DrawIO diagram with atomic execution (all succeed or all rollback).
+    description: `Batch edit DrawIO diagram with sequential execution (top to bottom). Stops at the first failed/blocked operation and returns the failed operation details.
+
+**Behavior:**
+- Operations are executed in order
+- On failure, the tool stops immediately
+- Any operations before the failure are already applied and saved
 
 **Locator (choose one per operation):**
 - \`id\`: mxCell ID (preferred, auto-converts to XPath \`//mxCell[@id='xxx']\`)
@@ -1227,41 +1424,11 @@ function createDrawioEditBatchTool(context: FrontendToolContext) {
   });
 }
 
-function createDrawioOverwriteTool(context: FrontendToolContext) {
-  return tool({
-    description: `Completely replace the entire DrawIO diagram XML content.
-
-**When to Use:**
-- Apply a new template from scratch
-- Complete diagram restructure
-- Restore from a saved state
-
-**When NOT to Use:**
-- Modifying specific elements → use \`drawio_edit_batch\` instead
-- Adding/removing single elements → use \`drawio_edit_batch\` instead
-
-**Input Requirements:**
-- \`drawio_xml\`: Complete, valid DrawIO XML string
-- Must include proper \`<mxGraphModel>\` root structure
-- XML format is validated before applying
-
-**Warning:** This replaces the ENTIRE diagram. All existing content will be lost.`,
-    inputSchema: drawioOverwriteInputSchema,
-    execute: async ({ drawio_xml, description }) => {
-      return await executeDrawioOverwriteFrontend(
-        { drawio_xml, description },
-        context,
-      );
-    },
-  });
-}
-
 export function createFrontendDrawioTools(
   context: FrontendToolContext,
 ): Record<string, Tool> {
   return {
     [DRAWIO_READ]: createDrawioReadTool(context),
     [DRAWIO_EDIT_BATCH]: createDrawioEditBatchTool(context),
-    [DRAWIO_OVERWRITE]: createDrawioOverwriteTool(context),
   };
 }

@@ -80,8 +80,16 @@ function formatDrawioOperationDetails(
   const locatorLabel =
     locatorParts.length > 0 ? `Locator: ${locatorParts.join(", ")}` : null;
 
+  const operationsApplied =
+    typeof details.operationsApplied === "number"
+      ? details.operationsApplied
+      : undefined;
+
   const lines = [
     `Operation: ${details.operationIndex + 1}/${details.operationsTotal}`,
+    operationsApplied !== undefined
+      ? `operationsApplied: ${String(operationsApplied)}`
+      : null,
     `Type: ${details.operationType}`,
     locatorLabel,
     `allowNoMatch: ${String(Boolean(details.allowNoMatch))}`,

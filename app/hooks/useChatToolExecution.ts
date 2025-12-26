@@ -16,7 +16,6 @@ import {
 import { formatToolErrorDetailsToText } from "@/app/lib/tool-error-format";
 import {
   drawioEditBatchInputSchema,
-  drawioOverwriteInputSchema,
   drawioReadInputSchema,
 } from "@/app/lib/schemas/drawio-tool-schemas";
 
@@ -29,7 +28,6 @@ const logger = createLogger("useChatToolExecution");
 const TOOL_INPUT_SCHEMAS = {
   [AI_TOOL_NAMES.DRAWIO_READ]: drawioReadInputSchema.optional(),
   [AI_TOOL_NAMES.DRAWIO_EDIT_BATCH]: drawioEditBatchInputSchema,
-  [AI_TOOL_NAMES.DRAWIO_OVERWRITE]: drawioOverwriteInputSchema,
 } as const;
 
 /**
@@ -299,10 +297,7 @@ async function validateToolExists(
   submitToolError: SubmitToolErrorFn,
   setToolError: (error: Error | null) => void,
 ): Promise<boolean> {
-  if (
-    tool &&
-    typeof (tool as { execute?: unknown }).execute === "function"
-  ) {
+  if (tool && typeof (tool as { execute?: unknown }).execute === "function") {
     return true;
   }
 
@@ -323,10 +318,11 @@ async function validateToolExists(
       toolCallId,
       submitError,
     });
-    logger.error(
-      "[useChatToolExecution] 提交工具错误失败（tool_not_found）",
-      { error: fatalError, tool: toolName, toolCallId },
-    );
+    logger.error("[useChatToolExecution] 提交工具错误失败（tool_not_found）", {
+      error: fatalError,
+      tool: toolName,
+      toolCallId,
+    });
     setToolError(fatalError);
   }
   return false;
@@ -363,10 +359,11 @@ async function validateToolSchema(
       toolCallId,
       submitError,
     });
-    logger.error(
-      "[useChatToolExecution] 提交工具错误失败（schema_missing）",
-      { error: fatalError, tool: toolName, toolCallId },
-    );
+    logger.error("[useChatToolExecution] 提交工具错误失败（schema_missing）", {
+      error: fatalError,
+      tool: toolName,
+      toolCallId,
+    });
     setToolError(fatalError);
   }
   return false;
@@ -429,10 +426,11 @@ async function validateToolInput(
       toolCallId,
       submitError,
     });
-    logger.error(
-      "[useChatToolExecution] 提交工具错误失败（zod_validation）",
-      { error: fatalError, tool: toolName, toolCallId },
-    );
+    logger.error("[useChatToolExecution] 提交工具错误失败（zod_validation）", {
+      error: fatalError,
+      tool: toolName,
+      toolCallId,
+    });
     setToolError(fatalError);
   }
   return { valid: false };

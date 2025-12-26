@@ -6,7 +6,6 @@
 export const AI_TOOL_NAMES = {
   DRAWIO_READ: "drawio_read",
   DRAWIO_EDIT_BATCH: "drawio_edit_batch",
-  DRAWIO_OVERWRITE: "drawio_overwrite",
 } as const;
 
 export const CLIENT_TOOL_NAMES = {

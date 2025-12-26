@@ -9,7 +9,7 @@
 - **constants/tool-names.ts**: 工具名称常量与类型定义（AI 工具 / 前端执行工具）
 - **constants/tool-config.ts**: 工具默认超时配置（毫秒），覆盖所有工具
 - **drawio-tools.ts**: 浏览器端的 XML 存储桥接（统一存储抽象层 + 事件通知），包含 `waitForMergeValidation()`（返回含 `requestId/context/rawError` 的 merge 结果）
-- **frontend-tools.ts**: 前端 AI 工具定义与执行（`drawio_read` / `drawio_edit_batch` / `drawio_overwrite`），通过注入回调直接读取/写入编辑器 XML
+- **frontend-tools.ts**: 前端 AI 工具定义与执行（`drawio_read` / `drawio_edit_batch`），通过注入回调直接读取/写入编辑器 XML
 - **schemas/drawio-tool-schemas.ts**: DrawIO AI 工具参数的统一 Zod Schema 单一真源（含类型导出）
 - **svg-export-utils.ts**: DrawIO 多页面 SVG 导出工具（页面拆分、单页 XML 重建、结果序列化）
 - **compression-utils.ts**: Web/Node 共享的 `CompressionStream` / `DecompressionStream` deflate-raw 压缩工具
@@ -776,7 +776,7 @@ const tools = [
 3. **WIP 版本特殊性**: WIP (v0.0.0) 不计历史，不能被恢复，用户操作前应告知此限制
 4. **跨端行为一致性**: 存储层接口统一，Web/Electron 实现必须保证行为完全一致
 5. **迁移脚本幂等性**: 数据库迁移脚本必须可重复执行，不能因重复运行而损坏数据
-6. **工具原子性**: `drawio_edit_batch` 操作必须全部成功或全部失败，不允许部分修改
+6. **工具顺序执行**: `drawio_edit_batch` 从上到下依次执行，遇到失败/阻塞立即停止并返回失败原因；此前已成功的操作会保留
 7. **日志级别控制**: 生产环境应关闭 debug 级别日志，避免性能影响
 
 ## 代码腐化清理记录

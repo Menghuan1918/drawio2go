@@ -95,16 +95,31 @@ export function normalizeDiagramXml(payload: string): string {
   return maybeInflateDrawioDiagrams(resolvedXml);
 }
 
+function normalizeBase64Input(base64: string): string {
+  const trimmed = base64.trim();
+  const compact = trimmed
+    .replace(/\s+/g, "")
+    .replace(/-/g, "+")
+    .replace(/_/g, "/");
+
+  const mod = compact.length % 4;
+  if (mod === 2) return `${compact}==`;
+  if (mod === 3) return `${compact}=`;
+  return compact;
+}
+
 /**
  * 跨平台 Base64 解码（Node / 浏览器）
  */
 export function decodeBase64(base64: string): string {
+  const normalized = normalizeBase64Input(base64);
+
   if (typeof Buffer !== "undefined") {
-    return Buffer.from(base64, "base64").toString("utf-8");
+    return Buffer.from(normalized, "base64").toString("utf-8");
   }
 
   if (typeof atob !== "undefined") {
-    const binaryString = atob(base64);
+    const binaryString = atob(normalized);
     const bytes = Uint8Array.from(binaryString, (char) => char.charCodeAt(0));
     return new TextDecoder("utf-8").decode(bytes);
   }
@@ -116,12 +131,14 @@ export function decodeBase64(base64: string): string {
 }
 
 function decodeBase64ToUint8Array(base64: string): Uint8Array {
+  const normalized = normalizeBase64Input(base64);
+
   if (typeof Buffer !== "undefined") {
-    return Uint8Array.from(Buffer.from(base64, "base64"));
+    return Uint8Array.from(Buffer.from(normalized, "base64"));
   }
 
   if (typeof atob !== "undefined") {
-    const binaryString = atob(base64);
+    const binaryString = atob(normalized);
     const bytes = new Uint8Array(binaryString.length);
     for (let i = 0; i < binaryString.length; i += 1) {
       bytes[i] = binaryString.charCodeAt(i);
@@ -173,8 +190,7 @@ function maybeInflateDrawioDiagrams(xml: string): string {
 
 function inflateDiagramContent(encoded: string): string | null {
   try {
-    const sanitized = encoded.replace(/\s+/g, "");
-    const binary = decodeBase64ToUint8Array(sanitized);
+    const binary = decodeBase64ToUint8Array(encoded);
     const inflated = inflateRaw(binary, { to: "string" });
     const inflatedString =
       typeof inflated === "string"

@@ -23,13 +23,12 @@ import { AI_TOOL_NAMES, CLIENT_TOOL_NAMES } from "./tool-names";
  *
  * 工具默认超时配置（毫秒）。
  *
- * - LLM 工具（前端执行）：读取通常 30s 足够；批量编辑/覆盖需要覆盖 export+merge+验证的最坏路径，提升到 60s。
+ * - LLM 工具（前端执行）：读取通常 30s 足够；批量编辑需要覆盖 export+merge+验证的最坏路径，提升到 60s。
  * - 客户端桥接工具（同样在前端执行）：读取/写入设为 60s，多页导出更耗时，提升到 120s。
  */
 export const TOOL_TIMEOUT_CONFIG = {
   [AI_TOOL_NAMES.DRAWIO_READ]: 30_000,
   [AI_TOOL_NAMES.DRAWIO_EDIT_BATCH]: 60_000,
-  [AI_TOOL_NAMES.DRAWIO_OVERWRITE]: 60_000,
   [CLIENT_TOOL_NAMES.GET_DRAWIO_XML]: 60_000,
   [CLIENT_TOOL_NAMES.REPLACE_DRAWIO_XML]: 60_000,
   [CLIENT_TOOL_NAMES.EXPORT_DRAWIO]: 120_000,

@@ -238,7 +238,7 @@ Accordion, Alert, Avatar, Button, Card, Checkbox, CheckboxGroup, Chip, CloseButt
 - **目标**: 后端不再执行任何 DrawIO 工具；工具执行迁移到前端（浏览器/ Electron 渲染进程）。
 - **当前形态**:
   - `/api/ai-proxy`：纯 HTTP/BFF 代理转发（不注入 DrawIO 工具）
-  - `frontend-tools.ts`：前端执行 `drawio_read` / `drawio_edit_batch` / `drawio_overwrite`
+  - `frontend-tools.ts`：前端执行 `drawio_read` / `drawio_edit_batch`
   - `app/components/ChatSidebar.tsx`：前端接收 tool-call（`useChat.onToolCall`）并调用 `frontend-tools.ts` 执行，然后把结果回传给对话流
 - **（已废弃并删除）Socket.IO 工具调用架构**：v1.1 起不再提供/连接 Socket.IO，相关文档仅保留为历史背景。
 
