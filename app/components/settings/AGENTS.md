@@ -140,83 +140,23 @@ VersionSettingsPanel
 
 默认使用 `useAppTranslation("settings")` 获取文案；`AgentSettingsPanel` 直接使用 `react-i18next` 的 `useTranslation("settings")`，并为关键文案提供中文 fallback。
 
-支持的翻译键：
+**翻译文件路径：** `public/locales/{locale}/settings.json`
 
-**通用设置：**
+**主要翻译命名空间：**
 
-```
-settings.general.title
-settings.general.description
-settings.general.defaultPath.label
-settings.general.defaultPath.placeholder
-settings.general.defaultPath.description
-settings.general.defaultPath.selectButton
-settings.general.sidebarExpanded.label
-settings.general.sidebarExpanded.description
-```
+- `settings.general.*` - 通用设置
+- `settings.llm.*` - LLM 设置
+- `settings.agent.*` - Agent 设置
+- `settings.version.*` - 版本设置
+- `settings.connectionTest.*` - 连接测试
 
-**LLM 设置：**
-
-```
-settings.llm.title
-settings.llm.description
-settings.llm.apiUrl.label
-settings.llm.apiUrl.placeholder
-settings.llm.apiUrl.description
-settings.llm.provider.label
-settings.llm.provider.description
-settings.llm.providers.[type].label        // gemini, openai-compatible, anthropic, deepseek-native, openai-reasoning
-settings.llm.providers.[type].description
-settings.llm.apiKey.label
-settings.llm.apiKey.placeholder
-settings.llm.apiKey.description
-settings.llm.modelName.label
-settings.llm.modelName.placeholder
-settings.llm.modelName.description
-settings.llm.temperature.label
-settings.llm.temperature.description
-settings.llm.maxToolRounds.label
-settings.llm.maxToolRounds.description
-settings.systemPrompt.label
-settings.systemPrompt.button
-settings.systemPrompt.description
-
-settings.agent.title
-settings.agent.description
-settings.agent.systemPrompt.label
-settings.agent.systemPrompt.description
-settings.agent.futureFeatures
-settings.agent.defaultSettings.title
-settings.agent.defaultSettings.description
-settings.agent.defaultSettings.themeLabel
-settings.agent.defaultSettings.knowledgeLabel
-```
-
-**文件设置：**
-
-```
-settings.file.title
-settings.file.description
-settings.file.defaultPath.label
-settings.file.defaultPath.placeholder
-settings.file.defaultPath.note
-settings.file.defaultPath.browse
-```
-
-**版本设置：**
-
-```
-settings.version.title
-settings.version.description
-settings.version.autoVersionOnAIEdit.label
-settings.version.autoVersionOnAIEdit.description
-```
+---
 
 ## 代码腐化清理记录
 
 ### 2025-12-08 清理
 
-**执行的操作**：
+**执行的操作：**
 
 - 删除 `ModelsSettingsPanel` 中的过时 TODO 注释，避免误导性待办。
 - 确认此次清理不改动模型/供应商 CRUD 逻辑，仅做注释层面瘦身。
@@ -228,24 +168,11 @@ settings.version.autoVersionOnAIEdit.description
 
 - 观察模型管理面板是否需要 onPress 统一或表单校验复用。
 
-**连接测试：**
-
-```
-settings.connectionTest.button
-settings.connectionTest.description
-settings.connectionTest.title
-settings.connectionTest.loading
-settings.connectionTest.testing
-settings.connectionTest.success
-settings.connectionTest.error
-settings.connectionTest.close
-```
-
 ---
 
 ## 使用示例
 
-### 完整设置面板集成
+### 基础集成
 
 ```tsx
 import {
@@ -255,138 +182,31 @@ import {
   AgentSettingsPanel,
   VersionSettingsPanel,
   isSystemPromptValid,
-  type SettingsTab,
 } from "@/app/components/settings";
-import { DEFAULT_AGENT_SETTINGS } from "@/app/lib/config-utils";
-import type {
-  ActiveModelReference,
-  AgentSettings,
-  ModelConfig,
-  ProviderConfig,
-} from "@/app/types/chat";
 
-export function SettingsModal() {
-  const [activeTab, setActiveTab] = useState<SettingsTab>("general");
-  const [generalPath, setGeneralPath] = useState("");
-  const [version, setVersion] = useState({ autoVersionOnAIEdit: true });
-  const [agentSettings, setAgentSettings] = useState<AgentSettings>(
-    DEFAULT_AGENT_SETTINGS,
-  );
-  const [providers, setProviders] = useState<ProviderConfig[]>([]);
-  const [models, setModels] = useState<ModelConfig[]>([]);
-  const [activeModel, setActiveModel] = useState<ActiveModelReference | null>(
-    null,
-  );
-
-  return (
-    <div className="settings-container">
-      <SettingsNav activeTab={activeTab} onTabChange={setActiveTab} />
-
-      <div className="settings-content">
-        {activeTab === "general" && (
-          <GeneralSettingsPanel
-            defaultPath={generalPath}
-            onDefaultPathChange={setGeneralPath}
-          />
-        )}
-
-        {activeTab === "models" && (
-          <ModelsSettingsPanel
-            providers={providers}
-            models={models}
-            activeModel={activeModel}
-            onProvidersChange={setProviders}
-            onModelsChange={setModels}
-            onActiveModelChange={setActiveModel}
-          />
-        )}
-
-        {activeTab === "agent" && (
-          <AgentSettingsPanel
-            systemPrompt={agentSettings.systemPrompt}
-            onChange={(systemPrompt) =>
-              setAgentSettings((prev) => ({
-                ...prev,
-                systemPrompt,
-                updatedAt: Date.now(),
-              }))
-            }
-            skillSettings={agentSettings.skillSettings}
-            onSkillSettingsChange={(skillSettings) =>
-              setAgentSettings((prev) => ({
-                ...prev,
-                skillSettings,
-                updatedAt: Date.now(),
-              }))
-            }
-            error={
-              isSystemPromptValid(agentSettings.systemPrompt)
-                ? undefined
-                : "系统提示词不能为空"
-            }
-          />
-        )}
-
-        {activeTab === "version" && (
-          <VersionSettingsPanel settings={version} onChange={setVersion} />
-        )}
-      </div>
-    </div>
-  );
-}
+// 在父组件中管理 activeTab 和各面板的 state
+// 通过 onTabChange、onChange 等回调处理状态更新
+// 参考完整实现：app/components/SettingsDialog.tsx
 ```
 
-### 系统提示词编辑
+### 系统提示词校验
 
 ```tsx
-<AgentSettingsPanel
-  systemPrompt={systemPrompt}
-  onChange={(next) => {
-    setSystemPrompt(next);
-    setUpdatedAt(Date.now());
-  }}
-  skillSettings={skillSettings}
-  onSkillSettingsChange={(next) => {
-    setSkillSettings(next);
-    setUpdatedAt(Date.now());
-  }}
-  error={isSystemPromptValid(systemPrompt) ? undefined : "系统提示词不能为空"}
-/>
+import {
+  isSystemPromptValid,
+  getSystemPromptError,
+} from "@/app/components/settings";
 
-// 面板内联编辑（TextArea rows=15），右侧按钮触发 ConfirmDialog 恢复 DEFAULT_SYSTEM_PROMPT。
+const error = isSystemPromptValid(prompt)
+  ? undefined
+  : getSystemPromptError(prompt);
 ```
 
 ---
 
-## 工具和常量
+## 核心类型定义
 
-### 常量 (`constants.ts`)
-
-```typescript
-interface ProviderOption {
-  value: ProviderType;
-  label: string;
-  description: string;
-  disabled?: boolean;
-}
-
-const PROVIDER_OPTIONS: ProviderType[] = [
-  "openai-compatible",
-  "gemini",
-  "anthropic",
-  "deepseek-native",
-  "openai-reasoning",
-];
-
-// 获取国际化后的供应商选项
-const getProviderOptions = (t: TFunction): ProviderOption[] => {
-  // 返回带有翻译的选项列表
-};
-```
-
-### 类型定义
-
-来自 `@/app/types/chat`（节选）：
+来自 `@/app/types/chat`：
 
 ```typescript
 type ProviderType =
@@ -430,6 +250,20 @@ interface AgentSettings {
 }
 ```
 
+**常量 (`constants.ts`)：**
+
+```typescript
+const PROVIDER_OPTIONS: ProviderType[] = [
+  "openai-compatible",
+  "gemini",
+  "anthropic",
+  "deepseek-native",
+  "openai-reasoning",
+];
+
+// 使用 getProviderOptions(t) 获取国际化后的供应商选项
+```
+
 ---
 
 ## API 集成
@@ -438,35 +272,7 @@ interface AgentSettings {
 
 **端点：** `POST /api/test`
 
-**请求体：**
-
-```json
-{
-  "apiUrl": "https://api.example.com/v1",
-  "apiKey": "sk-xxx",
-  "modelName": "gpt-4o",
-  "temperature": 0.7,
-  "providerType": "openai-compatible"
-}
-```
-
-**响应（成功）：**
-
-```json
-{
-  "success": true,
-  "response": "OK / 测试消息"
-}
-```
-
-**响应（失败）：**
-
-```json
-{
-  "success": false,
-  "error": "Invalid API key"
-}
-```
+**请求/响应：** 包含 apiUrl、apiKey、modelName、providerType 等字段，返回 success 和 response/error。
 
 ---
 
@@ -508,4 +314,4 @@ app/components/settings/
 
 ---
 
-**最后更新:** 2025年12月15日
+**最后更新:** 2025年12月27日

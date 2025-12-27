@@ -117,16 +117,18 @@
 
 **核心功能**:
 
-- 模块化架构（12个独立子组件）
-- 一体化布局：消息区 + 输入区（含模型选择按钮）
-- 按钮组：新建聊天/历史对话（左）、版本管理/文件上传/发送（右）
+- 模块化架构（基于 hooks 和状态机）
+- 一体化布局：消息区 + 输入区 + 顶部操作栏（ChatTopActions）
 - 画布上下文（Canvas Context）：发送前可选注入 `<drawio_status vertices="X" edges="Y"/>`（仅包含节点/连接线数量）与 `<user_select>`（仅 Electron，来自 `app/page.tsx` 的 `selectionRef`）；仅影响请求 payload，不写入本地历史/存储
+- 页面选择器（Page Selector）：支持多选页面，未全选时至少选一页才能发送；通过 `usePageSelection` hook 管理状态
+- 绘图技能配置（Skill Settings）：风格（style）和知识类型（knowledge）配置，持久化到存储
+- MCP 工具支持：前端工具通过 `electronMcp` 桥接到主进程，支持独立的工具上下文和超时控制
 - @ai-sdk/react: `useChat` hook + 流式响应
 - Markdown 渲染（react-markdown）
 - 工具状态卡片（进行中/成功/失败）
 - 模型信息条（图标 + 模型名 + 时间戳）
 - 模型选择 Popover（HeroUI ComboBox 分组），按供应商列出模型，流式期间禁用选择
-- `sendMessage(message, ...)` 仅在“替换既有用户消息”时才传 `message.messageId`；普通发送只需设置 `message.id`
+- 自动版本快照（AI 编辑前）：`version.autoVersionOnAIEdit` 设置控制，首次创建默认主版本后跳过子版本避免无差异错误
 
 #### 4.1 聊天子组件（app/components/chat/）
 

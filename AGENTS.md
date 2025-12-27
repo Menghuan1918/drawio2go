@@ -9,6 +9,7 @@
 - **前端框架**: Next.js 15 (App Router) + React 19
 - **UI 库**: HeroUI v3 (v3.0.0-beta.1) - 基于 React Aria Components 的复合组件模式
 - **样式**: Tailwind CSS v4 (⚠️ 必须 v4，v3 不兼容)
+- **AI 集成**: AI SDK v6 (Vercel AI SDK)
 - **DrawIO 集成**: 原生 iframe 实现
 - **桌面应用**: Electron 38.x
 - **语言**: TypeScript
@@ -51,9 +52,10 @@ app/
 │   ├── TopBar.tsx                # 顶栏组件（含国际化）
 │   ├── UnifiedSidebar.tsx        # 统一侧边栏容器
 │   ├── SettingsSidebar.tsx       # 设置侧边栏
-│   ├── ChatSidebar.tsx           # 聊天侧边栏主组件（@ai-sdk/react）
+│   ├── ChatSidebar.tsx           # 聊天侧边栏主组件（AI SDK v6）
 │   ├── VersionSidebar.tsx        # 版本侧边栏主组件
 │   ├── chat/                     # 聊天组件模块化架构（17个子组件）
+│   │   ├── Composer.tsx          # 输入区域（含 Skill 按钮、页面选择器）
 │   │   └── AGENTS.md             # 聊天模块详细文档
 │   ├── settings/                 # 设置相关子组件（含国际化）
 │   │   └── AGENTS.md             # 设置模块详细文档
@@ -75,10 +77,10 @@ app/
 ├── lib/                # 工具库 [详细文档 → app/lib/AGENTS.md]
 │   ├── drawio-tools.ts          # DrawIO XML 操作工具集
 │   ├── drawio-xml-utils.ts      # DrawIO XML 归一化与解压工具
-│   ├── frontend-tools.ts        # 前端工具执行（DrawIO read/edit/overwrite）
+│   ├── frontend-tools.ts        # 前端工具执行（DrawIO read/edit_batch，顺序执行）
 │   ├── svg-export-utils.ts      # 多页面 SVG 导出工具
 │   ├── svg-smart-diff.ts        # SVG 智能差异对比引擎
-│   ├── config-utils.ts          # LLM 配置规范化工具
+│   ├── config-utils.ts          # LLM 配置规范化工具（含 Skill 配置）
 │   ├── compression-utils.ts     # 压缩/解压工具（pako）
 │   ├── version-utils.ts         # 版本号解析与排序工具
 │   ├── utils.ts                 # 通用工具函数
@@ -115,6 +117,8 @@ app/
 │   ├── ai-proxy/                # 纯 AI 代理端点（仅转发，不含业务逻辑）
 │   ├── health/                  # 健康检查（在线心跳）
 │   └── test/                    # 测试 API 路由
+├── config/              # 配置文件
+│   └── skill-elements.json      # 绘图技能配置（主题、知识库元素）
 ├── styles/             # 模块化样式系统 [详细文档 → app/styles/AGENTS.md]
 │   ├── base/                    # 基础样式（reset、变量）
 │   ├── components/              # 组件样式
@@ -218,13 +222,14 @@ Accordion, Alert, Avatar, Button, Card, Checkbox, CheckboxGroup, Chip, CloseButt
 ### 3.1 国际化系统（Milestone 2-6）
 
 - **支持语言**: 中文（zh-CN）、英文（en-US）、日文（ja-JP）
-- **技术栈**: next-intl + i18n-js
-- **翻译资源**: `app/i18n/locales/` 目录存放各语言翻译文件
+- **技术栈**: i18next + react-i18next
+- **翻译资源**: `public/locales/` 目录存放各语言翻译文件（JSON 格式）
 - **已完成国际化模块**:
   - **Milestone 2**: 语言切换器与通用设置面板
   - **Milestone 3 & 4**: 顶栏与项目选择器国际化
   - **Milestone 5**: 侧边栏国际化（聊天、设置、版本）
   - **Milestone 6**: 设置模块国际化（完整面板和选项）
+  - **最近更新**: Skill 配置、页面选择器、画布上下文国际化
 - **详细文档**: 见 `app/i18n/AGENTS.md`
 
 ### 4. 包开发信息获取
@@ -233,13 +238,19 @@ Accordion, Alert, Avatar, Button, Card, Checkbox, CheckboxGroup, Chip, CloseButt
 - **工作流程**: 先调用 `resolve-library-id` 获取包ID，再调用 `get-library-docs` 获取最新文档
 - **适用场景**: 新增包、使用包的API、版本升级、遇到兼容性问题时
 
-### 5. 工具调用架构（v1.1：前端执行 + HTTP/BFF）
+### 5. 工具调用架构（v1.2：前端顺序执行 + HTTP/BFF）
 
 - **目标**: 后端不再执行任何 DrawIO 工具；工具执行迁移到前端（浏览器/ Electron 渲染进程）。
 - **当前形态**:
-  - `/api/ai-proxy`：纯 HTTP/BFF 代理转发（不注入 DrawIO 工具）
-  - `frontend-tools.ts`：前端执行 `drawio_read` / `drawio_edit_batch`
+  - `/api/ai-proxy`：纯 HTTP/BFF 代理转发（不注入 DrawIO 工具）+ AI SDK v6
+  - `frontend-tools.ts`：前端执行 `drawio_read` / `drawio_edit_batch`（顺序执行，遇错即停）
   - `app/components/ChatSidebar.tsx`：前端接收 tool-call（`useChat.onToolCall`）并调用 `frontend-tools.ts` 执行，然后把结果回传给对话流
+  - **页面选择器**：支持多页面图表的分页操作，用户可选择 AI 操作生效的页面范围
+  - **画布上下文注入**：自动注入 `<drawio_status>` 标签（节点/连线数量），App 环境还会注入 `<user_select>` 标签（鼠标选中元素 ID）
+- **工具变更**:
+  - ✅ `drawio_read`：读取图表（支持 filter/id/xpath 查询，支持页面过滤）
+  - ✅ `drawio_edit_batch`：批量编辑图表（顺序执行，第一个失败时停止，支持页面过滤）
+  - ❌ `drawio_overwrite`：已移除（2025-12-27），功能已合并到 `drawio_edit_batch` 的顺序执行逻辑
 - **（已废弃并删除）Socket.IO 工具调用架构**：v1.1 起不再提供/连接 Socket.IO，相关文档仅保留为历史背景。
 
 ### 6. 检查测试
@@ -405,6 +416,36 @@ npm run format           # 使用 Prettier 格式化所有代码
 
 ## 最近更新
 
+### Skill 配置系统与工具优化（2025-12-27）
+
+**Skill 配置功能**
+
+- 新增绘图技能（Skill）配置系统：支持主题风格（现代/学术/极简/自定义）+ 知识库（通用/流程图/UML/云服务）动态组合
+- 系统提示词支持 `{{theme}}` / `{{knowledge}}` 占位符，根据用户选择动态注入
+- 配置存储在 `app/config/skill-elements.json`，支持热加载和扩展
+- 优化配色策略：优先遵从用户提供的调色板/品牌色，否则使用风格默认配色
+
+**工具调用架构优化**
+
+- 移除 `drawio_overwrite` 工具（功能已合并到 `drawio_edit_batch`）
+- `drawio_edit_batch` 重构为顺序执行（遇到第一个失败时停止），提升可预测性和错误处理
+- 新增页面选择器功能：支持多页面图表的分页操作，用户可选择 AI 操作生效的页面范围
+- 精简系统提示词与画布上下文注入，降低 token 消耗（约 30% 减少）
+
+**AI SDK 升级**
+
+- 升级到 AI SDK v6，支持更多原生供应商（Anthropic、Gemini）
+- 改进流式输出性能和错误处理机制
+- 支持 Reasoning 模型的思考过程展示
+
+**影响文件**：约 10 个文件
+
+**下次关注**：
+
+- 观察 Skill 配置对不同模型的 token 消耗影响
+- 监控顺序执行对工具调用失败率的改善效果
+- 考虑为页面选择器添加批量操作快捷方式
+
 ### 模块化文档与国际化完善（2025-11-30）
 
 **子模块 AGENTS.md 创建**
@@ -486,7 +527,10 @@ npm run format           # 使用 Prettier 格式化所有代码
 **LLM 集成**
 
 - OpenAI Compatible 支持（Reasoning 模型 o1/o3、LM Studio、DeepSeek）
+- Anthropic Claude 原生支持（AI SDK v6）
+- Google Gemini 原生支持（AI SDK v6）
 - 聊天消息带模型标记（`model_name` 字段）
+- 系统提示词支持 Skill 配置动态注入（`{{theme}}` / `{{knowledge}}` 占位符）
 
 ### 版本管理系统（2025-11-12 ~ 2025-11-17）
 
@@ -569,4 +613,4 @@ npm run format           # 使用 Prettier 格式化所有代码
 - SQLite：基于 `PRAGMA user_version` 的 `runSQLiteMigrations`，V1 迁移创建全部表、索引（含 `source_version_id`）、外键约束，保持 WAL 与外键开启
 - 现有用户库版本仍为 1，如需应用迁移可删除本地库重新初始化（未来版本将基于此体系增量迭代）
 
-_最后更新: 2025-12-08_
+_最后更新: 2025-12-27_

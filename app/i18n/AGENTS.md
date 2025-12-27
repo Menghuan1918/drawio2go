@@ -242,6 +242,74 @@ await i18n.changeLanguage("zh-CN");
 - 新增 validation.json 和完整 settings.json
 - 集成 Toast 通知的多语言支持
 
+### Milestone 7: Skill 配置系统国际化
+
+- 完成 Skill（绘图技能）模块翻译
+- 新增 `chat.json` → `skill.*` 命名空间：
+  - `skill.theme.*`：风格选择（modern/academic/minimal/custom）
+  - `skill.element.*`：知识类型（general/basic/uml/aws/azure/gcp/network）
+  - `skill.custom.*`：自定义风格对话框
+  - `skill.disabled.*`：功能禁用提示
+- 支持多语言风格描述和知识分类
+- 集成 `app/config/skill-elements.json` 配置系统
+
+**新增翻译键结构**：
+
+```json
+{
+  "skill": {
+    "buttonLabel": "{{theme}}", // 按钮标签（动态显示当前风格）
+    "ariaLabel": "配置绘图风格与知识", // 无障碍标签
+    "disabled": {
+      // 功能禁用提示
+      "missingTemplate": "系统提示词需要包含占位符",
+      "partialTemplate": "系统提示词需要同时包含两个占位符",
+      "unavailable": "当前状态下无法修改设置"
+    },
+    "theme": {
+      // 风格配置
+      "label": "风格",
+      "description": "选择图表整体风格（优先遵从用户配色）",
+      "modern": "现代",
+      "academic": "学术",
+      "minimal": "极简",
+      "custom": "自定义",
+      "unknown": "未知风格"
+    },
+    "knowledge": {
+      // 知识配置
+      "label": "知识",
+      "description": "选择可用知识类型（可多选）",
+      "required": "必选"
+    },
+    "custom": {
+      // 自定义风格对话框
+      "title": "自定义风格",
+      "placeholder": "描述你希望的图表风格：色调、饱和度、线宽、圆角...",
+      "save": "保存",
+      "cancel": "取消"
+    },
+    "element": {
+      // 知识类型翻译
+      "general": "通用",
+      "basic": "基础流程",
+      "misc": "杂项",
+      "uml": "UML",
+      "aws": "AWS",
+      "azure": "Azure",
+      "gcp": "GCP",
+      "network": "网络"
+    }
+  }
+}
+```
+
+**配置文件关联**：
+
+- `app/config/skill-elements.json`：定义风格和知识的 `nameKey` 字段
+- `public/locales/{lng}/chat.json`：提供 `skill.*` 键的翻译文本
+- `app/components/ChatSidebar.tsx`：使用 `t("skill.theme.modern")` 读取翻译
+
 ## 注意事项
 
 ### SSR/SSG 兼容性

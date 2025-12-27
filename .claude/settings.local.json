@@ -81,7 +81,8 @@
       "WebFetch(domain:docs.litellm.ai)",
       "Bash(git show:*)",
       "Bash(npm run:*)",
-      "Bash(file:*)"
+      "Bash(file:*)",
+      "Skill(update-agents)"
     ],
     "deny": [],
     "ask": []
