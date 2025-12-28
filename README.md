@@ -12,9 +12,10 @@
 ![Linux](https://img.shields.io/badge/-Linux-yellow?logo=linux&logoColor=white)
 
 <p align="center">
-  <a href="./README_zh-CN.md">简体中文</a> | English
+  <a href="./README_zh-CN.md">简体中文</a> | English </a><br><br>
+  <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FMenghuan1918%2Fdrawio2go"><img src="https://vercel.com/button" alt="Deploy with Vercel"/>
 </p>
-
+ 
 ---
 
 A modern DrawIO editor application dedicated to building better **human-AI collaborative** modeling tools with AI assistance. User-centered, enhancing human-machine efficiency, exploring how to best complement each other with AI. Provides out-of-the-box applications (Windows/Linux/Mac OS) or deployment as a web page.
