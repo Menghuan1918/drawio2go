@@ -12,7 +12,8 @@
 ![Linux](https://img.shields.io/badge/-Linux-yellow?logo=linux&logoColor=white)
 
 <p align="center">
-  简体中文 | <a href="./README.md">English</a>
+  简体中文 | <a href="./README.md">English</a><br><br>
+  <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FMenghuan1918%2Fdrawio2go"><img src="https://vercel.com/button" alt="Deploy with Vercel"/>
 </p>
 
 ---
