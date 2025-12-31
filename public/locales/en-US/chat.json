@@ -112,6 +112,14 @@
   },
   "canvasContext": "Canvas Context",
   "canvasContextTooltip": "Auto-inject a canvas summary (vertex/edge counts). In App, also inject selected element IDs.",
+  "canvasEnhancements": {
+    "buttonLabel": "Canvas({{count}})",
+    "tooltip": "Configure canvas enhancements"
+  },
+  "layoutCheck": {
+    "title": "Layout Check",
+    "description": "After batch edits, detect connector overlaps and append warnings"
+  },
   "pageSelector": {
     "title": "Page Selector",
     "allPages": "All pages",
@@ -141,6 +149,18 @@
       "custom": "Custom",
       "unknown": "Unknown style"
     },
+    "colorTheme": {
+      "label": "Color Theme",
+      "description": "Choose the color scheme for diagrams",
+      "default": "Default",
+      "blue": "Blue",
+      "green": "Green",
+      "warm": "Warm",
+      "cool": "Cool",
+      "grayscale": "Grayscale",
+      "earth": "Earth",
+      "none": "None"
+    },
     "knowledge": {
       "label": "Knowledge",
       "description": "Choose knowledge types (multi-select)",
@@ -151,6 +171,15 @@
       "placeholder": "Describe the style you want: tone (cool/warm/neutral), saturation & contrast, line weight, corner radius, connector style (orthogonal/curved/arrows), layout density, typography/annotation style. If you provide a primary color or palette, it will be followed.",
       "save": "Save",
       "cancel": "Cancel"
+    },
+    "customThemePrompt": {
+      "label": "Custom style prompt",
+      "description": "Only applies when \"Custom\" style is selected. Replaces {{theme}} content."
+    },
+    "customKnowledge": {
+      "label": "Custom knowledge",
+      "description": "Optional: appended to the end of {{knowledge}} to add your own constraints or domain notes.",
+      "placeholder": "e.g. Prefer internal terminology/naming rules, or add domain-specific libraries/business rules, etc."
     },
     "element": {
       "general": "General",

@@ -112,6 +112,14 @@
   },
   "canvasContext": "画布上下文",
   "canvasContextTooltip": "对话自动注入画布摘要（节点/连线数量），App 中还会注入鼠标选中元素 ID",
+  "canvasEnhancements": {
+    "buttonLabel": "画布增强({{count}})",
+    "tooltip": "配置画布增强功能"
+  },
+  "layoutCheck": {
+    "title": "布局检查",
+    "description": "批量编辑完成后检测连接线是否与元素重叠，并在结果中附加 warning"
+  },
   "pageSelector": {
     "title": "页面选择器",
     "allPages": "全部页面",
@@ -141,6 +149,18 @@
       "custom": "自定义",
       "unknown": "未知风格"
     },
+    "colorTheme": {
+      "label": "颜色主题",
+      "description": "选择图表的颜色方案",
+      "default": "默认",
+      "blue": "蓝色系",
+      "green": "绿色系",
+      "warm": "暖色",
+      "cool": "冷色",
+      "grayscale": "灰度",
+      "earth": "大地",
+      "none": "不指定"
+    },
     "knowledge": {
       "label": "知识",
       "description": "选择可用知识类型（可多选）",
@@ -151,6 +171,15 @@
       "placeholder": "描述你希望的图表风格：色调倾向（冷/暖/中性）、饱和度与对比度、线宽、圆角、连接线（直角/曲线/箭头）、布局密度、字体/标注风格等；如你提供主色或调色板，将优先使用。",
       "save": "保存",
       "cancel": "取消"
+    },
+    "customThemePrompt": {
+      "label": "自定义风格提示词",
+      "description": "仅在选择「自定义」风格时生效，用于替换 {{theme}} 内容。"
+    },
+    "customKnowledge": {
+      "label": "自定义知识内容",
+      "description": "可选：追加到 {{knowledge}} 的末尾，用于补充你自己的知识或约束。",
+      "placeholder": "例如：请优先使用公司内部术语/命名规范；或补充特定图形库/业务规则等。"
     },
     "element": {
       "general": "通用",

@@ -64,6 +64,8 @@ export interface FrontendToolContext {
   onVersionSnapshot?: (description: string) => Promise<void>;
   /** 获取页面过滤上下文（用于“仅选中页面”场景）；返回 null/undefined 表示不启用过滤 */
   getPageFilterContext?: () => PageFilterContext | null;
+  /** 是否启用布局检查（批量编辑成功后检测连接线与元素重叠并附加 warnings） */
+  getLayoutCheckEnabled?: () => boolean;
 }
 
 function parseXml(xml: string): Document {
@@ -385,11 +387,53 @@ function convertNodeToResult(node: Node): DrawioQueryResult | null {
   switch (node.nodeType) {
     case node.ELEMENT_NODE: {
       const element = node as Element;
+      const attributes = collectAttributes(element);
+
+      // 解析子元素信息
+      const childElements: Array<{
+        tag_name: string;
+        attributes: Record<string, string>;
+      }> = [];
+      const childNodes = Array.from(element.childNodes).filter(
+        (n) => n.nodeType === 1,
+      );
+
+      for (const child of childNodes) {
+        const childElement = child as Element;
+        childElements.push({
+          tag_name: childElement.tagName,
+          attributes: collectAttributes(childElement),
+        });
+      }
+
+      // 智能判断是否需要显示 xml_string：
+      // - 如果元素没有子元素 → xml_string 为空
+      // - 如果元素有子元素，且所有子元素都是简单元素（只有属性，没有嵌套子元素）→ xml_string 为空
+      // - 如果子元素还有嵌套子元素（深度 > 1）→ 保留 xml_string
+      let shouldShowXmlString = false;
+
+      if (childElements.length > 0) {
+        // 检查子元素是否有嵌套子元素
+        for (const child of childNodes) {
+          const childElement = child as Element;
+          const grandChildren = Array.from(childElement.childNodes).filter(
+            (n) => n.nodeType === 1,
+          );
+          if (grandChildren.length > 0) {
+            shouldShowXmlString = true;
+            break;
+          }
+        }
+      }
+
       return {
         type: "element",
         tag_name: element.tagName,
-        attributes: collectAttributes(element),
-        xml_string: xmlSerializer.serializeToString(element),
+        attributes,
+        children: childElements.length > 0 ? childElements : undefined,
+        xml_string: shouldShowXmlString
+          ? xmlSerializer.serializeToString(element)
+          : "",
         matched_xpath: matchedXPath,
       };
     }
@@ -1217,6 +1261,530 @@ async function writeBackXmlWithRollback(params: {
   throw err;
 }
 
+type LayoutPoint = { x: number; y: number };
+type LayoutRect = { left: number; top: number; right: number; bottom: number };
+
+function parseFiniteNumber(value: string | null | undefined): number | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getDirectChildElement(
+  parent: Element,
+  tagNameLower: string,
+): Element | null {
+  for (let i = 0; i < parent.childNodes.length; i++) {
+    const node = parent.childNodes.item(i);
+    if (!node || node.nodeType !== node.ELEMENT_NODE) continue;
+    const element = node as Element;
+    if ((element.tagName ?? "").toLowerCase() === tagNameLower) {
+      return element;
+    }
+  }
+  return null;
+}
+
+function findAncestorDiagramElement(node: Node): Element | null {
+  let current: Node | null = node;
+  while (current) {
+    if (current.nodeType === current.ELEMENT_NODE) {
+      const element = current as Element;
+      if ((element.tagName ?? "").toLowerCase() === "diagram") return element;
+    }
+    current = current.parentNode;
+  }
+  return null;
+}
+
+function resolveDiagramIdByIndex(diagram: Element): string | null {
+  const parent = diagram.parentNode;
+  if (!parent) return null;
+
+  let diagramIndex = 0;
+  for (let i = 0; i < parent.childNodes.length; i++) {
+    const sibling = parent.childNodes.item(i);
+    if (!sibling || sibling.nodeType !== sibling.ELEMENT_NODE) continue;
+    const siblingEl = sibling as Element;
+    if ((siblingEl.tagName ?? "").toLowerCase() !== "diagram") continue;
+    diagramIndex += 1;
+    if (siblingEl === diagram) {
+      return `page-${diagramIndex}`;
+    }
+  }
+
+  return null;
+}
+
+function resolveDiagramEffectiveId(diagram: Element): string | null {
+  const id = diagram.getAttribute("id")?.trim();
+  if (id) return id;
+  return resolveDiagramIdByIndex(diagram);
+}
+
+function resolveNodePageId(node: Node): string | null {
+  const diagram = findAncestorDiagramElement(node);
+  if (!diagram) return null;
+  return resolveDiagramEffectiveId(diagram);
+}
+
+function buildVertexGeometry(cell: Element): {
+  id: string;
+  pageId: string;
+  rect: LayoutRect;
+  center: LayoutPoint;
+} | null {
+  const id = cell.getAttribute("id")?.trim();
+  if (!id) return null;
+  const pageId = resolveNodePageId(cell);
+  if (!pageId) return null;
+
+  const geometry = getDirectChildElement(cell, "mxgeometry");
+  if (!geometry) return null;
+
+  const x = parseFiniteNumber(geometry.getAttribute("x"));
+  const y = parseFiniteNumber(geometry.getAttribute("y"));
+  const width = parseFiniteNumber(geometry.getAttribute("width"));
+  const height = parseFiniteNumber(geometry.getAttribute("height"));
+  if (x === null || y === null || width === null || height === null)
+    return null;
+
+  const left = x;
+  const top = y;
+  const right = x + width;
+  const bottom = y + height;
+
+  return {
+    id,
+    pageId,
+    rect: { left, top, right, bottom },
+    center: { x: x + width / 2, y: y + height / 2 },
+  };
+}
+
+function resolveEdgeAnchorPoint(
+  geometry: Element | null,
+  kind: "sourcePoint" | "targetPoint",
+): LayoutPoint | null {
+  if (!geometry) return null;
+  for (let i = 0; i < geometry.childNodes.length; i++) {
+    const node = geometry.childNodes.item(i);
+    if (!node || node.nodeType !== node.ELEMENT_NODE) continue;
+    const element = node as Element;
+    if ((element.tagName ?? "").toLowerCase() !== "mxpoint") continue;
+    if ((element.getAttribute("as") ?? "").trim() !== kind) continue;
+    const x = parseFiniteNumber(element.getAttribute("x"));
+    const y = parseFiniteNumber(element.getAttribute("y"));
+    if (x === null || y === null) return null;
+    return { x, y };
+  }
+  return null;
+}
+
+function collectEdgeIntermediatePoints(
+  geometry: Element | null,
+): LayoutPoint[] {
+  if (!geometry) return [];
+
+  const intermediatePoints: LayoutPoint[] = [];
+  for (let i = 0; i < geometry.childNodes.length; i++) {
+    const node = geometry.childNodes.item(i);
+    if (!node || node.nodeType !== node.ELEMENT_NODE) continue;
+    const element = node as Element;
+    if ((element.tagName ?? "").toLowerCase() !== "array") continue;
+    if ((element.getAttribute("as") ?? "").trim() !== "points") continue;
+
+    for (let j = 0; j < element.childNodes.length; j++) {
+      const pointNode = element.childNodes.item(j);
+      if (!pointNode || pointNode.nodeType !== pointNode.ELEMENT_NODE) continue;
+      const pointEl = pointNode as Element;
+      if ((pointEl.tagName ?? "").toLowerCase() !== "mxpoint") continue;
+      const x = parseFiniteNumber(pointEl.getAttribute("x"));
+      const y = parseFiniteNumber(pointEl.getAttribute("y"));
+      if (x === null || y === null) continue;
+      intermediatePoints.push({ x, y });
+    }
+  }
+
+  return intermediatePoints;
+}
+
+function buildEdgePolyline(params: {
+  edge: Element;
+  vertexCentersById: Map<string, LayoutPoint>;
+}): {
+  id: string;
+  pageId: string;
+  sourceId?: string;
+  targetId?: string;
+  points: LayoutPoint[];
+} | null {
+  const id = params.edge.getAttribute("id")?.trim();
+  if (!id) return null;
+  const pageId = resolveNodePageId(params.edge);
+  if (!pageId) return null;
+
+  const sourceId = params.edge.getAttribute("source")?.trim() || undefined;
+  const targetId = params.edge.getAttribute("target")?.trim() || undefined;
+
+  const geometry = getDirectChildElement(params.edge, "mxgeometry");
+
+  const sourcePoint =
+    (sourceId && params.vertexCentersById.get(sourceId)) ||
+    resolveEdgeAnchorPoint(geometry, "sourcePoint");
+  const targetPoint =
+    (targetId && params.vertexCentersById.get(targetId)) ||
+    resolveEdgeAnchorPoint(geometry, "targetPoint");
+
+  if (!sourcePoint || !targetPoint) return null;
+
+  const intermediatePoints = collectEdgeIntermediatePoints(geometry);
+
+  return {
+    id,
+    pageId,
+    sourceId,
+    targetId,
+    points: [sourcePoint, ...intermediatePoints, targetPoint],
+  };
+}
+
+function pointInRect(point: LayoutPoint, rect: LayoutRect): boolean {
+  return (
+    point.x >= rect.left &&
+    point.x <= rect.right &&
+    point.y >= rect.top &&
+    point.y <= rect.bottom
+  );
+}
+
+function segmentBoundingBox(a: LayoutPoint, b: LayoutPoint): LayoutRect {
+  const left = Math.min(a.x, b.x);
+  const right = Math.max(a.x, b.x);
+  const top = Math.min(a.y, b.y);
+  const bottom = Math.max(a.y, b.y);
+  return { left, top, right, bottom };
+}
+
+function rectIntersectsRect(a: LayoutRect, b: LayoutRect): boolean {
+  return !(
+    a.right < b.left ||
+    a.left > b.right ||
+    a.bottom < b.top ||
+    a.top > b.bottom
+  );
+}
+
+function segmentIntersectsSegment(
+  p1: LayoutPoint,
+  q1: LayoutPoint,
+  p2: LayoutPoint,
+  q2: LayoutPoint,
+): boolean {
+  const eps = 1e-9;
+  const orientation = (
+    p: LayoutPoint,
+    q: LayoutPoint,
+    r: LayoutPoint,
+  ): number => {
+    const val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
+    if (Math.abs(val) < eps) return 0;
+    return val > 0 ? 1 : 2;
+  };
+
+  const onSegment = (
+    p: LayoutPoint,
+    q: LayoutPoint,
+    r: LayoutPoint,
+  ): boolean => {
+    return (
+      q.x <= Math.max(p.x, r.x) + eps &&
+      q.x + eps >= Math.min(p.x, r.x) &&
+      q.y <= Math.max(p.y, r.y) + eps &&
+      q.y + eps >= Math.min(p.y, r.y)
+    );
+  };
+
+  const o1 = orientation(p1, q1, p2);
+  const o2 = orientation(p1, q1, q2);
+  const o3 = orientation(p2, q2, p1);
+  const o4 = orientation(p2, q2, q1);
+
+  if (o1 !== o2 && o3 !== o4) return true;
+  if (o1 === 0 && onSegment(p1, p2, q1)) return true;
+  if (o2 === 0 && onSegment(p1, q2, q1)) return true;
+  if (o3 === 0 && onSegment(p2, p1, q2)) return true;
+  if (o4 === 0 && onSegment(p2, q1, q2)) return true;
+  return false;
+}
+
+function segmentIntersectsRect(
+  a: LayoutPoint,
+  b: LayoutPoint,
+  rect: LayoutRect,
+): boolean {
+  const segBox = segmentBoundingBox(a, b);
+  if (!rectIntersectsRect(segBox, rect)) return false;
+  if (pointInRect(a, rect) || pointInRect(b, rect)) return true;
+
+  const tl = { x: rect.left, y: rect.top };
+  const tr = { x: rect.right, y: rect.top };
+  const br = { x: rect.right, y: rect.bottom };
+  const bl = { x: rect.left, y: rect.bottom };
+
+  return (
+    segmentIntersectsSegment(a, b, tl, tr) ||
+    segmentIntersectsSegment(a, b, tr, br) ||
+    segmentIntersectsSegment(a, b, br, bl) ||
+    segmentIntersectsSegment(a, b, bl, tl)
+  );
+}
+
+function selectMxCellElements(
+  document: Document,
+  expression: string,
+): Element[] {
+  const selected = xpath.select(expression, document);
+  if (!Array.isArray(selected)) return [];
+  return selected.filter(
+    (node): node is Element =>
+      xpath.isNodeLike(node) && node.nodeType === node.ELEMENT_NODE,
+  );
+}
+
+function buildLayoutVertexIndex(params: {
+  vertices: Element[];
+  allowedPageIds?: Set<string> | null;
+}): {
+  verticesByPage: Map<
+    string,
+    Array<{ id: string; rect: LayoutRect; center: LayoutPoint }>
+  >;
+  vertexCentersById: Map<string, LayoutPoint>;
+} {
+  const verticesByPage = new Map<
+    string,
+    Array<{ id: string; rect: LayoutRect; center: LayoutPoint }>
+  >();
+  const vertexCentersById = new Map<string, LayoutPoint>();
+
+  for (const vertex of params.vertices) {
+    const info = buildVertexGeometry(vertex);
+    if (!info) continue;
+    if (params.allowedPageIds && !params.allowedPageIds.has(info.pageId)) {
+      continue;
+    }
+
+    vertexCentersById.set(info.id, info.center);
+
+    const list = verticesByPage.get(info.pageId) ?? [];
+    list.push({ id: info.id, rect: info.rect, center: info.center });
+    verticesByPage.set(info.pageId, list);
+  }
+
+  return { verticesByPage, vertexCentersById };
+}
+
+function recordLayoutOverlap(params: {
+  overlapKeys: Set<string>;
+  overlapsSample: Array<{
+    edgeId: string;
+    vertexId: string;
+    seg: [number, number, number, number];
+    vtx: [number, number];
+  }>;
+  maxSamples: number;
+  edgeId: string;
+  vertexId: string;
+  segmentStart: LayoutPoint;
+  segmentEnd: LayoutPoint;
+  vertexCenter: LayoutPoint;
+}): void {
+  const key = `${params.edgeId}::${params.vertexId}`;
+  if (params.overlapKeys.has(key)) return;
+  params.overlapKeys.add(key);
+
+  if (params.overlapsSample.length < params.maxSamples) {
+    params.overlapsSample.push({
+      edgeId: params.edgeId,
+      vertexId: params.vertexId,
+      seg: [
+        Math.round(params.segmentStart.x),
+        Math.round(params.segmentStart.y),
+        Math.round(params.segmentEnd.x),
+        Math.round(params.segmentEnd.y),
+      ],
+      vtx: [
+        Math.round(params.vertexCenter.x),
+        Math.round(params.vertexCenter.y),
+      ],
+    });
+  }
+}
+
+function collectSegmentOverlaps(params: {
+  edgeId: string;
+  a: LayoutPoint;
+  b: LayoutPoint;
+  vertices: Array<{ id: string; rect: LayoutRect; center: LayoutPoint }>;
+  exclude: Set<string>;
+  overlapKeys: Set<string>;
+  overlapsSample: Array<{
+    edgeId: string;
+    vertexId: string;
+    seg: [number, number, number, number];
+    vtx: [number, number];
+  }>;
+  maxSamples: number;
+}): void {
+  for (const vertex of params.vertices) {
+    if (params.exclude.has(vertex.id)) continue;
+    if (!segmentIntersectsRect(params.a, params.b, vertex.rect)) continue;
+
+    recordLayoutOverlap({
+      overlapKeys: params.overlapKeys,
+      overlapsSample: params.overlapsSample,
+      maxSamples: params.maxSamples,
+      edgeId: params.edgeId,
+      vertexId: vertex.id,
+      segmentStart: params.a,
+      segmentEnd: params.b,
+      vertexCenter: vertex.center,
+    });
+  }
+}
+
+function collectPolylineOverlaps(params: {
+  polyline: NonNullable<ReturnType<typeof buildEdgePolyline>>;
+  verticesByPage: Map<
+    string,
+    Array<{ id: string; rect: LayoutRect; center: LayoutPoint }>
+  >;
+  allowedPageIds?: Set<string> | null;
+  overlapKeys: Set<string>;
+  overlapsSample: Array<{
+    edgeId: string;
+    vertexId: string;
+    seg: [number, number, number, number];
+    vtx: [number, number];
+  }>;
+  maxSamples: number;
+}): void {
+  if (
+    params.allowedPageIds &&
+    !params.allowedPageIds.has(params.polyline.pageId)
+  ) {
+    return;
+  }
+
+  const vertices = params.verticesByPage.get(params.polyline.pageId);
+  if (!vertices || vertices.length === 0) return;
+
+  const exclude = new Set<string>();
+  if (params.polyline.sourceId) exclude.add(params.polyline.sourceId);
+  if (params.polyline.targetId) exclude.add(params.polyline.targetId);
+
+  const points = params.polyline.points;
+  if (points.length < 2) return;
+
+  for (let i = 0; i < points.length - 1; i++) {
+    collectSegmentOverlaps({
+      edgeId: params.polyline.id,
+      a: points[i],
+      b: points[i + 1],
+      vertices,
+      exclude,
+      overlapKeys: params.overlapKeys,
+      overlapsSample: params.overlapsSample,
+      maxSamples: params.maxSamples,
+    });
+  }
+}
+
+function computeLayoutOverlaps(params: {
+  edges: Element[];
+  verticesByPage: Map<
+    string,
+    Array<{ id: string; rect: LayoutRect; center: LayoutPoint }>
+  >;
+  vertexCentersById: Map<string, LayoutPoint>;
+  allowedPageIds?: Set<string> | null;
+}): {
+  overlapsFound: number;
+  overlapsSample: Array<{
+    edgeId: string;
+    vertexId: string;
+    seg: [number, number, number, number];
+    vtx: [number, number];
+  }>;
+} {
+  const overlapKeys = new Set<string>();
+  const overlapsSample: Array<{
+    edgeId: string;
+    vertexId: string;
+    seg: [number, number, number, number];
+    vtx: [number, number];
+  }> = [];
+  const maxSamples = 8;
+
+  for (const edge of params.edges) {
+    const polyline = buildEdgePolyline({
+      edge,
+      vertexCentersById: params.vertexCentersById,
+    });
+    if (!polyline) continue;
+
+    collectPolylineOverlaps({
+      polyline,
+      verticesByPage: params.verticesByPage,
+      allowedPageIds: params.allowedPageIds,
+      overlapKeys,
+      overlapsSample,
+      maxSamples,
+    });
+  }
+
+  return {
+    overlapsFound: overlapKeys.size,
+    overlapsSample,
+  };
+}
+
+function runLayoutOverlapCheck(params: {
+  document: Document;
+  allowedPageIds?: Set<string> | null;
+}): {
+  overlapsFound: number;
+  overlapsSample: Array<{
+    edgeId: string;
+    vertexId: string;
+    seg: [number, number, number, number];
+    vtx: [number, number];
+  }>;
+} {
+  const vertexNodes = selectMxCellElements(
+    params.document,
+    "//mxCell[@vertex='1']",
+  );
+  const { verticesByPage, vertexCentersById } = buildLayoutVertexIndex({
+    vertices: vertexNodes,
+    allowedPageIds: params.allowedPageIds,
+  });
+
+  const edgeNodes = selectMxCellElements(
+    params.document,
+    "//mxCell[@edge='1']",
+  );
+
+  return computeLayoutOverlaps({
+    edges: edgeNodes,
+    verticesByPage,
+    vertexCentersById,
+    allowedPageIds: params.allowedPageIds,
+  });
+}
+
 async function executeDrawioEditBatchFrontend(
   request: DrawioEditBatchRequest & { description?: string },
   context: FrontendToolContext,
@@ -1316,6 +1884,34 @@ async function executeDrawioEditBatchFrontend(
       rollbackDescription: "Rollback after batch edit failure",
     });
 
+    const layoutCheckEnabled = Boolean(context.getLayoutCheckEnabled?.());
+    if (layoutCheckEnabled) {
+      const layoutReport = runLayoutOverlapCheck({
+        document,
+        allowedPageIds,
+      });
+
+      if (layoutReport.overlapsFound > 0) {
+        const sampleText = layoutReport.overlapsSample
+          .map((item) => `${item.edgeId}→${item.vertexId}`)
+          .join(", ");
+
+        const warning = sampleText
+          ? `Layout: ${layoutReport.overlapsFound} edge-vertex overlaps (${sampleText})`
+          : `Layout: ${layoutReport.overlapsFound} edge-vertex overlaps`;
+
+        return {
+          success: true,
+          operations_applied: operations.length,
+          warnings: [warning],
+          layout_check: {
+            overlaps_found: layoutReport.overlapsFound,
+            overlaps_sample: layoutReport.overlapsSample,
+          },
+        };
+      }
+    }
+
     return { success: true, operations_applied: operations.length };
   } catch (error) {
     return normalizeUnknownToToolErrorResult(error);
@@ -1339,7 +1935,10 @@ function createDrawioReadTool(context: FrontendToolContext) {
 3. **xpath mode**: XPath expression for complex queries
    - Example: \`{ "xpath": "//mxCell[@vertex='1']" }\`
 
-**Returns:** Each result includes \`matched_xpath\` field for use in subsequent edit operations.
+**Returns:**
+- Each result includes \`matched_xpath\` field for use in subsequent edit operations
+- \`children\`: Array of direct child elements (tag_name + attributes), e.g., mxGeometry info
+- \`xml_string\`: Full XML only shown for complex nested structures; empty for simple elements to reduce tokens
 
 **Best Practice:** Use this tool before editing to understand current diagram state.`,
     inputSchema: drawioReadInputSchema.optional(),
@@ -1368,6 +1967,7 @@ function createDrawioEditBatchTool(context: FrontendToolContext) {
 **Locator (choose one per operation):**
 - \`id\`: mxCell ID (preferred, auto-converts to XPath \`//mxCell[@id='xxx']\`)
 - \`xpath\`: XPath expression for complex targeting
+  - **Edit child elements**: Use path like \`//mxCell[@id='xxx']/mxGeometry\` to target children
 
 **Operation Types:**
 | Type | Required Fields | Description |

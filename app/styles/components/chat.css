@@ -234,6 +234,10 @@
   align-items: center;
 }
 
+.chat-top-actions__item--mcp {
+  margin-left: auto;
+}
+
 .chat-top-actions .canvas-context-button,
 .chat-top-actions .skill-button,
 .chat-top-actions .mcp-button,
@@ -399,6 +403,89 @@
 
 .dark .chat-model-popover {
   background: var(--background, #0f172a);
+}
+
+.canvas-enhancements-popover {
+  min-width: 360px;
+  max-width: 420px;
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-default, var(--border));
+  background: var(--surface, #ffffff);
+  box-shadow: var(--shadow-2);
+}
+
+.dark .canvas-enhancements-popover {
+  background: var(--background, #0f172a);
+}
+
+.canvas-enhancements-dialog {
+  outline: none;
+}
+
+.canvas-enhancements-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.canvas-enhancement-card {
+  width: 100%;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-light);
+  background: var(--surface);
+  cursor: pointer;
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.canvas-enhancement-card:hover {
+  border-color: var(--border-hover);
+  background: var(--bg-primary);
+}
+
+.canvas-enhancement-card:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+.canvas-enhancement-card--enabled {
+  border-color: var(--border-focus);
+  background: color-mix(in oklch, var(--accent) 12%, transparent);
+}
+
+.dark .canvas-enhancement-card--enabled {
+  background: color-mix(in oklch, var(--accent) 18%, transparent);
+}
+
+.canvas-enhancement-card__content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+}
+
+.canvas-enhancement-card__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+}
+
+.canvas-enhancement-card__title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.canvas-enhancement-card__description {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  line-height: 1.3;
+  padding-left: 24px;
 }
 
 .skill-button {
@@ -578,6 +665,51 @@
 .skill-element-item[data-disabled="true"],
 .skill-element-item[aria-disabled="true"] {
   opacity: 0.6;
+}
+
+/* Color Theme Selector */
+.skill-color-theme-selector {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.skill-color-theme-select {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.skill-color-dots {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.skill-color-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--border-light);
+  flex-shrink: 0;
+}
+
+.skill-color-option {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.skill-color-dots-small {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.skill-color-dot-small {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 /* Markdown内容包装器 - 让打字指示器显示在同一行 */

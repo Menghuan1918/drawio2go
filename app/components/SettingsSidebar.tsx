@@ -8,10 +8,18 @@ import {
   type ProviderConfig,
   type SkillSettings,
 } from "@/app/types/chat";
-import { DEFAULT_AGENT_SETTINGS } from "@/app/lib/config-utils";
+import {
+  DEFAULT_AGENT_SETTINGS,
+  DEFAULT_DRAWIO_BASE_URL,
+  DEFAULT_DRAWIO_IDENTIFIER,
+  DEFAULT_DRAWIO_THEME,
+  stripTrailingSlashes,
+  type DrawioTheme,
+} from "@/app/lib/config-utils";
 import { debounce } from "@/app/lib/utils";
 import { useStorageSettings } from "@/app/hooks/useStorageSettings";
 import SettingsNav, { type SettingsTab } from "./settings/SettingsNav";
+import DrawioSettingsPanel from "./settings/DrawioSettingsPanel";
 import ModelsSettingsPanel from "./settings/ModelsSettingsPanel";
 import { VersionSettingsPanel } from "./settings/VersionSettingsPanel";
 import AboutSettingsPanel from "./settings/AboutSettingsPanel";
@@ -49,10 +57,18 @@ export default function SettingsSidebar({
     updateGeneralSettings,
     getSetting,
     setSetting,
+    subscribeSettingsUpdates,
   } = useStorageSettings();
 
   const [defaultPath, setDefaultPath] = useState("");
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
+  const [drawioBaseUrl, setDrawioBaseUrl] = useState(DEFAULT_DRAWIO_BASE_URL);
+  const [drawioIdentifier, setDrawioIdentifier] = useState(
+    DEFAULT_DRAWIO_IDENTIFIER,
+  );
+  const [drawioTheme, setDrawioTheme] =
+    useState<DrawioTheme>(DEFAULT_DRAWIO_THEME);
+  const [drawioUrlParams, setDrawioUrlParams] = useState("");
 
   const [providers, setProviders] = useState<ProviderConfig[]>([]);
   const [models, setModels] = useState<ModelConfig[]>([]);
@@ -79,6 +95,15 @@ export default function SettingsSidebar({
   const lastSaveErrorAtRef = useRef(0);
 
   const saveDefaultPathNowRef = useRef<(path: string) => Promise<void>>(
+    async () => {},
+  );
+  const saveDrawioBaseUrlNowRef = useRef<(url: string) => Promise<void>>(
+    async () => {},
+  );
+  const saveDrawioIdentifierNowRef = useRef<
+    (identifier: string) => Promise<void>
+  >(async () => {});
+  const saveDrawioUrlParamsNowRef = useRef<(params: string) => Promise<void>>(
     async () => {},
   );
   const saveAgentSettingsNowRef = useRef<
@@ -137,6 +162,55 @@ export default function SettingsSidebar({
     [runSaveTask, updateGeneralSettings],
   );
 
+  const saveDrawioBaseUrlNow = useCallback(
+    async (url: string) => {
+      const trimmed = stripTrailingSlashes(url.trim());
+      if (!trimmed) return;
+
+      try {
+        const parsed = new URL(trimmed);
+        if (!parsed.protocol.startsWith("http")) return;
+      } catch {
+        return;
+      }
+
+      await runSaveTask(async () => {
+        await updateGeneralSettings({ drawioBaseUrl: trimmed });
+      });
+    },
+    [runSaveTask, updateGeneralSettings],
+  );
+
+  const saveDrawioIdentifierNow = useCallback(
+    async (identifier: string) => {
+      const trimmed = identifier.trim();
+      if (!trimmed) return;
+
+      await runSaveTask(async () => {
+        await updateGeneralSettings({ drawioIdentifier: trimmed });
+      });
+    },
+    [runSaveTask, updateGeneralSettings],
+  );
+
+  const saveDrawioThemeNow = useCallback(
+    async (theme: DrawioTheme) => {
+      await runSaveTask(async () => {
+        await updateGeneralSettings({ drawioTheme: theme });
+      });
+    },
+    [runSaveTask, updateGeneralSettings],
+  );
+
+  const saveDrawioUrlParamsNow = useCallback(
+    async (params: string) => {
+      await runSaveTask(async () => {
+        await updateGeneralSettings({ drawioUrlParams: params });
+      });
+    },
+    [runSaveTask, updateGeneralSettings],
+  );
+
   const saveAgentSettingsNow = useCallback(
     async (settings: AgentSettings) => {
       if (!isSystemPromptValid(settings.systemPrompt)) return;
@@ -181,6 +255,18 @@ export default function SettingsSidebar({
   }, [saveDefaultPathNow]);
 
   useEffect(() => {
+    saveDrawioBaseUrlNowRef.current = saveDrawioBaseUrlNow;
+  }, [saveDrawioBaseUrlNow]);
+
+  useEffect(() => {
+    saveDrawioIdentifierNowRef.current = saveDrawioIdentifierNow;
+  }, [saveDrawioIdentifierNow]);
+
+  useEffect(() => {
+    saveDrawioUrlParamsNowRef.current = saveDrawioUrlParamsNow;
+  }, [saveDrawioUrlParamsNow]);
+
+  useEffect(() => {
     saveAgentSettingsNowRef.current = saveAgentSettingsNow;
   }, [saveAgentSettingsNow]);
 
@@ -189,6 +275,30 @@ export default function SettingsSidebar({
       debounce((path: string) => {
         saveDefaultPathNowRef.current(path).catch(() => {});
       }, 500),
+    [],
+  );
+
+  const debouncedSaveDrawioBaseUrl = useMemo(
+    () =>
+      debounce((url: string) => {
+        saveDrawioBaseUrlNowRef.current(url).catch(() => {});
+      }, 800),
+    [],
+  );
+
+  const debouncedSaveDrawioIdentifier = useMemo(
+    () =>
+      debounce((identifier: string) => {
+        saveDrawioIdentifierNowRef.current(identifier).catch(() => {});
+      }, 800),
+    [],
+  );
+
+  const debouncedSaveDrawioUrlParams = useMemo(
+    () =>
+      debounce((params: string) => {
+        saveDrawioUrlParamsNowRef.current(params).catch(() => {});
+      }, 800),
     [],
   );
 
@@ -202,8 +312,17 @@ export default function SettingsSidebar({
 
   const flushPendingSaves = useCallback(() => {
     debouncedSaveDefaultPath.flush();
+    debouncedSaveDrawioBaseUrl.flush();
+    debouncedSaveDrawioIdentifier.flush();
+    debouncedSaveDrawioUrlParams.flush();
     debouncedSaveAgentSettings.flush();
-  }, [debouncedSaveAgentSettings, debouncedSaveDefaultPath]);
+  }, [
+    debouncedSaveAgentSettings,
+    debouncedSaveDefaultPath,
+    debouncedSaveDrawioBaseUrl,
+    debouncedSaveDrawioIdentifier,
+    debouncedSaveDrawioUrlParams,
+  ]);
 
   useEffect(() => {
     return subscribeSidebarNavigate((detail) => {
@@ -239,6 +358,14 @@ export default function SettingsSidebar({
         const normalizedPath = generalSettings.defaultPath || "";
         setDefaultPath(normalizedPath);
         setSidebarExpanded(generalSettings.sidebarExpanded);
+        setDrawioBaseUrl(
+          generalSettings.drawioBaseUrl?.trim() || DEFAULT_DRAWIO_BASE_URL,
+        );
+        setDrawioIdentifier(
+          generalSettings.drawioIdentifier?.trim() || DEFAULT_DRAWIO_IDENTIFIER,
+        );
+        setDrawioTheme(generalSettings.drawioTheme ?? DEFAULT_DRAWIO_THEME);
+        setDrawioUrlParams(generalSettings.drawioUrlParams?.trim() || "");
 
         setProviders(loadedProviders);
 
@@ -265,6 +392,10 @@ export default function SettingsSidebar({
         setVersionSettings({ autoVersionOnAIEdit: true });
         setAutoCheckEnabled(true);
         setSidebarExpanded(true);
+        setDrawioBaseUrl(DEFAULT_DRAWIO_BASE_URL);
+        setDrawioIdentifier(DEFAULT_DRAWIO_IDENTIFIER);
+        setDrawioTheme(DEFAULT_DRAWIO_THEME);
+        setDrawioUrlParams("");
         showToast({
           variant: "danger",
           description: t("toasts.loadFailed", {
@@ -293,6 +424,28 @@ export default function SettingsSidebar({
     };
   }, [flushPendingSaves]);
 
+  // 订阅 settings-updated 事件，当 Agent 设置被外部更新时（如提示词升级）重新加载
+  useEffect(() => {
+    const unsubscribe = subscribeSettingsUpdates(async (detail) => {
+      if (detail.type !== "agent") return;
+
+      try {
+        // 取消防抖队列中的待保存任务，避免覆盖新值
+        debouncedSaveAgentSettings.cancel();
+
+        // 重新加载 Agent 设置
+        const loadedAgent = await getAgentSettings();
+        setAgentSettings(loadedAgent ?? DEFAULT_AGENT_SETTINGS);
+
+        logger.info("[SettingsSidebar] Agent 设置已从外部更新，重新加载完成");
+      } catch (e) {
+        logger.warn("[SettingsSidebar] 重新加载 Agent 设置失败", e);
+      }
+    });
+
+    return unsubscribe;
+  }, [subscribeSettingsUpdates, getAgentSettings, debouncedSaveAgentSettings]);
+
   const systemPromptError = useMemo(
     () =>
       isSystemPromptValid(agentSettings.systemPrompt)
@@ -301,6 +454,26 @@ export default function SettingsSidebar({
     [agentSettings.systemPrompt, t],
   );
 
+  const drawioBaseUrlError = useMemo(() => {
+    const trimmed = drawioBaseUrl.trim();
+    if (!trimmed) return t("errors.required");
+    try {
+      const url = new URL(trimmed);
+      if (!url.protocol.startsWith("http")) {
+        return t("errors.invalidUrl");
+      }
+    } catch {
+      return t("errors.invalidUrl");
+    }
+    return undefined;
+  }, [drawioBaseUrl, t]);
+
+  const drawioIdentifierError = useMemo(() => {
+    return drawioIdentifier.trim().length > 0
+      ? undefined
+      : t("errors.required");
+  }, [drawioIdentifier, t]);
+
   const handleDefaultPathChange = useCallback(
     (path: string) => {
       setDefaultPath(path);
@@ -308,6 +481,56 @@ export default function SettingsSidebar({
     },
     [debouncedSaveDefaultPath],
   );
+
+  const handleDrawioBaseUrlChange = useCallback(
+    (url: string) => {
+      setDrawioBaseUrl(url);
+      debouncedSaveDrawioBaseUrl(url);
+    },
+    [debouncedSaveDrawioBaseUrl],
+  );
+
+  const handleDrawioIdentifierChange = useCallback(
+    (identifier: string) => {
+      setDrawioIdentifier(identifier);
+      debouncedSaveDrawioIdentifier(identifier);
+    },
+    [debouncedSaveDrawioIdentifier],
+  );
+
+  const handleDrawioThemeChange = useCallback(
+    (theme: DrawioTheme) => {
+      setDrawioTheme(theme);
+      saveDrawioThemeNow(theme).catch(() => {});
+    },
+    [saveDrawioThemeNow],
+  );
+
+  const handleDrawioUrlParamsChange = useCallback(
+    (params: string) => {
+      setDrawioUrlParams(params);
+      debouncedSaveDrawioUrlParams(params);
+    },
+    [debouncedSaveDrawioUrlParams],
+  );
+
+  const handleResetDrawioBaseUrl = useCallback(() => {
+    debouncedSaveDrawioBaseUrl.cancel();
+    setDrawioBaseUrl(DEFAULT_DRAWIO_BASE_URL);
+    saveDrawioBaseUrlNow(DEFAULT_DRAWIO_BASE_URL).catch(() => {});
+  }, [debouncedSaveDrawioBaseUrl, saveDrawioBaseUrlNow]);
+
+  const handleResetDrawioIdentifier = useCallback(() => {
+    debouncedSaveDrawioIdentifier.cancel();
+    setDrawioIdentifier(DEFAULT_DRAWIO_IDENTIFIER);
+    saveDrawioIdentifierNow(DEFAULT_DRAWIO_IDENTIFIER).catch(() => {});
+  }, [debouncedSaveDrawioIdentifier, saveDrawioIdentifierNow]);
+
+  const handleResetDrawioUrlParams = useCallback(() => {
+    debouncedSaveDrawioUrlParams.cancel();
+    setDrawioUrlParams("");
+    saveDrawioUrlParamsNow("").catch(() => {});
+  }, [debouncedSaveDrawioUrlParams, saveDrawioUrlParamsNow]);
 
   const handleSidebarExpandedChange = useCallback(
     (expanded: boolean) => {
@@ -401,6 +624,24 @@ export default function SettingsSidebar({
               onSidebarExpandedChange={handleSidebarExpandedChange}
               defaultPath={defaultPath}
               onDefaultPathChange={handleDefaultPathChange}
+            />
+          )}
+
+          {activeTab === "drawio" && (
+            <DrawioSettingsPanel
+              drawioBaseUrl={drawioBaseUrl}
+              drawioIdentifier={drawioIdentifier}
+              drawioTheme={drawioTheme}
+              drawioUrlParams={drawioUrlParams}
+              drawioBaseUrlError={drawioBaseUrlError}
+              drawioIdentifierError={drawioIdentifierError}
+              onDrawioBaseUrlChange={handleDrawioBaseUrlChange}
+              onDrawioIdentifierChange={handleDrawioIdentifierChange}
+              onDrawioThemeChange={handleDrawioThemeChange}
+              onDrawioUrlParamsChange={handleDrawioUrlParamsChange}
+              onResetDrawioBaseUrl={handleResetDrawioBaseUrl}
+              onResetDrawioIdentifier={handleResetDrawioIdentifier}
+              onResetDrawioUrlParams={handleResetDrawioUrlParams}
             />
           )}
 

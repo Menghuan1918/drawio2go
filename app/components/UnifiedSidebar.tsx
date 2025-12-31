@@ -5,6 +5,7 @@ import {
   useEffect,
   useRef,
   useMemo,
+  useCallback,
   type Key,
   type RefObject,
   type MutableRefObject,
@@ -72,16 +73,32 @@ export default function UnifiedSidebar({
     onTabChange(key as SidebarTab);
   };
 
-  const applySidebarWidth = (width: number) => {
-    setSidebarWidth(width);
-    document.documentElement.style.setProperty("--sidebar-width", `${width}px`);
-  };
+  const clampSidebarWidth = useCallback((width: number) => {
+    const viewportWidth = window.innerWidth;
+    const clampedMax = Math.min(SIDEBAR_MAX_WIDTH, viewportWidth);
+    const clampedMin = Math.min(SIDEBAR_MIN_WIDTH, clampedMax);
+    return Math.max(clampedMin, Math.min(width, clampedMax));
+  }, []);
+
+  const applySidebarWidth = useCallback(
+    (width: number) => {
+      const nextWidth = clampSidebarWidth(width);
+      sidebarWidthRef.current = nextWidth;
+      setSidebarWidth(nextWidth);
+      document.documentElement.style.setProperty(
+        "--sidebar-width",
+        `${nextWidth}px`,
+      );
+    },
+    [clampSidebarWidth],
+  );
 
   const calculateWidth = (clientX: number) => {
     const viewportWidth = window.innerWidth;
     const rawWidth = viewportWidth - clientX;
     const clampedMax = Math.min(SIDEBAR_MAX_WIDTH, viewportWidth);
-    return Math.max(SIDEBAR_MIN_WIDTH, Math.min(rawWidth, clampedMax));
+    const clampedMin = Math.min(SIDEBAR_MIN_WIDTH, clampedMax);
+    return Math.max(clampedMin, Math.min(rawWidth, clampedMax));
   };
 
   const finalizeResize = async () => {
@@ -106,8 +123,10 @@ export default function UnifiedSidebar({
       try {
         const savedWidth = await getSetting("unifiedSidebarWidth");
         if (savedWidth) {
-          const width = parseInt(savedWidth);
-          applySidebarWidth(width);
+          const width = Number.parseInt(savedWidth, 10);
+          if (Number.isFinite(width)) {
+            applySidebarWidth(width);
+          }
         }
       } catch (e) {
         logger.error("Failed to load sidebar width:", e);
@@ -115,7 +134,19 @@ export default function UnifiedSidebar({
     };
 
     loadWidth();
-  }, [getSetting]);
+  }, [applySidebarWidth, getSetting]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      applySidebarWidth(sidebarWidthRef.current);
+    };
+
+    window.addEventListener("resize", handleResize);
+    handleResize();
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [applySidebarWidth]);
 
   const handlePointerDown = (e: SidebarPointerEvent) => {
     if (e.button !== 0 && e.pointerType !== "touch") {

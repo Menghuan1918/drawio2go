@@ -62,7 +62,9 @@ interface ChatInputAreaProps {
   };
 
   isCanvasContextEnabled: boolean;
-  onCanvasContextToggle: () => void;
+  onCanvasContextChange: (enabled: boolean) => void;
+  isLayoutCheckEnabled: boolean;
+  onLayoutCheckChange: (enabled: boolean) => void;
 
   /**
    * 页面选择器（Milestone M5：受控模式）。
@@ -94,7 +96,9 @@ export default function ChatInputArea({
   skillButton,
   modelSelectorProps,
   isCanvasContextEnabled,
-  onCanvasContextToggle,
+  onCanvasContextChange,
+  isLayoutCheckEnabled,
+  onLayoutCheckChange,
   pageSelector,
   mcpConfigDialog,
 }: ChatInputAreaProps) {
@@ -278,7 +282,9 @@ export default function ChatInputArea({
           mcpConfigDialog={mcpConfigDialog}
           isInputDisabled={isInputDisabled}
           isCanvasContextEnabled={isCanvasContextEnabled}
-          onCanvasContextToggle={onCanvasContextToggle}
+          onCanvasContextChange={onCanvasContextChange}
+          isLayoutCheckEnabled={isLayoutCheckEnabled}
+          onLayoutCheckChange={onLayoutCheckChange}
         />
 
         {/* 多行文本输入框 */}

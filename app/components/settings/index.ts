@@ -5,6 +5,7 @@
 // 子组件
 export { default as SettingsNav } from "./SettingsNav";
 export { default as GeneralSettingsPanel } from "./GeneralSettingsPanel";
+export { default as DrawioSettingsPanel } from "./DrawioSettingsPanel";
 export { default as ModelsSettingsPanel } from "./ModelsSettingsPanel";
 export { default as AboutSettingsPanel } from "./AboutSettingsPanel";
 export { default as ProviderEditDialog } from "./ProviderEditDialog";

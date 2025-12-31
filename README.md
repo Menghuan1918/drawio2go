@@ -24,6 +24,26 @@ https://github.com/user-attachments/assets/40fe5c3b-0f37-4fbf-b6ac-60b8734f2d14
 
 <div align="center">
 <table width="100%">
+    <tr>
+    <td width="33.33%" valign="top" align="center">
+      <h3><em>NEW:</em> Canvas Enhancement</h3>
+      <p>After inserting images, it will automatically check if connection lines overlap with elements, avoiding AI connection errors</p>
+      <img src="https://github.com/user-attachments/assets/91904af5-e00c-4517-bce0-8162672df0a9" width="90%" />
+      <br />
+    </td>
+    <td width="33.33%" valign="top" align="center">
+      <h3><em>NEW:</em> LLM Enhancement</h3>
+      <p>Specify drawing style/colors and even add DrawIO element knowledge*</p>
+      <img src="https://github.com/user-attachments/assets/85fef675-b748-4b99-a693-93f898ea69b0" width="65%" />
+      <br />
+    </td>
+    <td width="33.33%" valign="top" align="center">
+      <h3><em>NEW:</em> Custom DrawIO Canvas</h3>
+      <p>Fully customize DrawIO canvas, modify default appearance theme / switch to self-hosted URL</p>
+      <img src="https://github.com/user-attachments/assets/8456c678-6cac-4f2f-b5a0-ef4d107ec21f" alt="MCP" />
+      <br />
+    </td>
+  </tr>
   <tr>
     <td width="33.33%" valign="top" align="center">
       <h3>Version Management</h3>
@@ -33,7 +53,7 @@ https://github.com/user-attachments/assets/40fe5c3b-0f37-4fbf-b6ac-60b8734f2d14
     </td>
     <td width="33.33%" valign="top" align="center">
       <h3>AI-Powered Modification</h3>
-      <p>XPath-based precise deletion, modification, and query tool, effective and token-saving*</p>
+      <p>XPath-based precise deletion, modification, and query tool, effective and token-saving**</p>
       <img src="https://github.com/user-attachments/assets/db4c17b7-49f9-407d-a046-227092e70708" alt="Demo" width="60%" />
       <br />
     </td>
@@ -60,7 +80,7 @@ https://github.com/user-attachments/assets/40fe5c3b-0f37-4fbf-b6ac-60b8734f2d14
     </td>
     <td width="33.33%" valign="top" align="center">
       <h3>Canvas Context</h3>
-      <p>No longer need to describe "the few xxx on the far right", simply drag-select with the mouse, the conversation will automatically parse canvas elements into context**</p>
+      <p>No longer need to describe "the few xxx on the far right", simply drag-select with the mouse, the conversation will automatically parse canvas elements into context***</p>
       <img src="https://github.com/user-attachments/assets/07ec5631-21bc-4a11-853a-62058061c49f" alt="Context" width="100%" />
       <br />
       <br />
@@ -68,13 +88,43 @@ https://github.com/user-attachments/assets/40fe5c3b-0f37-4fbf-b6ac-60b8734f2d14
   </tr>
 </table>
 </div>
-<sub>* Currently LLM API supports Openai/Deepseek/Anthropic/Gemini formats</sub>
+<sub>* Support specifying default theme/colors/knowledge and adding custom knowledge in settings</sub>
 <br />
-<sub>** Limited by Web API restrictions, mouse selection perception is not available on the web. But Web still has basic compressed canvas content context injection functionality</sub>
+<sub>** Currently LLM API supports Openai/Deepseek/Anthropic/Gemini formats</sub>
+<br />
+<sub>*** Limited by Web API restrictions, mouse selection perception is not available on the web. But Web still has basic compressed canvas content context injection functionality</sub>
 <br />
 <br />
 
 Here are some actual demos and their prompts:
+
+<div align="center">
+<table width="100%">
+    <tr>
+    <td width="33.33%" valign="top" align="center">
+      <h3>DeepSeek-Chat Modern Style*</h3>
+      <p>Draw a detailed standard Agent flowchart, including MCP/Multi-Agent concepts, in English</p>
+      <img src="https://github.com/user-attachments/assets/55b7b986-67ab-4562-8602-ddb5b2b95c44" width="80%" />
+      <br />
+    </td>
+    <td width="33.33%" valign="top" align="center">
+      <h3>DeepSeek-Chat Academic Style*</h3>
+      <p>Draw a detailed standard Agent flowchart, including MCP/Multi-Agent concepts, in English</p>
+      <img src="https://github.com/user-attachments/assets/6aa336af-e7b8-40ed-9bc0-9249555d2a0f" width="65%" />
+      <br />
+    </td>
+    <td width="33.33%" valign="top" align="center">
+      <h3>DeepSeek-Chat Minimalist Style*</h3>
+      <p>Draw a detailed standard Agent flowchart, including MCP/Multi-Agent concepts, in English</p>
+      <img src="https://github.com/user-attachments/assets/999de929-5582-4173-a5fe-f1f50ff643b1"  width="80%"/>
+      <br />
+    </td>
+  </tr>
+</table>
+</div>
+<sub>* Using official API, default color configuration, deepseek-chat v3.2, non-thinking, temperature 0.3</sub>
+<br />
+<br />
 
 <div align="center">
 <table width="100%">

@@ -1,6 +1,7 @@
 {
   "nav": {
     "general": "General",
+    "drawio": "Canvas",
     "models": "Models",
     "agent": "Agent",
     "version": "Version Settings",
@@ -10,6 +11,8 @@
     "title": "About",
     "description": "Application information and update checks",
     "appVersionLabel": "Version",
+    "tagline": "AI-Powered, Human-AI Collaboration",
+    "license": "MIT License",
     "github": {
       "open": "Open GitHub"
     },
@@ -50,6 +53,55 @@
     "sidebarExpanded": {
       "label": "Expand Sidebar by Default",
       "description": "Open the right sidebar on startup"
+    }
+  },
+  "drawio": {
+    "title": "DrawIO Canvas",
+    "description": "Configure canvas loading, messaging, and default theme",
+    "baseUrl": {
+      "label": "DrawIO Base URL",
+      "description": "The DrawIO embed service URL used to load the editor iframe",
+      "placeholder": "https://embed.diagrams.net",
+      "warning": "Changing this may cause the canvas to stop working",
+      "reset": "Reset to Default",
+      "resetTitle": "Reset DrawIO Base URL",
+      "resetConfirm": "Reset DrawIO Base URL to the default value?"
+    },
+    "identifier": {
+      "label": "DrawIO Identifier",
+      "description": "Used for postMessage origin verification (origin check)",
+      "placeholder": "diagrams.net",
+      "warning": "Changing this may cause canvas messaging to fail",
+      "reset": "Reset to Default",
+      "resetTitle": "Reset DrawIO Identifier",
+      "resetConfirm": "Reset DrawIO Identifier to the default value?"
+    },
+    "theme": {
+      "label": "DrawIO Default Theme",
+      "description": "Controlled via URL parameter ui= (requires reloading the canvas)",
+      "change": "Change theme",
+      "options": {
+        "kennedy": "kennedy (Default)",
+        "min": "min",
+        "atlas": "atlas",
+        "sketch": "sketch",
+        "simple": "simple"
+      },
+      "descriptions": {
+        "kennedy": "Classic default UI with best compatibility",
+        "min": "Minimal UI for distraction-free editing",
+        "atlas": "Feature-rich layout with more tools",
+        "sketch": "Hand-drawn look for sketchy diagrams",
+        "simple": "Simplified, lightweight UI"
+      }
+    },
+    "urlParams": {
+      "label": "Custom URL Params",
+      "placeholder": "e.g. spin=0&libraries=0",
+      "description": "Overrides default params. Common: embed, proto, spin, ui, libraries, dark. Example: embed=1&proto=json&spin=1&libraries=1",
+      "warning": "Changes may break the canvas",
+      "reset": "Clear Params",
+      "resetConfirm": "Clear custom URL params?"
     }
   },
   "llm": {
@@ -118,7 +170,10 @@
       "reset": "Reset to Default",
       "errorEmpty": "System prompt cannot be empty",
       "resetTitle": "Reset to Default System Prompt",
-      "resetConfirm": "This will discard your current edits. Confirm reset to default system prompt?"
+      "resetConfirm": "This will discard your current edits. Confirm reset to default system prompt?",
+      "upgradeToastTitle": "Outdated system prompt detected",
+      "upgradeToastDescription": "You are using a {{version}} system prompt. Upgrade to the latest version for better experience.",
+      "upgradeToastAction": "Upgrade to latest"
     },
     "defaultSettings": {
       "title": "Defaults for New Chats",

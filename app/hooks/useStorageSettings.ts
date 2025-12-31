@@ -16,12 +16,15 @@ import {
   DEFAULT_AGENT_SETTINGS,
   DEFAULT_GENERAL_SETTINGS,
   DEFAULT_SKILL_SETTINGS,
+  type GeneralSettings,
   STORAGE_KEY_ACTIVE_MODEL,
   STORAGE_KEY_AGENT_SETTINGS,
   STORAGE_KEY_GENERAL_SETTINGS,
   STORAGE_KEY_LLM_MODELS,
   STORAGE_KEY_LLM_PROVIDERS,
+  isDrawioTheme,
   normalizeLLMConfig,
+  stripTrailingSlashes,
 } from "@/app/lib/config-utils";
 import { getDefaultCapabilities } from "@/app/lib/model-capabilities";
 import { createLogger } from "@/app/lib/logger";
@@ -45,8 +48,6 @@ type SettingsUpdatedDetail = { type: SettingsUpdatedType };
 
 type StorageInstance = Awaited<ReturnType<typeof getStorage>>;
 
-type GeneralSettings = typeof DEFAULT_GENERAL_SETTINGS;
-
 const safeParseJSON = <T>(
   raw: string | null,
   key: string,
@@ -61,12 +62,47 @@ const safeParseJSON = <T>(
   }
 };
 
+const normalizeDrawioUrlParams = (value: unknown): string | undefined => {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  const withoutQuestionMark = trimmed.startsWith("?")
+    ? trimmed.slice(1).trim()
+    : trimmed;
+  return withoutQuestionMark ? withoutQuestionMark : undefined;
+};
+
 const normalizeGeneralSettings = (parsed: unknown): GeneralSettings | null => {
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     return null;
   }
 
   const record = parsed as Record<string, unknown>;
+
+  const normalizeDrawioBaseUrl = (value: unknown): string | undefined => {
+    if (typeof value !== "string") return undefined;
+    const trimmed = value.trim();
+    if (!trimmed) return undefined;
+    try {
+      const url = new URL(trimmed);
+      if (!url.protocol.startsWith("http")) return undefined;
+    } catch {
+      return undefined;
+    }
+    return stripTrailingSlashes(trimmed);
+  };
+
+  const normalizeDrawioIdentifier = (value: unknown): string | undefined => {
+    if (typeof value !== "string") return undefined;
+    const trimmed = value.trim();
+    return trimmed ? trimmed : undefined;
+  };
+
+  const normalizeDrawioTheme = (
+    value: unknown,
+  ): GeneralSettings["drawioTheme"] =>
+    isDrawioTheme(value) ? value : undefined;
+
   return {
     sidebarExpanded:
       typeof record.sidebarExpanded === "boolean"
@@ -76,6 +112,10 @@ const normalizeGeneralSettings = (parsed: unknown): GeneralSettings | null => {
       typeof record.defaultPath === "string"
         ? record.defaultPath
         : DEFAULT_GENERAL_SETTINGS.defaultPath,
+    drawioBaseUrl: normalizeDrawioBaseUrl(record.drawioBaseUrl),
+    drawioIdentifier: normalizeDrawioIdentifier(record.drawioIdentifier),
+    drawioTheme: normalizeDrawioTheme(record.drawioTheme),
+    drawioUrlParams: normalizeDrawioUrlParams(record.drawioUrlParams),
   };
 };
 
@@ -102,6 +142,17 @@ const normalizeSkillSettings = (parsed: unknown): SkillSettings => {
       ? record.customThemePrompt
       : DEFAULT_SKILL_SETTINGS.customThemePrompt;
 
+  const customKnowledgeContent =
+    typeof record.customKnowledgeContent === "string"
+      ? record.customKnowledgeContent
+      : DEFAULT_SKILL_SETTINGS.customKnowledgeContent;
+
+  const selectedColorTheme =
+    typeof record.selectedColorTheme === "string" &&
+    record.selectedColorTheme.trim()
+      ? record.selectedColorTheme
+      : DEFAULT_SKILL_SETTINGS.selectedColorTheme;
+
   return {
     selectedTheme,
     selectedKnowledge:
@@ -109,6 +160,8 @@ const normalizeSkillSettings = (parsed: unknown): SkillSettings => {
         ? selectedKnowledge
         : DEFAULT_SKILL_SETTINGS.selectedKnowledge,
     customThemePrompt,
+    customKnowledgeContent,
+    selectedColorTheme,
   };
 };
 
@@ -489,6 +542,21 @@ export function useStorageSettings() {
             typeof updates.defaultPath === "string"
               ? updates.defaultPath
               : current.defaultPath,
+          drawioBaseUrl:
+            typeof updates.drawioBaseUrl === "string"
+              ? updates.drawioBaseUrl
+              : current.drawioBaseUrl,
+          drawioIdentifier:
+            typeof updates.drawioIdentifier === "string"
+              ? updates.drawioIdentifier
+              : current.drawioIdentifier,
+          drawioTheme: isDrawioTheme(updates.drawioTheme)
+            ? updates.drawioTheme
+            : current.drawioTheme,
+          drawioUrlParams:
+            typeof updates.drawioUrlParams === "string"
+              ? normalizeDrawioUrlParams(updates.drawioUrlParams)
+              : current.drawioUrlParams,
         };
 
         await persistGeneralSettings(storage, next);

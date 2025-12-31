@@ -8,18 +8,19 @@
 
 ### skill-elements.json
 
-绘图技能配置数据（JSON 格式），包含两大部分：
+绘图技能配置数据（JSON 格式），包含三大部分：
 
 - **themes**：预设风格样式（modern/academic/minimal/custom）
+- **colorThemes**：预设颜色主题（default/blue/green/.../none）
 - **knowledge**：知识类型库（通用图形、流程图、UML、云服务图标等）
 
 ### skill-elements.ts
 
 TypeScript 类型定义与配置读取工具，提供以下能力：
 
-- **类型定义**：`SkillThemeConfig`、`SkillKnowledgeConfig`
+- **类型定义**：`SkillThemeConfig`、`SkillColorThemeConfig`、`SkillKnowledgeConfig`
 - **加载函数**：`loadSkillKnowledgeConfig()`
-- **查询函数**：`getThemeById()`、`getKnowledgeById()`、`getRequiredKnowledge()`、`getOptionalKnowledge()`
+- **查询函数**：`getThemeById()`、`getColorThemeById()`、`getKnowledgeById()`、`getRequiredKnowledge()`、`getOptionalKnowledge()`
 
 ## skill-elements.json 配置详解
 
@@ -78,13 +79,24 @@ TypeScript 类型定义与配置读取工具，提供以下能力：
 
 - **多行文本**：使用 `\n` 表示换行（JSON 转义规则）
 - **结构要求**：
-  - Palette（配色）：优先用户配色，默认配色方案
+  - Palette（配色）：颜色信息由用户配色或 `colorThemes` 提供，themes 中避免写死具体 hex 色值
   - Shapes（形状）：默认图形类型、笔触风格
   - Layout（布局）：对齐规则、间距、留白
   - Connectors（连接线）：路由方式、交叉处理
   - Avoid（禁用）：明确不允许的视觉元素
 
-### 二、knowledge（知识配置）
+### 二、colorThemes（颜色主题配置）
+
+每个颜色主题对象包含以下字段：
+
+| 字段             | 类型     | 说明                                      |
+| ---------------- | -------- | ----------------------------------------- |
+| `id`             | string   | 颜色主题唯一标识（default/blue/.../none） |
+| `nameKey`        | string   | 国际化键名（指向 `chat.json` 的翻译文本） |
+| `colors`         | string[] | 用于 UI 预览的主色列表（hex）             |
+| `promptFragment` | string   | 颜色主题提示词片段（可注入系统提示词）    |
+
+### 三、knowledge（知识配置）
 
 每个知识对象包含以下字段：
 
@@ -190,12 +202,12 @@ TypeScript 类型定义与配置读取工具，提供以下能力：
 
 修改配置时需同步检查/更新以下文件：
 
-| 文件                                  | 同步内容                                |
-| ------------------------------------- | --------------------------------------- |
-| `app/config/skill-elements.ts`        | 类型定义（`SkillThemeId` 等）           |
-| `app/types/chat.ts`                   | `SkillKnowledgeId` 类型                 |
-| `public/locales/*/chat.json`          | `skill.theme.*` 和 `skill.element.*` 键 |
-| `public/images/skill-themes/{id}.svg` | 风格缩略图资源                          |
+| 文件                                  | 同步内容                                                      |
+| ------------------------------------- | ------------------------------------------------------------- |
+| `app/config/skill-elements.ts`        | 类型定义（`SkillThemeId` 等）                                 |
+| `app/types/chat.ts`                   | `SkillKnowledgeId` 类型                                       |
+| `public/locales/*/chat.json`          | `skill.theme.*` / `skill.colorTheme.*` / `skill.element.*` 键 |
+| `public/images/skill-themes/{id}.svg` | 风格缩略图资源                                                |
 
 ### 4. 提示词片段编写规范
 
@@ -219,6 +231,13 @@ TypeScript 类型定义与配置读取工具，提供以下能力：
 4. （可选）创建缩略图 `public/images/skill-themes/{id}.svg`（150x100px）
 5. 测试：UI 显示 → 配置保存 → 系统提示词注入
 
+### 7. 新增颜色主题流程
+
+1. 在 `colorThemes` 数组添加新对象，确保 `id` 唯一
+2. 更新 `app/config/skill-elements.ts` 中的 `SkillColorThemeId` 联合类型
+3. 在所有语言的 `chat.json` 添加 `skill.colorTheme.{id}` 翻译
+4. 测试：UI 预览色点 → 配置保存 →（如系统提示词包含 `{{colorTheme}}`）提示词注入
+
 ## 配置加载机制
 
 ```typescript
@@ -232,6 +251,10 @@ console.log(theme.promptFragment); // 输出风格提示词
 // 查询知识
 const aws = getKnowledgeById("aws");
 console.log(aws.required); // 输出是否必选
+
+// 查询颜色主题（用于 UI 与可选提示词注入）
+const colorTheme = getColorThemeById("default");
+console.log(colorTheme?.colors); // 输出颜色点预览
 
 // 获取必选知识列表
 const required = getRequiredKnowledge();
@@ -249,11 +272,14 @@ console.log(optional.map((k) => k.id)); // ["basic", "misc", "uml", ...]
 ```
 系统提示词模板（app/lib/storage → AgentSettings.systemPrompt）：
 {{theme}}
+{{colorTheme}}
 {{knowledge}}
 
 ↓ 运行时替换 ↓
 
 modern 风格提示词片段
++
+default 颜色主题提示词片段（可选，取决于系统提示词是否包含 {{colorTheme}}）
 +
 general 知识提示词片段
 +
@@ -265,6 +291,7 @@ uml 知识提示词片段（用户选中）
 **占位符规则**：
 
 - `{{theme}}`：替换为用户选中的风格提示词
+- `{{colorTheme}}`：替换为用户选中的颜色主题提示词（可选；系统提示词不含该占位符时不会注入）
 - `{{knowledge}}`：替换为所有选中的知识提示词（必选 + 用户选择的可选）
 
 **失效检测**：

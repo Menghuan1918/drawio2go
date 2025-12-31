@@ -123,6 +123,7 @@ export default function AboutSettingsPanel({
         <p className="section-description">{t("about.description")}</p>
       </div>
 
+      {/* App Info Card */}
       <div className="rounded-xl border border-default-200 bg-content1 p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex flex-col gap-1">
@@ -133,10 +134,18 @@ export default function AboutSettingsPanel({
               {t("about.appVersionLabel", { defaultValue: "Version" })}:{" "}
               <span className="font-mono">{currentVersion}</span>
             </div>
+            {/* License */}
+            <div className="text-xs text-default-400">
+              {t("about.license", { defaultValue: "MIT License" })}
+            </div>
+            <div className="mt-1 text-sm text-default-400">
+              {t("about.tagline", {
+                defaultValue: "AI-Powered, Human-AI Collaboration",
+              })}
+            </div>
           </div>
           <div className="shrink-0">{statusChip}</div>
         </div>
-
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <Button variant="secondary" size="sm" onPress={handleOpenGitHub}>
             <ExternalLink className="h-4 w-4" />
@@ -145,6 +154,7 @@ export default function AboutSettingsPanel({
         </div>
       </div>
 
+      {/* Version Info */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="rounded-xl border border-default-200 bg-content1 p-4">
           <div className="text-sm font-medium text-foreground">
@@ -170,6 +180,7 @@ export default function AboutSettingsPanel({
         </div>
       </div>
 
+      {/* Update Check */}
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <Button

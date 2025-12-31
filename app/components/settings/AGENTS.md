@@ -6,7 +6,7 @@
 
 **关键特性：**
 
-- 多标签页设置面板（通用、模型、Agent、版本）
+- 多标签页设置面板（通用、画布、模型、Agent、版本）
 - 连接测试器（按需接入）
 - 系统提示词内联编辑（AgentSettingsPanel）
 - 语言切换
@@ -22,6 +22,7 @@
 | 面板                     | 职责            | 核心配置项                                                                                            |
 | ------------------------ | --------------- | ----------------------------------------------------------------------------------------------------- |
 | **GeneralSettingsPanel** | 通用设置        | 语言选择、默认文件路径                                                                                |
+| **DrawioSettingsPanel**  | 画布设置        | DrawIO Base URL、DrawIO 标识符（origin 校验）、DrawIO 默认主题（ui=）                                 |
 | **ModelsSettingsPanel**  | 供应商/模型管理 | 供应商列表（Accordion）、模型预览、删除供应商级联处理、Provider/Model 编辑                            |
 | **ProviderEditDialog**   | 供应商新增/编辑 | HeroUI Modal 弹窗，支持新增/编辑供应商、表单校验、Toast 反馈                                          |
 | **ModelEditDialog**      | 模型新增/编辑   | HeroUI Modal 弹窗，模型名称/温度/工具轮次校验，能力（思考/视觉/工具）按钮切换（含 Tooltip）、模型测试 |
@@ -29,7 +30,7 @@
 | **VersionSettingsPanel** | 版本管理        | AI 编辑前自动创建版本快照                                                                             |
 | **AboutSettingsPanel**   | 关于            | 应用版本、GitHub 链接、更新检查（含 `update.autoCheck`）                                              |
 | **ConnectionTester**     | 连接测试器      | 测试 LLM API 连接可用性                                                                               |
-| **SettingsNav**          | 设置导航栏      | 标签页切换（通用 / 模型 / Agent / 版本 / 关于，图标导航）                                             |
+| **SettingsNav**          | 设置导航栏      | 标签页切换（通用 / 画布 / 模型 / Agent / 版本 / 关于，图标导航）                                      |
 
 ---
 
@@ -51,6 +52,36 @@ interface GeneralSettingsPanelProps {
 - **语言选择** - 切换应用UI语言（中文/英文），使用 LanguageSwitcher 组件
 - **默认展开侧边栏** - 控制启动时右侧侧边栏是否默认展开
 - **默认文件路径** - 设置文件浏览器打开的初始目录（Electron 环境）
+
+### DrawioSettingsPanel（画布设置）
+
+```typescript
+interface DrawioSettingsPanelProps {
+  drawioBaseUrl: string;
+  drawioIdentifier: string;
+  drawioTheme: "kennedy" | "min" | "atlas" | "sketch" | "simple";
+  drawioUrlParams: string;
+  drawioBaseUrlError?: string;
+  drawioIdentifierError?: string;
+  onDrawioBaseUrlChange: (value: string) => void;
+  onDrawioIdentifierChange: (value: string) => void;
+  onDrawioThemeChange: (
+    value: "kennedy" | "min" | "atlas" | "sketch" | "simple",
+  ) => void;
+  onDrawioUrlParamsChange: (value: string) => void;
+  onResetDrawioBaseUrl: () => void | Promise<void>;
+  onResetDrawioIdentifier: () => void | Promise<void>;
+  onResetDrawioUrlParams: () => void | Promise<void>;
+}
+```
+
+**配置项：**
+
+- **DrawIO Base URL** - DrawIO iframe 加载地址（默认 `https://embed.diagrams.net`）
+- **DrawIO 标识符** - postMessage `event.origin` 校验用的子串（默认 `diagrams.net`）
+- **DrawIO 默认主题** - 通过 URL 参数 `ui=` 控制（默认 `kennedy`）
+- **自定义 URL 参数** - 允许覆盖/添加任意 URL 参数（优先级最高，例如覆盖 `ui=`/`dark=` 等）
+- **恢复默认** - 需二次确认（ConfirmDialog），避免误操作导致画布不可用
 
 ### ModelsSettingsPanel（供应商/模型管理）
 
@@ -90,8 +121,12 @@ interface AgentSettingsPanelProps {
 
 - 内联 TextField + TextArea 直接编辑系统提示词（15 行默认高度）
 - 恢复默认：按钮 + `ConfirmDialog`（variant="danger"），使用 `DEFAULT_SYSTEM_PROMPT`
+- 提示词升级提醒：由 `app/hooks/useUpdateChecker.ts` 在设置页挂载后统一检测（命中历史版本且不等于当前默认值时 Toast warning），提供“升级到最新版”按钮一键替换为 `DEFAULT_SYSTEM_PROMPT`
 - 校验辅助：导出 `isSystemPromptValid` / `getSystemPromptError`，空白时展示 `FieldError`
-- 新对话默认设置：复用 `skill-elements` 配置，支持默认风格与默认知识多选（必选项锁定）
+- 新对话默认设置：复用 `skill-elements` 配置，支持默认风格/颜色主题/默认知识多选（必选项锁定）
+  - **自定义风格提示词**：当选择 `custom` 风格时可编辑 `customThemePrompt`，用于替换 `{{theme}}` 注入内容
+  - **自定义知识内容**：可选 `customKnowledgeContent`，追加到 `{{knowledge}}` 的末尾以补充自定义约束
+  - **知识大小提示**：知识列表展示每项 prompt 片段字节数（TextEncoder 计算），便于控制 token 消耗
 - 由父组件管理保存逻辑与时间戳更新（保持无副作用）
 
 ### VersionSettingsPanel（版本管理）
@@ -119,6 +154,11 @@ GeneralSettingsPanel
 ├── LanguageSwitcher（语言切换器）
 └── 默认路径输入 + 文件夹选择
 
+DrawioSettingsPanel
+├── DrawIO Base URL 输入 + 恢复默认
+├── DrawIO 标识符 输入 + 恢复默认
+└── DrawIO 默认主题选择（ui=）
+
 ModelsSettingsPanel
 ├── Provider 列表（Accordion）
 ├── Model 卡片列表（能力徽章、状态、操作菜单）
@@ -145,6 +185,7 @@ VersionSettingsPanel
 **主要翻译命名空间：**
 
 - `settings.general.*` - 通用设置
+- `settings.drawio.*` - 画布设置
 - `settings.llm.*` - LLM 设置
 - `settings.agent.*` - Agent 设置
 - `settings.version.*` - 版本设置
@@ -178,6 +219,7 @@ VersionSettingsPanel
 import {
   SettingsNav,
   GeneralSettingsPanel,
+  DrawioSettingsPanel,
   ModelsSettingsPanel,
   AgentSettingsPanel,
   VersionSettingsPanel,

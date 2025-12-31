@@ -5,6 +5,7 @@ import {
   Dropdown,
   Label,
   ListBox,
+  Select,
   Surface,
   TextArea,
   TooltipContent,
@@ -31,9 +32,11 @@ import {
 import { useAppTranslation } from "@/app/i18n/hooks";
 import type { SkillKnowledgeId, SkillSettings } from "@/app/types/chat";
 import {
+  getColorThemeById,
   getRequiredKnowledge,
   getThemeById,
   skillKnowledgeConfig,
+  type SkillColorThemeId,
 } from "@/app/config/skill-elements";
 import {
   hasKnowledgeVariable,
@@ -51,6 +54,7 @@ export interface SkillButtonProps {
 }
 
 const themeOptions = skillKnowledgeConfig.themes;
+const colorThemeOptions = skillKnowledgeConfig.colorThemes;
 const knowledgeOptions = skillKnowledgeConfig.knowledge;
 const knowledgeOrder = knowledgeOptions.map((item) => item.id);
 
@@ -129,6 +133,15 @@ export default function SkillButton({
       ) ?? themeOptions[0]
     );
   }, [skillSettings.selectedTheme]);
+
+  const selectedColorTheme = useMemo(() => {
+    const colorThemeId =
+      skillSettings.selectedColorTheme ?? ("none" as SkillColorThemeId);
+    return (
+      getColorThemeById(colorThemeId as SkillColorThemeId) ??
+      colorThemeOptions.find((ct) => ct.id === "none")!
+    );
+  }, [skillSettings.selectedColorTheme]);
 
   const themeLabel = selectedTheme
     ? t(selectedTheme.nameKey)
@@ -263,6 +276,20 @@ export default function SkillButton({
     ],
   );
 
+  const handleColorThemeChange = useCallback(
+    (value: string) => {
+      if (!value || value === skillSettings.selectedColorTheme) return;
+      // 延时确保 Select 下拉框完全关闭后再更新状态
+      setTimeout(() => {
+        onSkillSettingsChange({
+          ...skillSettings,
+          selectedColorTheme: value,
+        });
+      }, 150);
+    },
+    [onSkillSettingsChange, skillSettings],
+  );
+
   const button = (
     <Button
       type="button"
@@ -355,6 +382,75 @@ export default function SkillButton({
                     </button>
                   );
                 })}
+              </div>
+            </div>
+
+            <div className="skill-section">
+              <div className="skill-section__header">
+                <Label className="skill-section__title">
+                  {t("skill.colorTheme.label")}
+                </Label>
+                <p className="skill-section__hint">
+                  {t("skill.colorTheme.description")}
+                </p>
+              </div>
+              <div
+                className="skill-color-theme-selector"
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+              >
+                <div className="skill-color-dots">
+                  {selectedColorTheme.colors.map((color, index) => (
+                    <span
+                      key={index}
+                      className="skill-color-dot"
+                      style={{ backgroundColor: color }}
+                      aria-hidden="true"
+                    />
+                  ))}
+                </div>
+                <Select
+                  selectedKey={
+                    skillSettings.selectedColorTheme ?? ("none" as string)
+                  }
+                  onSelectionChange={(key) => {
+                    if (key && key !== "all") {
+                      handleColorThemeChange(String(key));
+                    }
+                  }}
+                  aria-label={t("skill.colorTheme.label")}
+                  isDisabled={isButtonDisabled}
+                  className="skill-color-theme-select"
+                >
+                  <Select.Trigger>
+                    {t(selectedColorTheme.nameKey)}
+                  </Select.Trigger>
+                  <Select.Popover>
+                    <ListBox>
+                      {colorThemeOptions.map((theme) => (
+                        <ListBox.Item
+                          key={theme.id}
+                          id={theme.id}
+                          textValue={t(theme.nameKey)}
+                        >
+                          <div className="skill-color-option">
+                            <span className="skill-color-dots-small">
+                              {theme.colors.slice(0, 3).map((c, i) => (
+                                <span
+                                  key={i}
+                                  className="skill-color-dot-small"
+                                  style={{ backgroundColor: c }}
+                                  aria-hidden="true"
+                                />
+                              ))}
+                            </span>
+                            <span>{t(theme.nameKey)}</span>
+                          </div>
+                        </ListBox.Item>
+                      ))}
+                    </ListBox>
+                  </Select.Popover>
+                </Select>
               </div>
             </div>
 

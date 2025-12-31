@@ -147,6 +147,9 @@ function ToastRoot({
                 await toast.action?.onPress();
               } catch {
                 // UI 级交互失败保持静默，避免 toast 内二次 toast
+              } finally {
+                // 无论 action 成功还是失败，都关闭 toast
+                onDismiss(toast.id);
               }
             }}
             className="toast__action"

@@ -17,7 +17,7 @@
   background: var(--background, #ffffff);
   border-radius: 0.5rem;
   padding: 1.5rem;
-  min-width: 400px;
+  min-width: min(400px, 90vw);
   max-width: 90vw;
   max-height: 90vh;
   box-shadow: var(--shadow-4);
@@ -47,7 +47,7 @@
 
 /* 系统提示词弹窗 */
 .prompt-modal {
-  min-width: 600px;
+  min-width: min(600px, 90vw);
   max-width: 800px;
 }
 
@@ -80,7 +80,7 @@
 
 /* 测试弹窗 */
 .test-modal {
-  min-width: 400px;
+  min-width: min(400px, 90vw);
 }
 
 .test-loading {

@@ -3,6 +3,7 @@
 import { Button } from "@heroui/react";
 import {
   Settings,
+  PenTool,
   BrainCircuit,
   Sparkles,
   GitBranch,
@@ -14,7 +15,13 @@ import { useAppTranslation } from "@/app/i18n/hooks";
 /**
  * 设置标签类型
  */
-export type SettingsTab = "general" | "models" | "agent" | "version" | "about";
+export type SettingsTab =
+  | "general"
+  | "drawio"
+  | "models"
+  | "agent"
+  | "version"
+  | "about";
 
 interface SettingsNavProps {
   activeTab: SettingsTab;
@@ -41,6 +48,15 @@ export default function SettingsNav({
         aria-label={t("nav.general", { defaultValue: "General" })}
       >
         <Settings size={24} />
+      </Button>
+      <Button
+        variant="tertiary"
+        isIconOnly
+        className={`settings-nav-item ${activeTab === "drawio" ? "active" : ""}`}
+        onPress={() => onTabChange("drawio")}
+        aria-label={t("nav.drawio", { defaultValue: "DrawIO" })}
+      >
+        <PenTool size={24} />
       </Button>
       <Button
         variant="tertiary"

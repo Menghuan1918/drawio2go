@@ -24,6 +24,26 @@ https://github.com/user-attachments/assets/40fe5c3b-0f37-4fbf-b6ac-60b8734f2d14
 
 <div align="center">
 <table width="100%">
+    <tr>
+    <td width="33.33%" valign="top" align="center">
+      <h3><em>NEW:</em> 画布增强</h3>
+      <p>插入图像后将会自动检查连接线与元素是否重叠，避免AI连线失误</p>
+      <img src="https://github.com/user-attachments/assets/91904af5-e00c-4517-bce0-8162672df0a9" width="90%" />
+      <br />
+    </td>
+    <td width="33.33%" valign="top" align="center">
+      <h3><em>NEW:</em> LLM增强</h3>
+      <p>指定绘图风格/颜色乃至附加drawio元素知识*</p>
+      <img src="https://github.com/user-attachments/assets/85fef675-b748-4b99-a693-93f898ea69b0" width="65%" />
+      <br />
+    </td>
+    <td width="33.33%" valign="top" align="center">
+      <h3><em>NEW:</em> 自定义drawio画布</h3>
+      <p>完全自定义drawio画布，修改其默认外观主题/切换至自托管地址</p>
+      <img src="https://github.com/user-attachments/assets/8456c678-6cac-4f2f-b5a0-ef4d107ec21f" alt="MCP" />
+      <br />
+    </td>
+  </tr>
   <tr>
     <td width="33.33%" valign="top" align="center">
       <h3>版本管理</h3>
@@ -33,7 +53,7 @@ https://github.com/user-attachments/assets/40fe5c3b-0f37-4fbf-b6ac-60b8734f2d14
     </td>
     <td width="33.33%" valign="top" align="center">
       <h3>AI加持修改</h3>
-      <p>基于XPath的精准删改查工具，效果好省token*</p>
+      <p>基于XPath的精准删改查工具，效果好省token**</p>
       <img src="https://github.com/user-attachments/assets/db4c17b7-49f9-407d-a046-227092e70708" alt="演示" width="60%" />
       <br />
     </td>
@@ -60,7 +80,7 @@ https://github.com/user-attachments/assets/40fe5c3b-0f37-4fbf-b6ac-60b8734f2d14
     </td>
     <td width="33.33%" valign="top" align="center">
       <h3>画布上下文</h3>
-      <p>不再需要描述“最右边的几个xxx”，直接鼠标框选，会话会自动解析画布元素到上下文中**</p>
+      <p>不再需要描述“最右边的几个xxx”，直接鼠标框选，会话会自动解析画布元素到上下文中***</p>
       <img src="https://github.com/user-attachments/assets/07ec5631-21bc-4a11-853a-62058061c49f" alt="上下文" width="100%" />
       <br />
       <br />
@@ -68,13 +88,43 @@ https://github.com/user-attachments/assets/40fe5c3b-0f37-4fbf-b6ac-60b8734f2d14
   </tr>
 </table>
 </div>
-<sub>* 目前LLM API支持Openai/Deepseek/Anthropic/Gemini格式</sub>
+<sub>* 支持在设置中指定默认的主题/颜色/知识以及附加自定义的知识</sub>
 <br />
-<sub>** 受限于Web API限制，鼠标选中感知功能在Web端不可用。但是Web端依然有基础的压缩画布内容上下文注入功能</sub>
+<sub>** 目前LLM API支持Openai/Deepseek/Anthropic/Gemini格式</sub>
+<br />
+<sub>*** 受限于Web API限制，鼠标选中感知功能在Web端不可用。但是Web端依然有基础的压缩画布内容上下文注入功能</sub>
 <br />
 <br />
 
 以下是一些实际的演示以及其提示词：
+
+<div align="center">
+<table width="100%">
+    <tr>
+    <td width="33.33%" valign="top" align="center">
+      <h3>DeepSeek-Chat 现代风格*</h3>
+      <p>详细绘制一个标准Agent流程图，包含MCP/多Agent的概念，使用英文</p>
+      <img src="https://github.com/user-attachments/assets/55b7b986-67ab-4562-8602-ddb5b2b95c44" width="80%" />
+      <br />
+    </td>
+    <td width="33.33%" valign="top" align="center">
+      <h3>DeepSeek-Chat 学术风格*</h3>
+      <p>详细绘制一个标准Agent流程图，包含MCP/多Agent的概念，使用英文</p>
+      <img src="https://github.com/user-attachments/assets/6aa336af-e7b8-40ed-9bc0-9249555d2a0f" width="65%" />
+      <br />
+    </td>
+    <td width="33.33%" valign="top" align="center">
+      <h3>DeepSeek-Chat 极简风格*</h3>
+      <p>详细绘制一个标准Agent流程图，包含MCP/多Agent的概念，使用英文</p>
+      <img src="https://github.com/user-attachments/assets/999de929-5582-4173-a5fe-f1f50ff643b1"  width="80%"/>
+      <br />
+    </td>
+  </tr>
+</table>
+</div>
+<sub>* 使用官方API，使用默认颜色配置，deepseek-chat v3.2，非思考，温度0.3</sub>
+<br />
+<br />
 
 <div align="center">
 <table width="100%">

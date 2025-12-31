@@ -85,6 +85,10 @@ export interface DrawioElementResult extends DrawioQueryResultBase {
   type: "element";
   tag_name: string;
   attributes: Record<string, string>;
+  children?: Array<{
+    tag_name: string;
+    attributes: Record<string, string>;
+  }>;
   xml_string: string;
 }
 
@@ -127,6 +131,16 @@ export type DrawioReadResult =
 
 export type DrawioEditBatchResult = ToolResult<{
   operations_applied: number;
+  warnings?: string[];
+  layout_check?: {
+    overlaps_found: number;
+    overlaps_sample: Array<{
+      edgeId: string;
+      vertexId: string;
+      seg: [number, number, number, number]; // [x1, y1, x2, y2] 重叠线段起点和终点
+      vtx: [number, number]; // [cx, cy] 顶点中心坐标
+    }>;
+  };
 }>;
 
 /**

@@ -105,7 +105,7 @@ export function useUpdateChecker(
 
       push({
         variant: "info",
-        duration: 10_000,
+        duration: 30_000,
         title: t("about.update.toastTitle", {
           defaultValue: "New version available",
         }),

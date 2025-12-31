@@ -1,6 +1,7 @@
 {
   "nav": {
     "general": "通用",
+    "drawio": "画布",
     "models": "模型",
     "agent": "智能体",
     "version": "版本设置",
@@ -10,6 +11,8 @@
     "title": "关于",
     "description": "应用信息与更新检查",
     "appVersionLabel": "版本",
+    "tagline": "AI 赋能，人机协作",
+    "license": "MIT 许可证",
     "github": {
       "open": "打开 GitHub"
     },
@@ -50,6 +53,55 @@
     "sidebarExpanded": {
       "label": "默认展开侧边栏",
       "description": "启动应用时默认打开右侧侧边栏"
+    }
+  },
+  "drawio": {
+    "title": "DrawIO 画布设置",
+    "description": "配置画布加载、通信与默认主题",
+    "baseUrl": {
+      "label": "DrawIO Base URL",
+      "description": "用于加载 DrawIO 编辑器的服务地址",
+      "placeholder": "https://embed.diagrams.net",
+      "warning": "修改此设置可能导致画布无法正常工作",
+      "reset": "恢复默认",
+      "resetTitle": "恢复默认 DrawIO Base URL",
+      "resetConfirm": "确认将 DrawIO Base URL 恢复为默认值吗？"
+    },
+    "identifier": {
+      "label": "DrawIO 标识符",
+      "description": "用于 postMessage 来源验证（origin 检查）",
+      "placeholder": "diagrams.net",
+      "warning": "修改此设置可能导致画布通信失败",
+      "reset": "恢复默认",
+      "resetTitle": "恢复默认 DrawIO 标识符",
+      "resetConfirm": "确认将 DrawIO 标识符恢复为默认值吗？"
+    },
+    "theme": {
+      "label": "DrawIO 默认主题",
+      "description": "通过 URL 参数 ui= 控制（修改后需要重新加载画布）",
+      "change": "切换主题",
+      "options": {
+        "kennedy": "kennedy（默认）",
+        "min": "min",
+        "atlas": "atlas",
+        "sketch": "sketch",
+        "simple": "simple"
+      },
+      "descriptions": {
+        "kennedy": "经典默认主题，界面完整，兼容性最佳",
+        "min": "极简界面，适合专注绘图",
+        "atlas": "更丰富的工具与面板布局",
+        "sketch": "手绘风格外观，适合草图表达",
+        "simple": "简化界面，清爽轻量"
+      }
+    },
+    "urlParams": {
+      "label": "自定义 URL 参数",
+      "placeholder": "例如: spin=0&libraries=0",
+      "description": "可覆盖默认参数。常用参数: embed, proto, spin, ui, libraries, dark。示例: embed=1&proto=json&spin=1&libraries=1",
+      "warning": "修改可能导致画布功能异常",
+      "reset": "清空参数",
+      "resetConfirm": "确定清空自定义参数吗？"
     }
   },
   "llm": {
@@ -118,7 +170,10 @@
       "reset": "恢复默认",
       "errorEmpty": "系统提示词不能为空",
       "resetTitle": "恢复默认系统提示词",
-      "resetConfirm": "此操作将丢失当前编辑的内容，确认恢复默认系统提示词吗？"
+      "resetConfirm": "此操作将丢失当前编辑的内容，确认恢复默认系统提示词吗？",
+      "upgradeToastTitle": "检测到旧版本提示词",
+      "upgradeToastDescription": "你正在使用 {{version}} 版本的提示词，可以升级到最新版本获得更好的体验",
+      "upgradeToastAction": "升级到最新版"
     },
     "defaultSettings": {
       "title": "新对话默认设置",

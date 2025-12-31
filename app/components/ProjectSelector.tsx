@@ -573,10 +573,7 @@ export default function ProjectSelector({
       onPointerDown={handleOverlayPointerDown}
       {...overlayPressProps}
     >
-      <div
-        className="modal-content"
-        style={{ maxWidth: "800px", minWidth: "600px" }}
-      >
+      <div className="modal-content" style={{ width: "min(800px, 90vw)" }}>
         {/* 标题 */}
         <div className="flex items-center justify-between mb-4">
           <h2 className="modal-title flex items-center gap-2">

@@ -4,12 +4,14 @@
   top: 0;
   right: 0;
   width: var(--sidebar-width);
+  max-width: 100vw;
   height: 100vh;
   background: var(--background, #ffffff);
   border-left: 2px solid var(--primary-color);
   transform: translateX(100%);
   transition: transform 0.3s var(--ease-out-cubic);
   z-index: 100;
+  overflow-x: hidden;
   overflow-y: hidden;
   box-shadow: var(--shadow-sidebar);
 }
@@ -29,12 +31,14 @@
   top: 0;
   right: 0;
   width: var(--sidebar-width);
+  max-width: 100vw;
   height: 100vh;
   background: var(--background, #ffffff);
   border-left: 2px solid var(--primary-color);
   transform: translateX(100%);
   transition: transform 0.3s var(--ease-out-cubic);
   z-index: 100;
+  overflow-x: hidden;
   overflow-y: auto;
   box-shadow: var(--shadow-sidebar);
 }
@@ -285,6 +289,8 @@
 .settings-content {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
+  min-width: 0;
   padding: var(--spacing-3);
   padding-bottom: calc(var(--spacing-xl) + var(--spacing-sm));
 }
@@ -292,6 +298,118 @@
 /* 设置面板 */
 .settings-panel {
   padding: var(--spacing-sm);
+}
+
+/* DrawIO 主题卡片 */
+.drawio-theme-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.drawio-theme-selector {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-light);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.drawio-theme-card {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  flex: 1;
+  min-width: 0;
+  background: var(--surface);
+  color: var(--text-primary);
+  text-align: left;
+}
+
+.drawio-theme-card--selected {
+  background: var(--bg-secondary);
+}
+
+.drawio-theme-card__thumbnail {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 60px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-light);
+  background: var(--bg-primary);
+  overflow: hidden;
+}
+
+.drawio-theme-card__thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.drawio-theme-card__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.drawio-theme-card__title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.drawio-theme-card__description {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  line-height: 1.3;
+}
+
+.drawio-theme-dropdown-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--border-light);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.drawio-theme-dropdown-trigger:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.drawio-theme-dropdown-trigger:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: -2px;
+}
+
+.drawio-theme-dropdown-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-light);
+  background: var(--bg-primary);
+  overflow: hidden;
 }
 
 @media (max-width: 768px) {

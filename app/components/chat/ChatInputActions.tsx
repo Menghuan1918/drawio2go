@@ -63,7 +63,9 @@ export interface ChatTopActionsProps {
   mcpConfigDialog?: ChatMcpConfigDialogConfig;
   isInputDisabled: boolean;
   isCanvasContextEnabled: boolean;
-  onCanvasContextToggle: () => void;
+  onCanvasContextChange: (enabled: boolean) => void;
+  isLayoutCheckEnabled: boolean;
+  onLayoutCheckChange: (enabled: boolean) => void;
 }
 
 export function ChatTopActions({
@@ -72,7 +74,9 @@ export function ChatTopActions({
   mcpConfigDialog,
   isInputDisabled,
   isCanvasContextEnabled,
-  onCanvasContextToggle,
+  onCanvasContextChange,
+  isLayoutCheckEnabled,
+  onLayoutCheckChange,
 }: ChatTopActionsProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const rafRef = useRef<number | null>(null);
@@ -173,8 +177,10 @@ export function ChatTopActions({
     >
       <div className="chat-top-actions__item">
         <CanvasContextButton
-          enabled={isCanvasContextEnabled}
-          onPress={onCanvasContextToggle}
+          isCanvasContextEnabled={isCanvasContextEnabled}
+          onCanvasContextChange={onCanvasContextChange}
+          isLayoutCheckEnabled={isLayoutCheckEnabled}
+          onLayoutCheckChange={onLayoutCheckChange}
           isDisabled={isInputDisabled}
           isIconOnly={false}
           className="chat-icon-button"
@@ -201,7 +207,7 @@ export function ChatTopActions({
       ) : null}
 
       {mcpConfigDialog ? (
-        <div className="chat-top-actions__item">
+        <div className="chat-top-actions__item chat-top-actions__item--mcp">
           <McpConfigDialog
             isOpen={mcpConfigDialog.isOpen}
             onOpenChange={mcpConfigDialog.onOpenChange}

@@ -58,6 +58,7 @@ import {
 import type { DrawioEditorRef } from "@/app/components/DrawioEditorNative";
 import { getDrawioXML, replaceDrawioXML } from "@/app/lib/drawio-tools";
 import type { DrawioReadResult } from "@/app/types/drawio-tools";
+import type { DrawioPageInfo } from "@/app/lib/storage/page-metadata";
 import {
   createFrontendDrawioTools,
   type FrontendToolContext,
@@ -231,6 +232,32 @@ function formatUserSelectTag(ids: readonly string[]) {
   return `<user_select>${normalized.join(",")}</user_select>`;
 }
 
+/**
+ * Build <page_scope> tag for page-filtered operations.
+ * Provides ready-to-use XPath for each selected page.
+ *
+ * Format:
+ * <page_scope pages="2">
+ * | Page | XPath (append to target elements within this page) |
+ * | Page 1 | //diagram[@id='page-1']/mxGraphModel/root |
+ * | Page 2 | //diagram[@id='page-2']/mxGraphModel/root |
+ * </page_scope>
+ */
+function formatPageScopeTag(pages: DrawioPageInfo[], selectedIds: Set<string>) {
+  const selectedPages = pages.filter((p) => selectedIds.has(p.id));
+  if (selectedPages.length === 0) return null;
+
+  const rows = selectedPages.map((p) => {
+    const xpath = `//diagram[@id='${p.id}']/mxGraphModel/root`;
+    return `| ${p.name} | ${xpath} |`;
+  });
+
+  return `<page_scope pages="${selectedPages.length}">
+| Page | XPath (use as insert target for this page) |
+${rows.join("\n")}
+</page_scope>`;
+}
+
 async function buildCanvasContextPrefix(options: {
   drawioReadTool: unknown;
   isAppEnv: boolean;
@@ -352,18 +379,49 @@ async function maybeInjectCanvasContext(options: {
   drawioReadTool: unknown;
   isAppEnv: boolean;
   selectionIds: readonly string[];
+  pageContext?: {
+    pages: DrawioPageInfo[];
+    selectedPageIds: Set<string>;
+    isAllSelected: boolean;
+  };
 }): Promise<UseChatMessage[]> {
-  const { enabled, messages, drawioReadTool, isAppEnv, selectionIds } = options;
+  const {
+    enabled,
+    messages,
+    drawioReadTool,
+    isAppEnv,
+    selectionIds,
+    pageContext,
+  } = options;
   if (!enabled) return messages;
 
   try {
-    const prefix = await buildCanvasContextPrefix({
+    const prefixParts: string[] = [];
+
+    // 1. Canvas status (vertices/edges count)
+    const canvasPrefix = await buildCanvasContextPrefix({
       drawioReadTool,
       isAppEnv,
       selectionIds,
     });
-    if (!prefix) return messages;
+    if (canvasPrefix) {
+      prefixParts.push(canvasPrefix);
+    }
 
+    // 2. Page scope (when not all pages selected)
+    if (pageContext && !pageContext.isAllSelected) {
+      const pageScopeTag = formatPageScopeTag(
+        pageContext.pages,
+        pageContext.selectedPageIds,
+      );
+      if (pageScopeTag) {
+        prefixParts.push(pageScopeTag);
+      }
+    }
+
+    if (prefixParts.length === 0) return messages;
+
+    const prefix = prefixParts.join("\n");
     return injectPrefixIntoLastUserMessage({ messages, prefix });
   } catch (error) {
     logger.error("获取画布上下文失败，已降级为不注入", { error });
@@ -427,6 +485,8 @@ export default function ChatSidebar({
   const [input, setInput] = useState("");
   const [isCanvasContextEnabled, setIsCanvasContextEnabled] = useState(true);
   const isCanvasContextEnabledRef = useRef(false);
+  const [isLayoutCheckEnabled, setIsLayoutCheckEnabled] = useState(true);
+  const isLayoutCheckEnabledRef = useRef(false);
   const [pageSelectorXml, setPageSelectorXml] = useState<string | null>(null);
   const [expandedToolCalls, setExpandedToolCalls] = useState<
     Record<string, boolean>
@@ -477,11 +537,17 @@ export default function ChatSidebar({
   const pageSelection = usePageSelection({ xml: pageSelectorXml });
   const selectedPageIdsRef = useRef<Set<string>>(new Set());
   const isAllSelectedPagesRef = useRef(true);
+  const pagesRef = useRef<DrawioPageInfo[]>([]);
 
   useEffect(() => {
     selectedPageIdsRef.current = pageSelection.selectedPageIds;
     isAllSelectedPagesRef.current = pageSelection.isAllSelected;
-  }, [pageSelection.isAllSelected, pageSelection.selectedPageIds]);
+    pagesRef.current = pageSelection.pages;
+  }, [
+    pageSelection.isAllSelected,
+    pageSelection.selectedPageIds,
+    pageSelection.pages,
+  ]);
 
   // ========== Hooks 聚合 ==========
   const { t, i18n } = useI18n();
@@ -581,6 +647,10 @@ export default function ChatSidebar({
     isCanvasContextEnabledRef.current = isCanvasContextEnabled;
   }, [isCanvasContextEnabled]);
 
+  useEffect(() => {
+    isLayoutCheckEnabledRef.current = isLayoutCheckEnabled;
+  }, [isLayoutCheckEnabled]);
+
   const isMcpExposureOverlayOpen =
     isOpen &&
     Boolean(mcpOverlayPortalContainer) &&
@@ -611,8 +681,12 @@ export default function ChatSidebar({
     [mcpServer.isLoading, mcpServer.running],
   );
 
-  const handleCanvasContextToggle = useCallback(() => {
-    setIsCanvasContextEnabled((prev) => !prev);
+  const handleCanvasContextChange = useCallback((enabled: boolean) => {
+    setIsCanvasContextEnabled(enabled);
+  }, []);
+
+  const handleLayoutCheckChange = useCallback((enabled: boolean) => {
+    setIsLayoutCheckEnabled(enabled);
   }, []);
 
   const handleConfirmMcpConfig = useCallback(
@@ -927,6 +1001,7 @@ export default function ChatSidebar({
           : Array.from(selectedPageIdsRef.current),
         isMcpContext: false,
       }),
+      getLayoutCheckEnabled: () => isLayoutCheckEnabledRef.current,
     };
   }, [editorRef, handleFrontendToolVersionSnapshot]);
 
@@ -944,6 +1019,7 @@ export default function ChatSidebar({
         selectedPageIds: [],
         isMcpContext: true,
       }),
+      getLayoutCheckEnabled: () => isLayoutCheckEnabledRef.current,
     };
   }, [editorRef, handleFrontendToolVersionSnapshot]);
 
@@ -1140,17 +1216,29 @@ export default function ChatSidebar({
           drawioReadTool: frontendToolsRef.current["drawio_read"],
           isAppEnv,
           selectionIds: selectionRef?.current ?? [],
+          pageContext: {
+            pages: pagesRef.current,
+            selectedPageIds: selectedPageIdsRef.current,
+            isAllSelected: isAllSelectedPagesRef.current,
+          },
         });
 
         const toolSchemas = buildToolSchemaPayload(frontendTools);
 
         const rawBody = (options.body ?? {}) as Record<string, unknown>;
         const { llmConfig: legacyLlmConfig, ...bodyRest } = rawBody;
-        const config =
+        const baseConfig =
           (rawBody.config as unknown) ??
           legacyLlmConfig ??
           llmConfigRef.current ??
           DEFAULT_LLM_CONFIG;
+
+        // 将画布增强开关状态注入到 config 中，供 API 路由使用（提示词模板变量）
+        const config = {
+          ...baseConfig,
+          isCanvasContextEnabled: isCanvasContextEnabledRef.current,
+          isLayoutCheckEnabled: isLayoutCheckEnabledRef.current,
+        };
 
         // 确保每次请求都包含 conversationId 和 projectUuid
         // 这对于工具调用后的自动请求尤其重要,因为 useChat 不会保留原始 body
@@ -2182,7 +2270,9 @@ export default function ChatSidebar({
                   modelLabel: selectedModelLabel,
                 }}
                 isCanvasContextEnabled={isCanvasContextEnabled}
-                onCanvasContextToggle={handleCanvasContextToggle}
+                onCanvasContextChange={handleCanvasContextChange}
+                isLayoutCheckEnabled={isLayoutCheckEnabled}
+                onLayoutCheckChange={handleLayoutCheckChange}
                 pageSelector={{
                   pages: pageSelection.pages,
                   selectedPageIds: pageSelection.selectedPageIds,

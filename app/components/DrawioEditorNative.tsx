@@ -17,6 +17,13 @@ import {
 } from "../types/drawio-tools";
 import { debounce } from "@/app/lib/utils";
 import { useAppTranslation } from "@/app/i18n/hooks";
+import { useStorageSettings } from "@/app/hooks/useStorageSettings";
+import {
+  DEFAULT_DRAWIO_BASE_URL,
+  DEFAULT_DRAWIO_IDENTIFIER,
+  DEFAULT_DRAWIO_THEME,
+  type DrawioTheme,
+} from "@/app/lib/config-utils";
 import { createLogger } from "@/lib/logger";
 import { toErrorString } from "@/app/lib/error-handler";
 
@@ -113,6 +120,25 @@ const DrawioEditorNative = forwardRef<DrawioEditorRef, DrawioEditorNativeProps>(
     const onSelectionChangeRef =
       useRef<DrawioEditorNativeProps["onSelectionChange"]>(onSelectionChange);
 
+    const { getGeneralSettings } = useStorageSettings();
+
+    const [drawioBaseUrl, setDrawioBaseUrl] = useState(DEFAULT_DRAWIO_BASE_URL);
+    const [drawioTheme, setDrawioTheme] =
+      useState<DrawioTheme>(DEFAULT_DRAWIO_THEME);
+    const [drawioUrlParams, setDrawioUrlParams] = useState("");
+
+    const drawioConfigRef = useRef<{
+      baseUrl: string;
+      identifier: string;
+      theme: DrawioTheme;
+      urlParams: string;
+    }>({
+      baseUrl: DEFAULT_DRAWIO_BASE_URL,
+      identifier: DEFAULT_DRAWIO_IDENTIFIER,
+      theme: DEFAULT_DRAWIO_THEME,
+      urlParams: "",
+    });
+
     // 检测初始主题（用于设置 DrawIO URL 参数）
     // 优先读取 localStorage 中的用户偏好，回退到系统主题
     const [initialTheme] = useState<"light" | "dark">(() => {
@@ -182,13 +208,130 @@ const DrawioEditorNative = forwardRef<DrawioEditorRef, DrawioEditorNativeProps>(
       pendingLoadQueueRef.current = [];
     }, []);
 
+    // 已发送等待响应的 load 回调队列（与 pendingLoadQueueRef 分开管理）
+    const sentLoadResolversRef = useRef<Array<() => void>>([]);
+
+    const resetEditorForReload = useCallback(() => {
+      logger.debug("检测到 DrawIO 配置变化，重置 iframe 状态");
+      setIsReady(false);
+      isReadyRef.current = false;
+      initializationCompleteRef.current = false;
+      autosaveReceivedRef.current = false;
+      exportedXmlRef.current = undefined;
+      isFirstLoadRef.current = true;
+      activeRequestIdRef.current = undefined;
+      sentLoadResolversRef.current = [];
+
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+        autosaveTimerRef.current = null;
+      }
+
+      flushPendingLoads();
+      flushPendingExports();
+    }, [flushPendingExports, flushPendingLoads]);
+
+    const applyDrawioConfig = useCallback(
+      (next: {
+        baseUrl: string;
+        identifier: string;
+        theme: DrawioTheme;
+        urlParams: string;
+      }) => {
+        const prev = drawioConfigRef.current;
+        const shouldReload =
+          prev.baseUrl !== next.baseUrl ||
+          prev.theme !== next.theme ||
+          prev.urlParams !== next.urlParams;
+
+        drawioConfigRef.current = next;
+        setDrawioBaseUrl(next.baseUrl);
+        setDrawioTheme(next.theme);
+        setDrawioUrlParams(next.urlParams);
+
+        if (shouldReload) {
+          resetEditorForReload();
+        }
+      },
+      [resetEditorForReload],
+    );
+
+    const loadDrawioConfig = useCallback(async () => {
+      try {
+        const general = await getGeneralSettings();
+        applyDrawioConfig({
+          baseUrl: general.drawioBaseUrl?.trim() || DEFAULT_DRAWIO_BASE_URL,
+          identifier:
+            general.drawioIdentifier?.trim() || DEFAULT_DRAWIO_IDENTIFIER,
+          theme: general.drawioTheme ?? DEFAULT_DRAWIO_THEME,
+          urlParams: general.drawioUrlParams?.trim() || "",
+        });
+      } catch (error) {
+        logger.error("加载 DrawIO 设置失败，使用默认配置", error);
+        applyDrawioConfig({
+          baseUrl: DEFAULT_DRAWIO_BASE_URL,
+          identifier: DEFAULT_DRAWIO_IDENTIFIER,
+          theme: DEFAULT_DRAWIO_THEME,
+          urlParams: "",
+        });
+      }
+    }, [applyDrawioConfig, getGeneralSettings]);
+
+    useEffect(() => {
+      loadDrawioConfig().catch(() => {});
+    }, [loadDrawioConfig]);
+
+    useEffect(() => {
+      if (typeof window === "undefined") return;
+
+      const handler = (event: Event) => {
+        const detail = (event as CustomEvent<{ type?: string }>).detail;
+        if (detail?.type === "general") {
+          loadDrawioConfig().catch(() => {});
+        }
+      };
+
+      window.addEventListener("settings-updated", handler);
+      return () => window.removeEventListener("settings-updated", handler);
+    }, [loadDrawioConfig]);
+
     // 构建 DrawIO URL（包含主题参数）
     // dark=1 表示深色模式，dark=0 表示浅色模式
     // 运行时切换主题时，DrawIO 会通过 prefers-color-scheme 自动跟随，无需重载 iframe
-    const drawioUrl = `https://embed.diagrams.net/?embed=1&proto=json&spin=1&ui=kennedy&libraries=1&saveAndExit=0&noSaveBtn=1&noExitBtn=1&dark=${initialTheme === "dark" ? "1" : "0"}`;
+    const drawioUrl = useMemo(() => {
+      const build = (baseUrl: string) => {
+        const url = new URL(baseUrl);
 
-    // 已发送等待响应的 load 回调队列（与 pendingLoadQueueRef 分开管理）
-    const sentLoadResolversRef = useRef<Array<() => void>>([]);
+        // 1) 系统默认参数（可被用户覆盖）
+        url.searchParams.set("embed", "1");
+        url.searchParams.set("proto", "json");
+        url.searchParams.set("spin", "1");
+        url.searchParams.set("ui", drawioTheme);
+        url.searchParams.set("libraries", "1");
+        url.searchParams.set("saveAndExit", "0");
+        url.searchParams.set("noSaveBtn", "1");
+        url.searchParams.set("noExitBtn", "1");
+        url.searchParams.set("dark", initialTheme === "dark" ? "1" : "0");
+
+        // 2) 用户自定义参数优先级最高（覆盖上面的默认设置）
+        if (drawioUrlParams) {
+          const userParams = new URLSearchParams(drawioUrlParams);
+          for (const [key, value] of userParams.entries()) {
+            if (!key) continue;
+            url.searchParams.set(key, value);
+          }
+        }
+
+        return url.toString();
+      };
+
+      try {
+        return build(drawioBaseUrl);
+      } catch (error) {
+        logger.error("构建 DrawIO URL 失败，回退默认配置", error);
+        return build(DEFAULT_DRAWIO_BASE_URL);
+      }
+    }, [drawioBaseUrl, drawioTheme, drawioUrlParams, initialTheme]);
 
     const dispatchLoadCommand = useCallback(
       (xml: string | undefined, resolve?: () => void) => {
@@ -619,8 +762,11 @@ const DrawioEditorNative = forwardRef<DrawioEditorRef, DrawioEditorNativeProps>(
 
     const handleMessage = useCallback(
       (event: MessageEvent) => {
-        // 安全检查：确保消息来自 diagrams.net
-        if (!event.origin.includes("diagrams.net")) return;
+        // 安全检查：确保消息来自受信任的 DrawIO 来源
+        const trustedIdentifier = drawioConfigRef.current.identifier;
+        if (!trustedIdentifier || !event.origin.includes(trustedIdentifier)) {
+          return;
+        }
 
         try {
           const data = JSON.parse(event.data);

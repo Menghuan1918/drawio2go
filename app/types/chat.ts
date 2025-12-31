@@ -74,6 +74,8 @@ export interface SkillSettings {
   selectedTheme: string; // 选中的风格 ID
   selectedKnowledge: SkillKnowledgeId[]; // 选中的知识 ID 列表
   customThemePrompt?: string; // 自定义风格提示词
+  customKnowledgeContent?: string; // 自定义知识内容
+  selectedColorTheme: string; // 选中的颜色主题 ID
 }
 
 export interface AgentSettings {

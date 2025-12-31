@@ -1,6 +1,7 @@
 export type SidebarTabKey = "chat" | "settings" | "version";
 export type SettingsTabKey =
   | "general"
+  | "drawio"
   | "models"
   | "agent"
   | "version"

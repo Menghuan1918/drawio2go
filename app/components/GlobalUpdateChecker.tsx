@@ -6,9 +6,15 @@ import type { UpdateCheckResult } from "@/app/hooks/useUpdateChecker";
 import { useStorageSettings } from "@/app/hooks/useStorageSettings";
 import { useToast } from "@/app/components/toast";
 import { useAppTranslation } from "@/app/i18n/hooks";
+import { DEFAULT_SYSTEM_PROMPT } from "@/app/lib/config-utils";
+import { findMatchingHistoryVersion } from "@/app/lib/prompt-history";
 import { createLogger } from "@/lib/logger";
 
 const logger = createLogger("GlobalUpdateChecker");
+
+const normalizePrompt = (prompt: string): string => {
+  return prompt.replace(/\r\n/g, "\n").trim();
+};
 
 const normalizeString = (value: unknown): string | null => {
   if (typeof value !== "string") return null;
@@ -75,11 +81,19 @@ const openExternalUrl = async (rawUrl: string): Promise<void> => {
 export default function GlobalUpdateChecker() {
   const { t } = useAppTranslation("settings");
   const { push } = useToast();
-  const { getSetting, subscribeSettingsUpdates } = useStorageSettings();
+  const {
+    getSetting,
+    subscribeSettingsUpdates,
+    getAgentSettings,
+    saveAgentSettings,
+  } = useStorageSettings();
 
   const [autoCheckEnabled, setAutoCheckEnabled] = useState<boolean | null>(
     null,
   );
+  const [systemPrompt, setSystemPrompt] = useState<string | null>(null);
+
+  const didCheckPromptUpgradeRef = useRef(false);
 
   const canSubscribe = useMemo(
     () =>
@@ -104,6 +118,76 @@ export default function GlobalUpdateChecker() {
     void loadAutoCheckSetting();
   }, [loadAutoCheckSetting]);
 
+  const upgradeSystemPromptToLatest = useCallback(async () => {
+    try {
+      const next = await saveAgentSettings({
+        systemPrompt: DEFAULT_SYSTEM_PROMPT,
+      });
+      setSystemPrompt(next.systemPrompt);
+    } catch (error) {
+      logger.warn("[PromptUpgrade] saveAgentSettings failed", { error });
+    }
+  }, [saveAgentSettings]);
+
+  useEffect(() => {
+    if (systemPrompt !== null) return;
+
+    let disposed = false;
+
+    const run = async () => {
+      try {
+        const settings = await getAgentSettings();
+        if (disposed) return;
+        setSystemPrompt(settings.systemPrompt);
+      } catch (error) {
+        logger.warn("[PromptUpgrade] getAgentSettings failed", { error });
+        if (disposed) return;
+        setSystemPrompt(DEFAULT_SYSTEM_PROMPT);
+      }
+    };
+
+    run().catch((error) => {
+      logger.warn("[PromptUpgrade] load prompt failed", { error });
+    });
+
+    return () => {
+      disposed = true;
+    };
+  }, [getAgentSettings, systemPrompt]);
+
+  useEffect(() => {
+    if (didCheckPromptUpgradeRef.current) return;
+    if (systemPrompt === null) return;
+
+    didCheckPromptUpgradeRef.current = true;
+
+    const currentPrompt = normalizePrompt(systemPrompt);
+    const defaultPrompt = normalizePrompt(DEFAULT_SYSTEM_PROMPT);
+    if (currentPrompt === defaultPrompt) return;
+
+    const matchedVersion = findMatchingHistoryVersion(systemPrompt);
+    if (!matchedVersion) return;
+
+    push({
+      variant: "warning",
+      duration: 30_000,
+      title: t("agent.systemPrompt.upgradeToastTitle", {
+        defaultValue: "检测到旧版本提示词",
+      }),
+      description: t("agent.systemPrompt.upgradeToastDescription", {
+        defaultValue:
+          "你正在使用 {{version}} 版本的提示词，可以升级到最新版本获得更好的体验",
+        version: matchedVersion.version,
+      }),
+      action: {
+        label: t("agent.systemPrompt.upgradeToastAction", {
+          defaultValue: "升级到最新版",
+        }),
+        onPress: upgradeSystemPromptToLatest,
+      },
+    });
+  }, [push, systemPrompt, t, upgradeSystemPromptToLatest]);
+
   useEffect(() => {
     const unsubscribe = subscribeSettingsUpdates((detail) => {
       if (detail.type !== "update") return;
@@ -125,7 +209,7 @@ export default function GlobalUpdateChecker() {
 
       push({
         variant: "info",
-        duration: 10_000,
+        duration: 30_000,
         title: t("about.update.toastTitle", {
           defaultValue: "New version available",
         }),

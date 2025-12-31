@@ -17,30 +17,30 @@
 
 ## 核心组件列表
 
-| 组件                    | 职责             | 关键功能                                                |
-| ----------------------- | ---------------- | ------------------------------------------------------- |
-| **MessageList**         | 消息列表容器     | 渲染所有消息，自动滚动，加载状态，流式占位符            |
-| **MessageItem**         | 单条消息包装     | 消息元数据（模型名、时间戳），角色区分（用户/AI）       |
-| **MessageContent**      | 消息内容渲染引擎 | 分发文本、推理、工具调用等部分的渲染                    |
-| **ImageContent**        | 图片内容渲染     | 用户附件图片的懒加载渲染、加载态/错误态、点击全屏预览   |
-| **ImagePreview**        | 全屏图片预览弹层 | 遮罩层预览、ESC/点击背景关闭、下载                      |
-| **ToolCallCard**        | 工具调用卡片     | 展示工具调用的输入/输出/错误，支持展开/折叠，复制功能   |
-| **ThinkingBlock**       | 思考过程块       | 展示 AI 思考过程（推理），流式状态动画，展开/折叠       |
-| **ModelComboBox**       | 模型选择器       | 按供应商分组的模型下拉/搜索，支持禁用、加载态和默认标记 |
-| **ChatInputArea**       | 输入区域         | 多行文本框，表单处理，按 Enter 发送                     |
-| **CanvasContextButton** | 画布上下文按钮   | 切换是否在对话中附带画布上下文信息                      |
-| **PageSelectorButton**  | 页面选择器按钮   | 选择 AI 生效页面范围（多选/全选），用于后续工具执行     |
-| **SkillButton**         | 绘图技能按钮     | 配置绘图风格与知识类型（Dropdown + 单选/多选）          |
-| **ChatTopActions**      | 顶部操作栏       | 技能/MCP/页面/模型选择入口（图标按钮）                  |
-| **ChatInputActions**    | 输入操作按钮组   | 新建/历史/上传/发送/取消按钮                            |
-| **ChatHistoryView**     | 历史记录视图     | 搜索/筛选对话、日期范围、批量操作、预览                 |
-| **HistoryToolbar**      | 历史工具栏       | 搜索框、日期选择、批量操作切换、全选/清除               |
-| **ConversationList**    | 对话列表         | 显示过滤后的对话卡片，选择模式，预览和打开操作          |
-| **EmptyState**          | 空状态占位符     | 加载中、未配置、无消息三种状态提示                      |
-| **TypingIndicator**     | 打字指示器       | 流式输出时的动画指示                                    |
-| **ChatShell**           | 布局壳层         | 统一包裹聊天/历史视图，承载顶部提示与导航               |
-| **MessagePane**         | 消息区容器       | 包装 MessageList，保持滚动与间距样式                    |
-| **Composer**            | 输入区容器       | 聚合 ChatInputArea 的所有交互 props，简化父级组合       |
+| 组件                    | 职责             | 关键功能                                                  |
+| ----------------------- | ---------------- | --------------------------------------------------------- |
+| **MessageList**         | 消息列表容器     | 渲染所有消息，自动滚动，加载状态，流式占位符              |
+| **MessageItem**         | 单条消息包装     | 消息元数据（模型名、时间戳），角色区分（用户/AI）         |
+| **MessageContent**      | 消息内容渲染引擎 | 分发文本、推理、工具调用等部分的渲染                      |
+| **ImageContent**        | 图片内容渲染     | 用户附件图片的懒加载渲染、加载态/错误态、点击全屏预览     |
+| **ImagePreview**        | 全屏图片预览弹层 | 遮罩层预览、ESC/点击背景关闭、下载                        |
+| **ToolCallCard**        | 工具调用卡片     | 展示工具调用的输入/输出/错误，支持展开/折叠，复制功能     |
+| **ThinkingBlock**       | 思考过程块       | 展示 AI 思考过程（推理），流式状态动画，展开/折叠         |
+| **ModelComboBox**       | 模型选择器       | 按供应商分组的模型下拉/搜索，支持禁用、加载态和默认标记   |
+| **ChatInputArea**       | 输入区域         | 多行文本框，表单处理，按 Enter 发送                       |
+| **CanvasContextButton** | 画布增强按钮     | 弹出配置：画布上下文注入 + 布局检查（批量编辑后附加警告） |
+| **PageSelectorButton**  | 页面选择器按钮   | 选择 AI 生效页面范围（多选/全选），用于后续工具执行       |
+| **SkillButton**         | 绘图技能按钮     | 配置绘图风格与知识类型（Dropdown + 单选/多选）            |
+| **ChatTopActions**      | 顶部操作栏       | 技能/MCP/页面/模型选择入口（图标按钮）                    |
+| **ChatInputActions**    | 输入操作按钮组   | 新建/历史/上传/发送/取消按钮                              |
+| **ChatHistoryView**     | 历史记录视图     | 搜索/筛选对话、日期范围、批量操作、预览                   |
+| **HistoryToolbar**      | 历史工具栏       | 搜索框、日期选择、批量操作切换、全选/清除                 |
+| **ConversationList**    | 对话列表         | 显示过滤后的对话卡片，选择模式，预览和打开操作            |
+| **EmptyState**          | 空状态占位符     | 加载中、未配置、无消息三种状态提示                        |
+| **TypingIndicator**     | 打字指示器       | 流式输出时的动画指示                                      |
+| **ChatShell**           | 布局壳层         | 统一包裹聊天/历史视图，承载顶部提示与导航                 |
+| **MessagePane**         | 消息区容器       | 包装 MessageList，保持滚动与间距样式                      |
+| **Composer**            | 输入区容器       | 聚合 ChatInputArea 的所有交互 props，简化父级组合         |
 
 ---
 
@@ -216,7 +216,13 @@ export function ChatPanel() {
         onRetry={handleRetry}
         onCancel={handleCancel}
         isCanvasContextEnabled={false}
-        onCanvasContextToggle={() => undefined}
+        onCanvasContextChange={(enabled) => {
+          void enabled;
+        }}
+        isLayoutCheckEnabled={false}
+        onLayoutCheckChange={(enabled) => {
+          void enabled;
+        }}
         canSendNewMessage
         lastMessageIsUser={false}
         modelSelectorProps={{
