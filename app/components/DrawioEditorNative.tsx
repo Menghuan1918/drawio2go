@@ -764,10 +764,7 @@ const DrawioEditorNative = forwardRef<DrawioEditorRef, DrawioEditorNativeProps>(
       (event: MessageEvent) => {
         // 安全检查：确保消息来自受信任的 DrawIO 来源
         const trustedIdentifier = drawioConfigRef.current.identifier;
-        if (
-          !trustedIdentifier ||
-          !event.origin.includes(trustedIdentifier)
-        ) {
+        if (!trustedIdentifier || !event.origin.includes(trustedIdentifier)) {
           return;
         }
 

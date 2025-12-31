@@ -3,72 +3,88 @@
     {
       "id": "modern",
       "nameKey": "skill.theme.modern",
-      "promptFragment": "Modern (web-ready)\n- Palette: If the user provides a palette/brand colors, use it verbatim. Otherwise use neutral base + 1 accent (optional 1 secondary).\n- Shapes: rounded rectangles as the default; consistent stroke width; clear text contrast.\n- Layout: grid aligned; consistent spacing; generous whitespace; use subtle containers for grouping.\n- Connectors: prefer orthogonal routing; minimal bends; avoid crossings.\n- Avoid: gradients, heavy shadows, 3D, over-decoration, rainbow palettes."
+      "promptFragment": "Modern (web/product docs, marketing)\n- Color: Use user palette if provided; else neutral base + 1 accent (optional 1 secondary). No rainbow.\n- Shapes: Rounded rectangles primary; uniform stroke width; high text contrast.\n- Layout: Grid-aligned; consistent spacing; generous whitespace; subtle container grouping.\n- Connectors: Orthogonal routing; minimize bends/crossings.\n- Avoid: Gradients, heavy shadows, 3D effects, excessive decoration."
     },
     {
       "id": "academic",
       "nameKey": "skill.theme.academic",
-      "promptFragment": "Academic (paper figure)\n- Palette: If the user provides a palette/brand colors, use it verbatim. Otherwise use neutral base + 1 primary accent (+ optional 1 secondary for categories), with restrained saturation.\n- Shapes: more rectilinear; moderate corner radius; clear titled group boxes.\n- Layout: strict alignment; even spacing; stable label placement; prioritize readability.\n- Connectors: orthogonal with explicit waypoints when needed; minimize crossings; dashed lines only for a clear semantic meaning.\n- Avoid: decorative icons, thick outlines, heavy fills, strong shadows."
+      "promptFragment": "Academic (papers, technical docs, journals)\n- Color: Use user palette if provided; else neutral base + 1 primary accent (optional 1 secondary), restrained saturation.\n- Shapes: Rectilinear/right angles; moderate corners; clear titled group frames.\n- Layout: Strict alignment; uniform spacing; stable label positions; readability first.\n- Connectors: Orthogonal + explicit waypoints; minimal crossings; dashed only for clear semantics.\n- Avoid: Decorative icons, thick outlines, heavy fills, strong shadows."
     },
     {
       "id": "minimal",
       "nameKey": "skill.theme.minimal",
-      "promptFragment": "Minimal\n- Palette: If the user provides a palette, use it verbatim. Otherwise use monochrome or two-tone (mostly neutral + optional light accent).\n- Shapes: only basic shapes; minimal icons; emphasize structure via spacing, not decoration.\n- Fill: prefer no fill or very light fills; keep strokes thin and consistent.\n- Layout: strict alignment; large whitespace; short labels.\n- Connectors: thin, short, orthogonal routes; avoid crossings."
+      "promptFragment": "Minimal (concept maps, wireframes, clean presentations)\n- Color: Use user palette if provided; else monochrome or dual-tone.\n- Shapes: Basic forms (rect, ellipse); no/light fill; thin borders.\n- Layout: Abundant whitespace; loose spacing; minimal connections.\n- Connectors: Straight/simple orthogonal; thin lines; open arrows.\n- Avoid: Shadows, gradients, thick borders, dense elements, complex icons."
     },
     {
       "id": "custom",
       "nameKey": "skill.theme.custom",
-      "promptFragment": "Custom\n- Follow the user's style description/palette/brand rules exactly.\n- If key parameters are missing, ask only what you must: palette, corner radius, stroke width, typography, connector style (orthogonal vs curved), layout density.\n- Keep the palette small and consistent; do not invent arbitrary colors."
+      "promptFragment": "Custom (user-defined)\n- Follow user's style description exactly as provided in conversation.\n- If no style specified, fall back to Modern theme.\n- Respect all user palette/brand rules verbatim.\n- Keep palette small and consistent; never invent arbitrary colors."
     }
   ],
   "knowledge": [
     {
       "id": "general",
       "nameKey": "skill.element.general",
+      "description": "Base shapes (rectangle, ellipse, rhombus, etc.)",
       "required": true,
-      "promptFragment": "[General]\nrectangle: box (also text labels / group frames via style)\nellipse: circle/ellipse\nrhombus: decision diamond\ntriangle: triangle\nswimlane: container/lane\nnote: sticky note\ncurlyBracket: brace (flipH=1 for right)\nimage: icon (shape=image;image=<PATH or data URL>)"
+      "promptFragment": "| ID | Meaning | Example style |\n|---|---|---|\n| rectangle | Basic box, text label, group frame | rounded=1;fillColor=#f5f5f5;strokeColor=#666666 |\n| ellipse | Circle or oval shape | ellipse;fillColor=#ffffff;strokeColor=#666666 |\n| rhombus | Decision diamond | rhombus;fillColor=#ffe6cc;strokeColor=#d79b00 |\n| triangle | Triangle shape | triangle;fillColor=#dae8fc;strokeColor=#6c8ebf |\n| text | Plain text label | text;html=1;align=center;verticalAlign=middle |\n| line | Straight line | line;strokeColor=#666666;strokeWidth=2 |\n| image | Custom icon/image | shape=image;image=data:image/svg+xml,... |\n| swimlane | Container/lane | swimlane;fillColor=#f5f5f5;strokeColor=#666666 |\n| note | Sticky note | shape=note;fillColor=#fff2cc;strokeColor=#d6b656 |\n| curlyBracket | Brace (use flipH=1 for right) | shape=curlyBracket;fillColor=none;strokeColor=#666666 |",
+      "sizeBytes": 800
     },
     {
       "id": "basic",
       "nameKey": "skill.element.basic",
+      "description": "Standard flowchart symbols",
       "required": false,
-      "promptFragment": "[Flowchart]\nmxgraph.flowchart.terminator: start/end\nmxgraph.flowchart.process: process step\nmxgraph.flowchart.decision: decision\nmxgraph.flowchart.data: input/output\nmxgraph.flowchart.predefined_process: subprocess\nmxgraph.flowchart.document: document"
+      "promptFragment": "| ID | Meaning | Example style |\n|---|---|---|\n| mxgraph.flowchart.terminator | Start/End | shape=mxgraph.flowchart.terminator;fillColor=#d5e8d4 |\n| mxgraph.flowchart.process | Process step | shape=mxgraph.flowchart.process;fillColor=#dae8fc |\n| mxgraph.flowchart.decision | Decision point | shape=mxgraph.flowchart.decision;fillColor=#ffe6cc |\n| mxgraph.flowchart.data | Input/Output data | shape=mxgraph.flowchart.data;fillColor=#f8cecc |\n| mxgraph.flowchart.document | Document | shape=mxgraph.flowchart.document;fillColor=#e1d5e7 |\n| mxgraph.flowchart.stored_data | Database/Storage | shape=mxgraph.flowchart.stored_data;fillColor=#dae8fc |\n| mxgraph.flowchart.manual_input | Manual input | shape=mxgraph.flowchart.manual_input;fillColor=#fff2cc |\n| mxgraph.flowchart.delay | Delay | shape=mxgraph.flowchart.delay;fillColor=#f5f5f5 |",
+      "sizeBytes": 750
     },
     {
       "id": "misc",
       "nameKey": "skill.element.misc",
+      "description": "Miscellaneous shapes (note, bracket, container)",
       "required": false,
-      "promptFragment": "[Misc]\nnote: note/sticky\ncurlyBracket: brace (flipH=1 for right)\nswimlane: swimlane/container\nimage: custom icon (SVG via image=<...>)"
+      "promptFragment": "| ID | Meaning | Example style |\n|---|---|---|\n| note | Sticky note | shape=note;fillColor=#fff2cc;strokeColor=#d6b656 |\n| curlyBracket | Curly brace (flipH=1 for right) | shape=curlyBracket;fillColor=none;strokeColor=#666666 |\n| swimlane | Swimlane container | swimlane;fillColor=#f5f5f5;strokeColor=#666666 |\n| image | Custom SVG icon | shape=image;image=img/lib/... or data:image/svg+xml,... |",
+      "sizeBytes": 420
     },
     {
       "id": "uml",
       "nameKey": "skill.element.uml",
+      "description": "UML diagram elements",
       "required": false,
-      "promptFragment": "[UML]\nswimlane: class/interface box (HTML value with separators)\numlLifeline: lifeline\numlActor: actor\nellipse: use case\numlState: state\nendState: final state (typically with ellipse)"
+      "promptFragment": "| ID | Meaning | Example style |\n|---|---|---|\n| swimlane | Class/Interface box | swimlane;fillColor=#dae8fc;strokeColor=#6c8ebf |\n| umlLifeline | Lifeline | shape=umlLifeline;fillColor=#ffffff;strokeColor=#666666 |\n| umlActor | Actor/User | shape=umlActor;fillColor=#dae8fc;strokeColor=#6c8ebf |\n| ellipse | Use case | ellipse;fillColor=#e1d5e7;strokeColor=#9673a6 |\n| umlState | State | shape=umlState;fillColor=#ffe6cc;strokeColor=#d79b00 |\n| endState | Final state | shape=endState;fillColor=#000000;strokeColor=#666666 |",
+      "sizeBytes": 560
     },
     {
       "id": "aws",
       "nameKey": "skill.element.aws",
+      "description": "AWS cloud service icons",
       "required": false,
-      "promptFragment": "[AWS]\nmxgraph.aws4.ec2: EC2 instance\nmxgraph.aws4.s3: S3 bucket\nmxgraph.aws4.lambda: Lambda function\nmxgraph.aws4.rds: RDS\nmxgraph.aws4.dynamodb: DynamoDB\nmxgraph.aws4.vpc: VPC\nmxgraph.aws4.application_load_balancer: Application Load Balancer\nmxgraph.aws4.cloudfront: CloudFront\nmxgraph.aws4.api_gateway: API Gateway\nmxgraph.aws4.group: group/container (optional grIcon=mxgraph.aws4.group_*)"
+      "promptFragment": "| ID | Meaning | Example style |\n|---|---|---|\n| mxgraph.aws4.ec2 | EC2 instance | shape=mxgraph.aws4.ec2;fillColor=#F58536;strokeColor=none |\n| mxgraph.aws4.s3 | S3 storage bucket | shape=mxgraph.aws4.s3;fillColor=#7AA116;strokeColor=none |\n| mxgraph.aws4.lambda | Lambda function | shape=mxgraph.aws4.lambda;fillColor=#F58536;strokeColor=none |\n| mxgraph.aws4.rds | RDS database | shape=mxgraph.aws4.rds;fillColor=#2E73B8;strokeColor=none |\n| mxgraph.aws4.vpc | Virtual Private Cloud | shape=mxgraph.aws4.vpc;fillColor=#7AA116;strokeColor=none |\n| mxgraph.aws4.application_load_balancer | Application Load Balancer | shape=mxgraph.aws4.application_load_balancer;fillColor=#F58536 |\n| mxgraph.aws4.cloudfront | CloudFront CDN | shape=mxgraph.aws4.cloudfront;fillColor=#8C4FFF;strokeColor=none |\n| mxgraph.aws4.dynamodb | DynamoDB NoSQL | shape=mxgraph.aws4.dynamodb;fillColor=#2E73B8;strokeColor=none |\n| mxgraph.aws4.api_gateway | API Gateway | shape=mxgraph.aws4.api_gateway;fillColor=#8C4FFF;strokeColor=none |\n| mxgraph.aws4.group | Group/Container | shape=mxgraph.aws4.group;fillColor=none;strokeColor=#AAB7B8 |",
+      "sizeBytes": 1050
     },
     {
       "id": "azure",
       "nameKey": "skill.element.azure",
+      "description": "Azure cloud service icons",
       "required": false,
-      "promptFragment": "[Azure icons: image=<path>]\nimg/lib/azure2/compute/Virtual_Machine.svg: Virtual Machine\nimg/lib/azure2/general/Blob_Block.svg: Blob Storage\nimg/lib/azure2/databases/SQL_Database.svg: SQL Database\nimg/lib/azure2/compute/Function_Apps.svg: Functions\nimg/lib/azure2/app_services/App_Services.svg: App Service\nimg/lib/azure2/networking/Virtual_Networks.svg: Virtual Network\nimg/lib/azure2/networking/Load_Balancers.svg: Load Balancer\nimg/lib/azure2/networking/Application_Gateways.svg: Application Gateway\nimg/lib/azure2/other/AKS_Automatic.svg: AKS\nimg/lib/azure2/compute/Container_Instances.svg: Container Instances"
+      "promptFragment": "| ID | Meaning | Example style |\n|---|---|---|\n| img/lib/azure2/compute/Virtual_Machine.svg | Virtual Machine | shape=image;image=img/lib/azure2/compute/Virtual_Machine.svg |\n| img/lib/azure2/storage/Storage_Accounts.svg | Blob/Storage | shape=image;image=img/lib/azure2/storage/Storage_Accounts.svg |\n| img/lib/azure2/databases/SQL_Database.svg | SQL Database | shape=image;image=img/lib/azure2/databases/SQL_Database.svg |\n| img/lib/azure2/compute/Function_Apps.svg | Azure Functions | shape=image;image=img/lib/azure2/compute/Function_Apps.svg |\n| img/lib/azure2/app_services/App_Services.svg | App Service | shape=image;image=img/lib/azure2/app_services/App_Services.svg |\n| img/lib/azure2/networking/Virtual_Networks.svg | Virtual Network | shape=image;image=img/lib/azure2/networking/Virtual_Networks.svg |\n| img/lib/azure2/networking/Load_Balancers.svg | Load Balancer | shape=image;image=img/lib/azure2/networking/Load_Balancers.svg |\n| img/lib/azure2/networking/Application_Gateways.svg | Application Gateway | shape=image;image=img/lib/azure2/networking/Application_Gateways.svg |\n| img/lib/azure2/containers/Kubernetes_Services.svg | AKS | shape=image;image=img/lib/azure2/containers/Kubernetes_Services.svg |\n| img/lib/azure2/compute/Container_Instances.svg | Container Instances | shape=image;image=img/lib/azure2/compute/Container_Instances.svg |",
+      "sizeBytes": 1240
     },
     {
       "id": "gcp",
       "nameKey": "skill.element.gcp",
+      "description": "Google Cloud Platform service icons",
       "required": false,
-      "promptFragment": "[GCP]\nmxgraph.gcp2.compute_engine: Compute Engine\nmxgraph.gcp2.cloud_storage: Cloud Storage\nmxgraph.gcp2.bigquery: BigQuery\nmxgraph.gcp2.cloud_functions: Cloud Functions\nmxgraph.gcp2.container_engine: GKE\nmxgraph.gcp2.cloud_run: Cloud Run\nmxgraph.gcp2.cloud_pubsub: Pub/Sub"
+      "promptFragment": "| ID | Meaning | Example style |\n|---|---|---|\n| mxgraph.gcp2.compute_engine | Compute Engine VM | shape=mxgraph.gcp2.compute_engine;fillColor=#4285F4;strokeColor=none |\n| mxgraph.gcp2.cloud_storage | Cloud Storage bucket | shape=mxgraph.gcp2.cloud_storage;fillColor=#EA4335;strokeColor=none |\n| mxgraph.gcp2.bigquery | BigQuery analytics | shape=mxgraph.gcp2.bigquery;fillColor=#669DF6;strokeColor=none |\n| mxgraph.gcp2.cloud_functions | Cloud Functions | shape=mxgraph.gcp2.cloud_functions;fillColor=#4285F4;strokeColor=none |\n| mxgraph.gcp2.container_engine | GKE cluster | shape=mxgraph.gcp2.container_engine;fillColor=#4285F4;strokeColor=none |\n| mxgraph.gcp2.cloud_run | Cloud Run container | shape=mxgraph.gcp2.cloud_run;fillColor=#4285F4;strokeColor=none |\n| mxgraph.gcp2.cloud_pubsub | Pub/Sub messaging | shape=mxgraph.gcp2.cloud_pubsub;fillColor=#FBBC04;strokeColor=none |",
+      "sizeBytes": 800
     },
     {
       "id": "network",
       "nameKey": "skill.element.network",
+      "description": "Network infrastructure icons (Cisco style)",
       "required": false,
-      "promptFragment": "[Network]\nmxgraph.cisco19.router: router\nmxgraph.cisco19.l3_switch: L3 switch\nmxgraph.cisco19.firewall: firewall\nmxgraph.cisco19.server: server\nmxgraph.cisco19.workstation: workstation\nmxgraph.cisco19.cloud: cloud"
+      "promptFragment": "| ID | Meaning | Example style |\n|---|---|---|\n| mxgraph.cisco19.router | Network router | shape=mxgraph.cisco19.router;fillColor=#CCCCCC;strokeColor=none |\n| mxgraph.cisco19.l3_switch | Layer 3 switch | shape=mxgraph.cisco19.l3_switch;fillColor=#CCCCCC;strokeColor=none |\n| mxgraph.cisco19.firewall | Firewall | shape=mxgraph.cisco19.firewall;fillColor=#CCCCCC;strokeColor=none |\n| mxgraph.cisco19.server | Server | shape=mxgraph.cisco19.server;fillColor=#CCCCCC;strokeColor=none |\n| mxgraph.cisco19.workstation | Workstation/PC | shape=mxgraph.cisco19.workstation;fillColor=#CCCCCC;strokeColor=none |\n| mxgraph.cisco19.cloud | Cloud network | shape=mxgraph.cisco19.cloud;fillColor=#CCCCCC;strokeColor=none |",
+      "sizeBytes": 680
     }
   ]
 }

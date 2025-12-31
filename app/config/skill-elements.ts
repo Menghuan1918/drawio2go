@@ -13,8 +13,10 @@ export type SkillThemeConfig = {
 export type SkillKnowledgeConfig = {
   id: SkillKnowledgeId;
   nameKey: string;
+  description?: string;
   required?: boolean;
   promptFragment: string;
+  sizeBytes?: number;
 };
 
 export type SkillKnowledgeConfigSet = {

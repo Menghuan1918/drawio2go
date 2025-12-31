@@ -54,6 +54,7 @@ type AiProxyIncomingConfig = {
   maxToolRounds?: number;
   capabilities?: ModelCapabilities;
   skillSettings?: SkillSettings;
+  isCanvasContextEnabled?: boolean;
 };
 
 type AiProxyConfig = Omit<AiProxyIncomingConfig, "providerType"> & {
@@ -433,9 +434,15 @@ export async function POST(req: NextRequest) {
     let systemPrompt = normalizedConfig.systemPrompt;
     if (hasTemplateVariables(systemPrompt)) {
       if (normalizedConfig.skillSettings) {
+        // 根据前端传入的 isCanvasContextEnabled 状态决定是否注入画布上下文指南
+        // - 启用时：注入 CANVAS_CONTEXT_GUIDE，教导 LLM 如何理解画布上下文标签
+        // - 禁用时：替换为空字符串，节省 token
+        const isCanvasContextEnabled =
+          validation.rawConfig.isCanvasContextEnabled ?? false;
         systemPrompt = applyTemplateVariables(
           systemPrompt,
           normalizedConfig.skillSettings,
+          { isCanvasContextEnabled },
         );
       } else {
         logger.warn("系统提示词包含模板变量，但未提供 skillSettings");

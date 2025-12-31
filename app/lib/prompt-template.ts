@@ -4,12 +4,17 @@ import {
   getRequiredKnowledge,
   getThemeById,
 } from "@/app/config/skill-elements";
+import { CANVAS_CONTEXT_GUIDE } from "@/app/lib/config-utils";
 
 /**
  * Check if system prompt contains template variables.
  */
 export function hasTemplateVariables(prompt: string): boolean {
-  return /\{\{theme\}\}/.test(prompt) || /\{\{knowledge\}\}/.test(prompt);
+  return (
+    /\{\{theme\}\}/.test(prompt) ||
+    /\{\{knowledge\}\}/.test(prompt) ||
+    /\{\{canvas_context_guide\}\}/.test(prompt)
+  );
 }
 
 /**
@@ -24,6 +29,13 @@ export function hasThemeVariable(prompt: string): boolean {
  */
 export function hasKnowledgeVariable(prompt: string): boolean {
   return /\{\{knowledge\}\}/.test(prompt);
+}
+
+/**
+ * Check if the canvas context guide variable exists.
+ */
+export function hasCanvasContextGuideVariable(prompt: string): boolean {
+  return /\{\{canvas_context_guide\}\}/.test(prompt);
 }
 
 /**
@@ -69,6 +81,9 @@ export function buildKnowledgePrompt(skillSettings: SkillSettings): string {
 export function applyTemplateVariables(
   prompt: string,
   skillSettings: SkillSettings,
+  options?: {
+    isCanvasContextEnabled?: boolean;
+  },
 ): string {
   let result = prompt;
 
@@ -81,6 +96,12 @@ export function applyTemplateVariables(
       /\{\{knowledge\}\}/g,
       buildKnowledgePrompt(skillSettings),
     );
+  }
+
+  if (hasCanvasContextGuideVariable(result)) {
+    const replacement =
+      options?.isCanvasContextEnabled === true ? CANVAS_CONTEXT_GUIDE : "";
+    result = result.replace(/\{\{canvas_context_guide\}\}/g, replacement);
   }
 
   return result;
