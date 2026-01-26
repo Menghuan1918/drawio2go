@@ -194,6 +194,31 @@ npm run dev
 
 在浏览器中打开 [http://localhost:3000](http://localhost:3000)
 
+### Docker
+
+使用 Docker 构建并运行（对外端口使用高位端口，避免 3000 冲突）：
+
+```bash
+docker build -t drawio2go .
+docker run --rm -p 13000:3000 -e HOST=0.0.0.0 -e PORT=3000 drawio2go
+```
+
+在浏览器中打开 [http://localhost:13000](http://localhost:13000)
+
+### Docker Compose
+
+```bash
+docker compose up -d --build
+```
+
+在浏览器中打开 [http://localhost:13000](http://localhost:13000)
+
+停止：
+
+```bash
+docker compose down
+```
+
 > [!IMPORTANT]
 > 请注意，目前暂时还没适配多人使用WEB端（虽然理论上没有问题，但是没有测试）
 
