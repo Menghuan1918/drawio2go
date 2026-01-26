@@ -179,7 +179,7 @@ https://github.com/user-attachments/assets/40fe5c3b-0f37-4fbf-b6ac-60b8734f2d14
 
 ```bash
 # 克隆仓库
-git clone https://github.com/your-username/drawio2go.git
+git clone https://github.com/Menghuan1918/drawio2go.git
 cd drawio2go
 
 # 安装依赖
@@ -196,9 +196,18 @@ npm run dev
 
 ### Docker
 
-使用 Docker 构建并运行（对外端口使用高位端口，避免 3000 冲突）：
+从 Docker Hub 拉取：
 
 ```bash
+docker pull asunfly/drawio2go
+docker run --rm -p 13000:3000 -e HOST=0.0.0.0 -e PORT=3000 asunfly/drawio2go
+```
+
+本地构建（请先从源仓库克隆代码）：
+
+```bash
+git clone https://github.com/Menghuan1918/drawio2go.git
+cd drawio2go
 docker build -t drawio2go .
 docker run --rm -p 13000:3000 -e HOST=0.0.0.0 -e PORT=3000 drawio2go
 ```
@@ -208,7 +217,7 @@ docker run --rm -p 13000:3000 -e HOST=0.0.0.0 -e PORT=3000 drawio2go
 ### Docker Compose
 
 ```bash
-docker compose up -d --build
+docker compose up -d
 ```
 
 在浏览器中打开 [http://localhost:13000](http://localhost:13000)
