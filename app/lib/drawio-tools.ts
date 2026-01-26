@@ -24,6 +24,7 @@ import {
 } from "./storage/writers";
 import { createLogger } from "@/lib/logger";
 import { toErrorString } from "./error-handler";
+import { generateUUID } from "./utils";
 import type { RefObject } from "react";
 import type { DrawioEditorRef } from "@/app/components/DrawioEditorNative";
 import type {
@@ -174,7 +175,7 @@ export async function replaceDrawioXML(
     };
   }
 
-  const requestId = options?.requestId ?? crypto.randomUUID();
+  const requestId = options?.requestId ?? generateUUID("drawio-request");
   const editorRef = options?.editorRef;
   const isRollback = options?.isRollback === true;
   const skipExportValidation = options?.skipExportValidation === true;
