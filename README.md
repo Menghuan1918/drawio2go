@@ -179,7 +179,7 @@ Then run the following commands
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/drawio2go.git
+git clone https://github.com/Menghuan1918/drawio2go.git
 cd drawio2go
 
 # Install dependencies
@@ -196,9 +196,18 @@ Open [http://localhost:3000](http://localhost:3000) in your browser
 
 ### Docker
 
-Build and run with Docker (expose a higher external port to avoid 3000 conflicts):
+Pull from Docker Hub:
 
 ```bash
+docker pull asunfly/drawio2go
+docker run --rm -p 13000:3000 -e HOST=0.0.0.0 -e PORT=3000 asunfly/drawio2go
+```
+
+Build locally (make sure you cloned the source repository first):
+
+```bash
+git clone https://github.com/Menghuan1918/drawio2go.git
+cd drawio2go
 docker build -t drawio2go .
 docker run --rm -p 13000:3000 -e HOST=0.0.0.0 -e PORT=3000 drawio2go
 ```
@@ -208,7 +217,7 @@ Open [http://localhost:13000](http://localhost:13000) in your browser.
 ### Docker Compose
 
 ```bash
-docker compose up -d --build
+docker compose up -d
 ```
 
 Open [http://localhost:13000](http://localhost:13000) in your browser.
