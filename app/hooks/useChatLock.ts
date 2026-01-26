@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createLogger } from "@/lib/logger";
+import { generateUUID } from "@/lib/utils";
 
 type ChatLockMessageType =
   | "acquired"
@@ -92,8 +93,7 @@ export function useChatLock(projectUuid?: string | null) {
 
   useEffect(() => {
     if (!clientIdRef.current) {
-      const uuid = typeof crypto !== "undefined" ? crypto.randomUUID() : "uuid";
-      clientIdRef.current = `${Date.now()}-${uuid}`;
+      clientIdRef.current = generateUUID("chat-lock");
     }
   }, []);
 

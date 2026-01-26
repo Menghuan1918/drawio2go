@@ -179,7 +179,7 @@ Then run the following commands
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/drawio2go.git
+git clone https://github.com/Menghuan1918/drawio2go.git
 cd drawio2go
 
 # Install dependencies
@@ -193,6 +193,40 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser
+
+### Docker
+
+Pull from Docker Hub:
+
+```bash
+docker pull asunfly/drawio2go:v0.1.0
+docker run --rm -p 13000:3000 -e HOST=0.0.0.0 -e PORT=3000 asunfly/drawio2go:v0.1.0
+```
+
+Build locally (make sure you cloned the source repository first):
+
+```bash
+git clone https://github.com/Menghuan1918/drawio2go.git
+cd drawio2go
+docker build -t drawio2go .
+docker run --rm -p 13000:3000 -e HOST=0.0.0.0 -e PORT=3000 drawio2go
+```
+
+Open [http://localhost:13000](http://localhost:13000) in your browser.
+
+### Docker Compose
+
+```bash
+docker compose up -d
+```
+
+Open [http://localhost:13000](http://localhost:13000) in your browser.
+
+Stop:
+
+```bash
+docker compose down
+```
 
 > [!IMPORTANT]
 > Please note that multi-user web deployment is not yet adapted (although theoretically there should be no issues, it has not been tested)
