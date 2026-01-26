@@ -194,6 +194,31 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser
 
+### Docker
+
+Build and run with Docker (expose a higher external port to avoid 3000 conflicts):
+
+```bash
+docker build -t drawio2go .
+docker run --rm -p 13000:3000 -e HOST=0.0.0.0 -e PORT=3000 drawio2go
+```
+
+Open [http://localhost:13000](http://localhost:13000) in your browser.
+
+### Docker Compose
+
+```bash
+docker compose up -d --build
+```
+
+Open [http://localhost:13000](http://localhost:13000) in your browser.
+
+Stop:
+
+```bash
+docker compose down
+```
+
 > [!IMPORTANT]
 > Please note that multi-user web deployment is not yet adapted (although theoretically there should be no issues, it has not been tested)
 

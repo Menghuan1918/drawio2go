@@ -1,0 +1,10 @@
+services:
+  drawio2go:
+    build: .
+    ports:
+      - "13000:3000"
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+    restart: unless-stopped
