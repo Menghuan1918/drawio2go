@@ -199,8 +199,8 @@ npm run dev
 从 Docker Hub 拉取：
 
 ```bash
-docker pull asunfly/drawio2go
-docker run --rm -p 13000:3000 -e HOST=0.0.0.0 -e PORT=3000 asunfly/drawio2go
+docker pull asunfly/drawio2go:v0.1.0
+docker run --rm -p 13000:3000 -e HOST=0.0.0.0 -e PORT=3000 asunfly/drawio2go:v0.1.0
 ```
 
 本地构建（请先从源仓库克隆代码）：

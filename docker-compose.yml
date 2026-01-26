@@ -1,6 +1,6 @@
 services:
   drawio2go:
-    image: asunfly/drawio2go
+    image: asunfly/drawio2go:v0.1.0
     ports:
       - "13000:3000"
     environment:
